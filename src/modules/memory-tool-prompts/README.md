@@ -4,7 +4,7 @@
 
 **Почему костыль:** штатной настройки описаний встроенных тулов в OMP нет. Способ проверен по `omp://extensions.md` (хуки `before_provider_request`, `tool_result`, `session_start`) и `omp://mnemosyne-memory-backend.md` (состав тулов).
 
-**Вход:** `~/.omp/agent/extensions/memory-tool-prompts.js`.
+**Вход:** `~/.omp/agent/extensions/memory-tool-prompts.js` и `memory-tool-prompts.descriptions.json` рядом с ним.
 
 **Наблюдаемое поведение:**
 - текст совпал с эталоном — описание заменяется;
