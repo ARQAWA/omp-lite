@@ -1,0 +1,15 @@
+compaction:
+  modelThresholds:
+    opencode-go/deepseek-v4.1-flash: f400000
+    anthropic/claude-fable-5: f400000
+    anthropic/claude-fable-5-1: f400000
+    anthropic/claude-mythos-5: f400000
+    anthropic/claude-mythos-5-1: f400000
+    anthropic/claude-opus-4-6: f400000
+    anthropic/claude-opus-4-7: f400000
+    anthropic/claude-opus-4-8: f400000
+    anthropic/claude-opus-5: f400000
+    anthropic/claude-opus-5-5: f400000
+    anthropic/claude-sonnet-4-6: f400000
+    anthropic/claude-sonnet-5: f400000
+    anthropic/claude-sonnet-5-5: f400000

@@ -1,0 +1,74 @@
+modelRoles:
+  default: deepseek/deepseek-flash:max
+  web: openai-codex/gpt-6-luna
+retry:
+  fallbackChains:
+    web: []
+compaction:
+  modelThresholds:
+    opencode-go/deepseek-v4.1-flash: f400000
+    anthropic/claude-fable-5: f400000
+    anthropic/claude-fable-5-1: f400000
+    anthropic/claude-mythos-5: f400000
+    anthropic/claude-mythos-5-1: f400000
+    anthropic/claude-opus-4-6: f400000
+    anthropic/claude-opus-4-7: f400000
+    anthropic/claude-opus-4-8: f400000
+    anthropic/claude-opus-5: f400000
+    anthropic/claude-opus-5-5: f400000
+    anthropic/claude-sonnet-4-6: f400000
+    anthropic/claude-sonnet-5: f400000
+    anthropic/claude-sonnet-5-5: f400000
+symbolPreset: unicode
+composer:
+  shape: claude
+  predictions: true
+  predictionAlternatives: false
+  tokenRate: true
+theme:
+  dark: dark-copper
+update:
+  auto: false
+setupVersion: 3
+hideThinkingBlock: true
+proseOnlyThinking: false
+statusLine:
+  compactThinkingLevel: false
+  showHookStatus: true
+  separator: powerline-thin
+doubleEscapeAction: rewind
+spelling:
+  typoDetection: false
+  autocomplete: "off"
+emojiAutocomplete: false
+dev:
+  autoqaConsent: granted
+contextFiles:
+  extra:
+    - test.extra.md
+memory:
+  backend: mnemopi
+autolearn:
+  enabled: true
+astGrep:
+  enabled: true
+find:
+  enabled: "off"
+display:
+  showTokenUsage: false
+  hideToolActivity: true
+  subagentLivePreview: false
+  smoothStreaming: true
+  showTurnTime: true
+  shellVisualization: false
+  collapseCompacted: false
+tui:
+  imeSafeCursor: true
+task:
+  showResolvedModelBadge: true
+recap:
+  idleSeconds: 600
+mnemopi:
+  embeddingModel: embeddinggemma-2:270m
+  embeddingApiUrl: http://127.0.0.1:11434/v1
+  embeddingApiKey: ollama
