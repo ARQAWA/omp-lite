@@ -78,9 +78,9 @@
 
 ## D-008 — минимальный набор провайдеров и сжатие GPT
 
-**Решение:** в `config.yml` добавлен `enabledModels`: `anthropic/*`, `openai-codex/*`, `opencode-go/*`, `deepseek/*`. В `compaction.modelThresholds` добавлены `openai-codex/gpt-6.1-sol` и `openai-codex/gpt-6.1-terra` со значением `f400000`.
+**Решение:** в `config.yml` добавлен `enabledModels`: `anthropic/*`, `openai-codex/*`, `opencode-go/*`, `deepseek/*`. В `compaction.modelThresholds` добавлены `openai-codex/gpt-6.1-sol`, `openai-codex/gpt-6.1-terra` и `deepseek/deepseek-flash` со значением `f400000`.
 
-**Основание:** поручение владельца от 2026-11-08: оставить только Claude Code, Codex, OpenCode Go и DeepSeek. Сжатие 400k нужно на GPT с окном 500k.
+**Основание:** поручение владельца от 2026-11-08: оставить только Claude Code, Codex, OpenCode Go и DeepSeek. Сжатие 400k нужно на GPT с окном 500k и на модели по умолчанию.
 
 **Причина:** меньше лишнего в пикере. Длинные сессии на Sol и Terra не должны упираться в окно. Astra исключена: её окно 272k.
 

@@ -3,6 +3,7 @@ compaction:
     opencode-go/deepseek-v4.1-flash: f400000
     openai-codex/gpt-6.1-sol: f400000
     openai-codex/gpt-6.1-terra: f400000
+    deepseek/deepseek-flash: f400000
     anthropic/claude-fable-5: f400000
     anthropic/claude-fable-5-1: f400000
     anthropic/claude-mythos-5: f400000
