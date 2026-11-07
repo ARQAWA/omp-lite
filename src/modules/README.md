@@ -23,6 +23,7 @@
 Написанный код:
 
 - `dyslexia` — правило дислексии в хвосте отправленного сообщения. Тест: `dev/tests/harness/dyslexia/`.
+- `skill-alias` — короткий `/имя` вместо `/skill:имя`. Тест: `dev/tests/harness/skill-alias/`.
 
 Каждый README описывает свой модуль.
 
