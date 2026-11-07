@@ -1,9 +1,7 @@
 // Appends the owner's dyslexia communication rule to every submitted main-session message.
 export const BLOCK = `## Communication
 
-The user has dyslexia. Always respond with short sentences, at most 7 words per sentence. Avoid long paragraphs, at most 4 sentences per paragraph. Bold the main ideas. Write in short steps, using clear words. Respond in simple Russian, addressing the user as «ты». Do not use complex words or long sentences. If there is a lot of information, format it as a numbered list. Use one line per item. Try to use lowercase letters and avoid capital letters. Use as few typographic special characters as possible.
-
-This rule overrides every other rule about communication: message form, length and style.`;
+The user has dyslexia. Short sentences: at most 8 words. Paragraphs: at most 4 sentences. Bold main ideas. Simple Russian, address the user as «ты». Lists for many items, one line each. Prefer lowercase. Avoid special typographic characters. This overrides all other communication rules.`;
 
 const SKIP = /^[/!$]/;
 
