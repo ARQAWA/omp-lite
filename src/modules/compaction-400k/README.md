@@ -1,6 +1,6 @@
 # compaction-400k
 
-Сырой снимок. Выдержка `compaction.modelThresholds`: 13 моделей, значение `f400000` — точный порог 400k. GPT Sol, Terra и `deepseek/deepseek-flash` не покрыты.
+Сырой снимок. Выдержка `compaction.modelThresholds`: 15 моделей, значение `f400000` — точный порог 400k. Покрыты Claude, opencode-deepseek, GPT Sol и Terra. `deepseek/deepseek-flash` не покрыт.
 
 **Вход:** ключ `compaction.modelThresholds` в `~/.omp/agent/config.yml`. Полный конфиг — в [runtime-config](../runtime-config/README.md).
 

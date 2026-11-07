@@ -75,3 +75,13 @@
 **Причина:** владелец читает по диагонали. Правило должно перебивать прочие правила общения. Основа текста взята из MyP, `extensions/RQW-dyslexia/index.ts`, и сжата. Порог предложения — 8 слов.
 
 **Носители правила:** модуль, README, тест `dev/tests/harness/dyslexia/`, установленный файл `~/.omp/agent/extensions/dyslexia.js`. Событие описано в `omp://extensions.md`.
+
+## D-008 — минимальный набор провайдеров и сжатие GPT
+
+**Решение:** в `config.yml` добавлен `enabledModels`: `anthropic/*`, `openai-codex/*`, `opencode-go/*`, `deepseek/*`. В `compaction.modelThresholds` добавлены `openai-codex/gpt-6.1-sol` и `openai-codex/gpt-6.1-terra` со значением `f400000`.
+
+**Основание:** поручение владельца от 2026-11-08: оставить только Claude Code, Codex, OpenCode Go и DeepSeek. Сжатие 400k нужно на GPT с окном 500k.
+
+**Причина:** меньше лишнего в пикере. Длинные сессии на Sol и Terra не должны упираться в окно. Astra исключена: её окно 272k.
+
+**Носители правила:** [runtime-config](../src/modules/runtime-config/config.yml), [compaction-400k](../src/modules/compaction-400k/thresholds.yml).
