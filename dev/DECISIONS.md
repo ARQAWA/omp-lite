@@ -95,3 +95,13 @@
 **Причина:** нативный вызов требует префикс. Готовый пакет `@zigai/pi-mention-skill` в OMP не загрузился. Своё расширение занимает около 15 строк и не тратит запросы.
 
 **Носители правила:** модуль `src/modules/skill-alias/`, тест `dev/tests/harness/skill-alias/`, установленный файл `~/.omp/agent/extensions/skill-alias.js`.
+
+## D-010 — подмена описаний тулов памяти в рантайме
+
+**Решение:** расширение [memory-tool-prompts](../src/modules/memory-tool-prompts/index.js) подменяет описания `recall`, `retain`, `reflect`, `memory_edit` и `learn` через хуки `before_provider_request`, `tool_result` и `session_start`. Текст сверяется с эталоном. Совпал — заменяется. Разошёлся — замены нет, сразу выходит `warning`, статус-бар и файл состояния.
+
+**Основание:** поручение владельца от 2026-11-08: переписать описания без форка OMP и узнавать о поломке визуально. Штатной настройки описаний встроенных тулов нет: проверено по `omp://extensions.md`.
+
+**Причина:** OMP остаётся штатным. Обновление OMP не ломает патч молча. Новый текст сокращает лишние вызовы и задаёт точные триггеры.
+
+**Носители правила:** модуль, README, тест `dev/tests/harness/memory-tool-prompts/`, установленный файл `~/.omp/agent/extensions/memory-tool-prompts.js`. События описаны в `omp://extensions.md`, состав тулов — в `omp://mnemosyne-memory-backend.md`.
