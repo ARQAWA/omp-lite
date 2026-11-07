@@ -14,7 +14,7 @@
 
 Сырые снимки рантайма от 2026-11-08, без правок:
 
-- `runtime-config` — `config.yml`, 81 строка;
+- `runtime-config` — `config.yml`, 109 строк;
 - `compaction-400k` — 16 порогов `f400000`;
 - `web-search` — Codex-поиск, 5 файлов;
 - `codex-transport` — правка тела запроса, 16 строк;

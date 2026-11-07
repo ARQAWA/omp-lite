@@ -1,14 +1,24 @@
 modelRoles:
   default: deepseek/deepseek-flash:max
   web: openai-codex/gpt-6-luna
+  memory: deepseek/deepseek-flash:max
 enabledModels:
   - anthropic/*
   - openai-codex/*
   - opencode-go/*
   - deepseek/*
+disabledProviders:
+  - google
+  - openrouter
+  - local
+  - web
+  - cursor
+  - ollama
 retry:
   fallbackChains:
     web: []
+    memory:
+      - opencode-go/deepseek-v4.1-flash:max
 compaction:
   modelThresholds:
     opencode-go/deepseek-v4.1-flash: f400000
@@ -51,15 +61,12 @@ spelling:
 emojiAutocomplete: false
 dev:
   autoqaConsent: granted
-contextFiles:
-  extra:
-    - test.extra.md
 memory:
   backend: mnemopi
 autolearn:
   enabled: true
 astGrep:
-  enabled: true
+  enabled: false
 find:
   enabled: "off"
 display:
@@ -74,9 +81,30 @@ tui:
   imeSafeCursor: true
 task:
   showResolvedModelBadge: true
+  maxConcurrency: 100
 recap:
   idleSeconds: 600
 mnemopi:
   embeddingModel: embeddinggemma-2:270m
   embeddingApiUrl: http://127.0.0.1:11434/v1
   embeddingApiKey: ollama
+tools:
+  artifactSpillThreshold: 50
+  artifactHeadBytes: 50
+  artifactTailBytes: 0
+  artifactMaxBytes: 32
+  artifactTailLines: 0
+  outputMaxColumns: 0
+  approvalMode: yolo
+read:
+  defaultLimit: 4000
+  summarize:
+    enabled: false
+startup:
+  quiet: true
+  showSplash: false
+edit:
+  autoRepair:
+    enabled: true
+lsp:
+  diagnosticsOnEdit: true
