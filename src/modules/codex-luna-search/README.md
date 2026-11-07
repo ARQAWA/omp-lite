@@ -1,15 +1,9 @@
 # codex-luna-search
 
-Сырая копия хука для поиска Luna. Без правок.
+Сырой снимок расширения. Подменяет `fetch` для `gpt-6-luna` с `web_search`: `service_tier: priority`, `reasoning.effort: xhigh`. Возвращает `fetch` при завершении сессии.
 
-**Источник:** `~/.omp/agent/extensions/codex-luna-search.js`.
+**Вход:** `~/.omp/agent/extensions/codex-luna-search.js`.
 
-**Наблюдаемое поведение:** правит запрос поиска `gpt-6-luna` на уровне `fetch`. Ставит `service_tier: priority` и `reasoning.effort: xhigh`.
+**Выключить:** удалить файл.
 
-**Вход OMP:** файл в `~/.omp/agent/extensions/`.
-
-**Ресурсы и зависимости:** нет.
-
-**Подключение и отключение:** файл в каталоге расширений или удаление файла.
-
-**Тесты:** нет. Копия без правок.
+**Тесты:** нет.
