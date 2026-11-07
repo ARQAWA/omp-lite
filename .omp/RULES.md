@@ -1,6 +1,6 @@
 # Жёсткие правила omp-lite
 
-Действуют в каждой сессии этого репозитория. Подробности — в `AGENTS.md`, `dev/PROCESS.md`, `dev/DECISIONS.md`. Принципы владельца — в `dev/WORKFLOW-MANIFEST.md`.
+Действуют в каждой сессии этого репозитория. Подробности — в `AGENTS.md`, `dev/PROCESS.md`, `dev/DECISIONS.md`. Принципы владельца — в `dev/WORKFLOW-MANIFEST.md`. Рабочая процедура — skill `omp-lite-engineering`.
 
 ## Перед работой
 
