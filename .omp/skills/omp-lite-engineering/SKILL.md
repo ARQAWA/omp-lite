@@ -1,55 +1,36 @@
 ---
 name: omp-lite-engineering
-description: Use before writing, reviewing, or delivering omp-lite code. Covers minimal code, module layout, separate resources, tests, and delivery.
+description: Use before writing, reviewing, or delivering omp-lite code. Covers module layout, resources, tests, and order of work.
 ---
 
 # omp-lite engineering
 
-Жёсткие инварианты уже в `.omp/RULES.md`. Здесь — рабочая процедура.
+Инварианты — в `.omp/RULES.md`. Здесь структура и порядок.
 
-## Перед кодом
+## Когда
 
-1. Прочитай `AGENTS.md`, `dev/PROCESS.md`, `dev/DECISIONS.md`.
-2. Найди штатный способ в документации OMP.
-3. Проверь README модуля и его тест.
-4. Оцени задачу в SP. Больше двух SP — план владельцу.
+Перед написанием, ревью или сдачей кода omp-lite.
 
-## Структура модуля
+## Структура
 
 ```text
 src/modules/<name>/
   index.js
-  <name>.descriptions.json   # если есть тексты
+  <name>.json
   README.md
 dev/tests/harness/<name>/
   <name>.test.js
 ```
 
-- Код, данные и тексты лежат раздельно.
+- Тексты и данные — отдельными JSON или YAML.
 - README: назначение, вход, хуки, установка, выключение, тест.
-- Ресурс без кода тоже допустим: YAML или JSON плюс README.
-- Не добавляй `index.js` только ради шаблона.
+- Ресурс без кода: YAML/JSON плюс README.
+- Тест зеркалит модуль.
 
-## Минимальный код
+## Порядок
 
-- Сначала кратчайшее рабочее решение.
-- Минимум строк и символов.
-- Без one-line обёрток и хитрых цепочек.
-- Без дублей: вынеси общее или удали.
-- Новую зависимость согласуй с владельцем.
-- Удаляй мёртвый код сразу.
-
-## Проверка
-
-1. Запусти изменённое поведение настоящим входом.
-2. Запусти тест модуля.
-3. Перед `main` запусти все тесты.
-4. Покажи вывод, а не обещание.
-5. Сверь дифф с заказом.
-
-## Доставка
-
-- Ветка на задачу, один коммит.
-- Обнови README и `DECISIONS.md`.
-- Merge в `main`, push, удали ветку.
-- Не коммить чужие правки.
+1. Найди штатный способ в документации OMP.
+2. Прочитай README и тест модуля.
+3. Напиши минимальный код.
+4. Проверь реальным входом и тестом.
+5. Ветка, коммит, merge, push.
