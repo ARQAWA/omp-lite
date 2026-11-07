@@ -12,21 +12,26 @@ function handler() {
 
 const main = { agent: { kind: "main" } };
 const sub = { agent: { kind: "sub" } };
+const user = text => ({ role: "user", content: text });
 
-test("adds the exact rule to the message tail", () => {
+test("adds the exact rule to every user message", () => {
 	expect(BLOCK).toBe(fixture);
-	expect(handler()({ text: "привет" }, main)).toEqual({ text: `привет\n\n${BLOCK}` });
+	const result = handler()({ messages: [user("привет")] }, main);
+	expect(result).toEqual({ messages: [user(`привет\n\n${BLOCK}`)] });
 });
 
-test("skips subagents, commands and empty text", () => {
-	const run = handler();
-	expect(run({ text: "привет" }, sub)).toBeUndefined();
-	expect(run({ text: "/model" }, main)).toBeUndefined();
-	expect(run({ text: "! ls" }, main)).toBeUndefined();
-	expect(run({ text: "$ ls" }, main)).toBeUndefined();
-	expect(run({ text: "   " }, main)).toBeUndefined();
+test("keeps image messages and appends a text block", () => {
+	const messages = [user([{ type: "image", data: "x", mimeType: "image/png" }])];
+	const result = handler()({ messages }, main);
+	expect(result.messages[0].content).toEqual([messages[0].content[0], { type: "text", text: BLOCK }]);
+});
+
+test("skips subagents and non-user messages", () => {
+	expect(handler()({ messages: [user("привет")] }, sub)).toBeUndefined();
+	expect(handler()({ messages: [{ role: "assistant", content: "ответ" }] }, main)).toBeUndefined();
 });
 
 test("does not append twice", () => {
-	expect(handler()({ text: `привет\n\n${BLOCK}` }, main)).toBeUndefined();
+	const once = handler()({ messages: [user("привет")] }, main);
+	expect(handler()(once, main)).toBeUndefined();
 });
