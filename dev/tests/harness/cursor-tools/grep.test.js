@@ -321,3 +321,19 @@ test("a literal colon filename uses the engine in count mode", async () => {
 		rmSync(dir, { recursive: true, force: true });
 	}
 });
+
+test("a semicolon list stays a list even when the whole text exists as a file", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-list-"));
+	try {
+		const list = "bundle.zip:x;other:10-20";
+		writeFileSync(join(dir, list), "literal");
+		const seen = [];
+		const ctx = { cwd: dir, invokeTool: async params => (seen.push(params), { content: [{ type: "text", text: "native" }] }) };
+		const result = await executeGrep("call", { pattern: "x", path: list }, undefined, undefined, ctx);
+		expect(seen).toHaveLength(1);
+		expect(seen[0].path).toBe(list);
+		expect(result.content[0].text).toBe("native");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
