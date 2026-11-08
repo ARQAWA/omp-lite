@@ -1,0 +1,18 @@
+# Статуслайн OMP для omp-lite. Слить в ~/.omp/agent/config.yml.
+statusLine:
+  preset: custom
+  separator: powerline-thin
+  leftSegments: [pi, model, mode, path, git, pr]
+  rightSegments: [status, subagents, token_total, token_rate, cache_hit, context_pct, session_name]
+  segmentOptions:
+    model:
+      showThinkingLevel: true
+    path:
+      abbreviate: true
+      maxLength: 40
+      stripWorkPrefix: true
+    git:
+      showBranch: true
+      showStaged: true
+      showUnstaged: true
+      showUntracked: true

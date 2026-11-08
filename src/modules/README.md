@@ -28,6 +28,11 @@
 - `model-picker` — компактный пикер модели и усилия, Shift+стрелки, фильтр. Тест: `dev/tests/harness/model-picker/`.
 - `tool-summary` — одна строка со счётчиками тулов вместо карточек. Тест: `dev/tests/harness/tool-summary/`.
 - `review` — навыки `blindreview`, `highreview`, `reviewer` и агенты `spotty`, `bossy`. Тестов нет: только ресурсы, проверка реальным запуском.
+- `define-goal` — `/define-goal` вместо встроенной `/guided-goal` и скрытие старой из автокомплита. Тест: `dev/tests/harness/define-goal/`.
+
+Настройки без кода:
+
+- `status-line` — раскладка родного статуслайна, `status-line.yml`.
 
 Каждый README описывает свой модуль.
 
