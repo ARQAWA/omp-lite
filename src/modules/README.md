@@ -35,6 +35,7 @@
 - `compactions` — счётчик компакшенов сессии в статуслайне. Тест: `dev/tests/harness/compactions/`.
 - `turn-duration` — строка `⏱ 2m 4s` после долгого хода. Тест: `dev/tests/harness/turn-duration/`.
 - `cursor-tools` — аргументы сбора контекста курсора над родными тулами: `grep` с контекстом, режимами и типом, `bash` с `block_until_ms: 0`, `glob` и `read` со своими полями, режим правок `apply_patch`. Описания тулов и их параметров перенесены из курсора под наши имена и лежат в `descriptions.json`. Тест: `dev/tests/harness/cursor-tools/`.
+- `task-delegation` — строка Codex про саб-агентов в описании тула `task`. Тест: `dev/tests/harness/task-delegation/`.
 
 Настройки без кода:
 

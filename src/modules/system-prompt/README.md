@@ -23,7 +23,7 @@
 
 **Удалено:** блоки `<mode_selection>`, `<dynamic_tools>` и `<terminal_files_information>`, строка про markdown-картинки.
 
-**Строка про саб-агентов.** Добавлена дословно из Codex CLI, тул `spawn_agent`: `Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.` Стоит в `<general>`.
+**Строки про саб-агентов нет.** Как и в Codex CLI, запрет живёт в описании тула запуска, не в промпте. У нас это модуль [task-delegation](../task-delegation/README.md).
 
 **Дислексия не дублируется.** Правило дислексии дописывает расширение [dyslexia](../dyslexia/index.js) в конец пользовательского сообщения. В промпте его нет.
 
