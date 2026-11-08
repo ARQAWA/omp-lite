@@ -6,7 +6,7 @@ statusLine:
   separator: powerline-thin
   showHookStatus: false
   leftSegments: [pi, model, mode, path, git, pr, subagents]
-  rightSegments: [status, cache_hit, context_pct]
+  rightSegments: [status, token_total, cache_hit, context_pct]
   segmentOptions:
     model:
       showThinkingLevel: true

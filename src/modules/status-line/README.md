@@ -11,7 +11,7 @@
 
 **Вход:** блоки `statusLine` и `composer` в `~/.omp/agent/config.yml`.
 
-**Установка:** слить [status-line.yml](status-line.yml) в `config.yml` и перезапустить OMP.
+**Вход:** блоки `statusLine` и `composer.tokenRate` в `~/.omp/agent/config.yml`. Механизм установки в репозитории ещё не реализован.
 
 **Выключить:** удалить блок `statusLine` и строку `composer.tokenRate: false`. Остальные ключи `composer` не трогать.
 
