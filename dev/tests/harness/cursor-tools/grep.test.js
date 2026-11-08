@@ -233,7 +233,7 @@ test("a double-dot selector takes the native route and honours offset", async ()
 });
 
 test("an archive member counts as one file for offset", async () => {
-	for (const path of ["bundle.zip:src/a.ts", "pkg.whl:pkg/a.py", "ext.vsix:extension/file.txt", "pkg.tar.gz:src/a.ts"]) {
+	for (const path of ["bundle.zip:src/a.ts", "pkg.whl:pkg/a.py", "ext.vsix:extension/file.txt", "pkg.tar.gz:src/a.ts", "bundle.tar:src/a.ts"]) {
 		const ctx = { cwd: "/work", invokeTool: async () => ({ content: [{ type: "text", text: "*1|a\n*2|b" }] }) };
 		const result = await executeGrep("call", { pattern: "x", path, offset: 1 }, undefined, undefined, ctx);
 		expect(result.content[0].text).toBe("*2|b");
@@ -249,8 +249,8 @@ test("a native error keeps its diagnosis under offset", async () => {
 test("a one-file page from a remote multi-file scope keeps its match", async () => {
 	const ctx = {
 		cwd: "/work",
-		invokeTool: async () => ({ details: { files: ["https://host/dir/a.ts"] }, content: [{ type: "text", text: "*1|a" }] }),
+		invokeTool: async () => ({ details: { files: ["ssh://host/dir/a.ts"] }, content: [{ type: "text", text: "*1|a" }] }),
 	};
-	const result = await executeGrep("call", { pattern: "x", path: "https://host/dir", offset: 1 }, undefined, undefined, ctx);
+	const result = await executeGrep("call", { pattern: "x", path: "ssh://host/dir", offset: 1 }, undefined, undefined, ctx);
 	expect(result.content[0].text).toBe("*1|a");
 });
