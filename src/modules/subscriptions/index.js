@@ -34,7 +34,7 @@ function readUsage() {
 	});
 }
 
-export default function subscriptions(pi) {
+export default function subscriptions(pi, read = readUsage) {
 	pi.on("session_start", (_event, ctx) => {
 		if (ctx.mode !== "tui" || !ctx.hasUI || ctx.agent?.kind !== "main") return;
 		let busy = false;
@@ -42,7 +42,7 @@ export default function subscriptions(pi) {
 			if (busy) return;
 			busy = true;
 			try {
-				const reports = JSON.parse(await readUsage()).reports ?? [];
+				const reports = JSON.parse(await read()).reports ?? [];
 				const current = marks(reports);
 				const present = new Set(current.map(([key]) => key));
 				for (const key of KEYS) if (!present.has(key)) ctx.ui.setStatus(key, undefined);

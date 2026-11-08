@@ -1,14 +1,26 @@
 import { expect, test } from "bun:test";
-import defineGoal, { filterProvider, withoutHidden } from "../../../../src/modules/define-goal/index.js";
+import defineGoal, { filterProvider, goalPrompt, withoutHidden } from "../../../../src/modules/define-goal/index.js";
 
 function mount() {
 	const handlers = {};
 	const factories = [];
-	const pi = { on: (event, handler) => (handlers[event] = handler) };
+	const commands = {};
+	const sent = [];
+	const active = ["read", "bash"];
+	const pi = {
+		on: (event, handler) => (handlers[event] = handler),
+		registerCommand: (name, definition) => (commands[name] = definition),
+		getActiveTools: () => [...active],
+		setActiveTools: async names => {
+			active.length = 0;
+			active.push(...names);
+		},
+		sendUserMessage: (text, options) => sent.push([text, options]),
+	};
 	defineGoal(pi);
 	const ctx = { ui: { addAutocompleteProvider: factory => factories.push(factory) } };
 	handlers.session_start({}, ctx);
-	return { handlers, ctx, factories };
+	return { handlers, ctx, factories, commands, sent, active };
 }
 
 class Provider {
@@ -42,4 +54,32 @@ test("wraps the provider once per ui", () => {
 	const { handlers, ctx, factories } = mount();
 	handlers.session_start({}, ctx);
 	expect(factories.length).toBe(1);
+});
+
+test("the command switches the goal tool on and sends the interview", async () => {
+	const { commands, sent, active } = mount();
+	await commands["define-goal"].handler("ship the bar", {});
+	expect(active).toContain("goal");
+	expect(sent.length).toBe(1);
+	const [text, options] = sent[0];
+	expect(text).toContain("ship the bar");
+	expect(text).toContain("Before other work, interview in normal conversation");
+	expect(options).toEqual({ attribution: "agent" });
+});
+
+test("an already active goal tool is not switched again", async () => {
+	const commands = {};
+	const sent = [];
+	const sets = [];
+	const pi = {
+		on: () => {},
+		registerCommand: (name, definition) => (commands[name] = definition),
+		getActiveTools: () => ["goal", "read"],
+		setActiveTools: async () => sets.push(1),
+		sendUserMessage: () => sent.push(1),
+	};
+	defineGoal(pi);
+	await commands["define-goal"].handler("", {});
+	expect(sets.length).toBe(0);
+	expect(sent.length).toBe(1);
 });
