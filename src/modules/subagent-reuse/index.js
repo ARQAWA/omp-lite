@@ -1,5 +1,7 @@
 // Gives an existing subagent a new independent task on a fresh session.
 // The agent keeps its system prompt, tools and model; its conversation starts at zero.
+import { existsSync, rmSync, writeFileSync } from "node:fs";
+
 const busy = new Set();
 
 function pick(registry, name) {
@@ -11,6 +13,26 @@ function pick(registry, name) {
 	if (ref.status === "running") throw new Error(`Subagent "${ref.id}" is running. Wait for it, or steer it with write.`);
 	if (ref.status === "aborted") throw new Error(`Subagent "${ref.id}" is aborted and cannot be reused.`);
 	return ref;
+}
+
+const COOP =
+	"\n§ Coop\nYou are operating on a piece of work assigned to you by the main agent.\n§ Completion\nNo TODO tracking, no progress updates. Execute; your final message is your result.";
+
+export function withoutContext(prompt) {
+	return prompt.flatMap(block => {
+		const coop = block.lastIndexOf(COOP);
+		let at = block.startsWith("§ Context\n") ? 0 : -1;
+		if (at < 0) {
+			const found = coop < 0 ? block.lastIndexOf("\n\n§ Context\n") : block.lastIndexOf("\n\n§ Context\n", coop);
+			if (found >= 0) at = found + 2;
+		}
+		if (at < 0) return [block];
+		const head = block.slice(0, at).replace(/\n+$/, "");
+		const rest = block.slice(at);
+		const tail = coop < 0 ? "" : rest.slice(coop - at);
+		const next = `${head}${tail}`.trim();
+		return next ? [next] : [];
+	});
 }
 
 function yielded(messages) {
@@ -36,7 +58,13 @@ async function runReuse({ name, task }, { registry, lifecycle }) {
 	try {
 		const session = await lifecycle.ensureLive(ref.id);
 		registry.setStatus(ref.id, "running", ref);
+		const oldFile = session.sessionManager?.getSessionFile?.();
 		if (await session.newSession() === false) throw new Error(`Subagent "${ref.id}" did not start a new session.`);
+		const file = session.sessionManager?.getSessionFile?.();
+		if (file) writeFileSync(`${file}.reuse`, "");
+		if (oldFile && oldFile !== file) rmSync(`${oldFile}.reuse`, { force: true });
+		const tools = session.getEnabledToolNames?.();
+		if (tools?.includes("reuse")) await session.setActiveToolsByName(tools.filter(name => name !== "reuse"));
 		registry.attachSession(ref.id, session, session.sessionManager?.getSessionFile?.(), ref);
 		await session.prompt(task);
 		await session.waitForIdle();
@@ -68,12 +96,15 @@ export default function subagentReuse(pi, deps) {
 		loadMode: "essential",
 		concurrency: "shared",
 		description:
-			"Give a new independent task to an existing subagent. Before the task its conversation is reset to zero on a fresh session; its system prompt, tools and model stay. Create the subagent once with task, then call reuse for every later independent task instead of spawning a new one. Do not use it to steer a running subagent; use write for that.",
+			"Main agent only. Give a new independent task to an existing subagent. Before the task its conversation and the previous task's shared context are reset to zero on a fresh session; its role prompt, tools and model stay. Create the subagent once with task, then call reuse for every later independent task instead of spawning a new one. Do not use it to steer a running subagent; use write for that.",
 		parameters: z.object({
 			name: z.string().describe("Existing subagent id or display name."),
 			task: z.string().describe("Complete, self-contained new task."),
 		}),
-		async execute(_id, params) {
+		async execute(_id, params, _signal, _onUpdate, ctx) {
+			if (ctx && ctx.agent?.kind !== "main") {
+				return { content: [{ type: "text", text: "reuse is available only to the main agent." }], isError: true };
+			}
 			try {
 				const resolved = deps ?? (await defaults());
 				const text = await runReuse(params, resolved);
@@ -82,5 +113,16 @@ export default function subagentReuse(pi, deps) {
 				return { content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }], isError: true };
 			}
 		},
+	});
+	pi.on("session_start", async (_event, ctx) => {
+		if (ctx.agent?.kind !== "sub") return;
+		const active = await pi.getActiveTools();
+		if (active.includes("reuse")) await pi.setActiveTools(active.filter(name => name !== "reuse"));
+	});
+	pi.on("before_agent_start", (event, ctx) => {
+		if (ctx.agent?.kind !== "sub") return;
+		const file = ctx.sessionManager?.getSessionFile?.();
+		if (!file || !existsSync(`${file}.reuse`)) return;
+		return { systemPrompt: withoutContext(event.systemPrompt) };
 	});
 }

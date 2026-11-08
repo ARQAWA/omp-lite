@@ -1,5 +1,22 @@
-import { expect, test } from "bun:test";
+import { afterAll, afterEach, expect, test } from "bun:test";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import subagentReuse from "../../../../src/modules/subagent-reuse/index.js";
+
+const COOP =
+	"\n§ Coop\nYou are operating on a piece of work assigned to you by the main agent.\n§ Completion\nNo TODO tracking, no progress updates. Execute; your final message is your result.";
+const TAIL = "\nWhile work remains.";
+const root = join(tmpdir(), `omp-reuse-tests-${process.pid}`);
+rmSync(root, { recursive: true, force: true });
+mkdirSync(root, { recursive: true });
+let fileSeq = 0;
+const files = [];
+
+afterEach(() => {
+	for (const file of files.splice(0)) rmSync(`${file}.reuse`, { force: true });
+});
+afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 function fixture({
 	state = "idle",
@@ -12,16 +29,29 @@ function fixture({
 } = {}) {
 	const calls = [];
 	const statuses = [];
+	const file = join(root, `session-${++fileSeq}.jsonl`);
+	files.push(file);
+	const marker = { atPrompt: false };
+	let tools = ["read"];
 	const session = {
 		isStreaming: false,
 		messages,
-		sessionManager: { getSessionFile: () => "/tmp/new.jsonl" },
+		sessionManager: { getSessionFile: () => file },
+		getEnabledToolNames: () => [...tools],
+		async setActiveToolsByName(names) {
+			tools = [...names];
+			calls.push(["tools", names]);
+		},
+		setTools: names => {
+			tools = [...names];
+		},
 		async newSession() {
 			calls.push("newSession");
 			return reset;
 		},
 		async prompt(task) {
 			calls.push(["prompt", task]);
+			marker.atPrompt = existsSync(`${file}.reuse`);
 		},
 		async waitForIdle() {
 			calls.push("wait");
@@ -48,12 +78,15 @@ function fixture({
 			return session;
 		},
 	};
-	return { calls, statuses, ref, session, registry, lifecycle };
+	return { calls, statuses, ref, session, registry, lifecycle, file, marker };
 }
 
 function mount(options) {
 	const f = fixture(options);
 	let tool;
+	const handlers = {};
+	const active = ["reuse", "read"];
+	const sets = [];
 	const pi = {
 		zod: {
 			string: () => ({ describe: () => undefined }),
@@ -62,9 +95,18 @@ function mount(options) {
 		registerTool: definition => {
 			tool = definition;
 		},
+		on: (event, handler) => {
+			handlers[event] = handler;
+		},
+		getActiveTools: () => [...active],
+		setActiveTools: async names => {
+			active.length = 0;
+			active.push(...names);
+			sets.push(names);
+		},
 	};
 	subagentReuse(pi, f);
-	return { ...f, tool };
+	return { ...f, tool, handlers, active, sets };
 }
 
 const run = (tool, params) => tool.execute("call", params);
@@ -75,8 +117,142 @@ test("resets the session before the new task through the tool entry", async () =
 	const result = await run(m.tool, { name: "Probe", task: "new task" });
 	expect(result.isError).toBeUndefined();
 	expect(text(result)).toBe("done");
-	expect(m.calls).toEqual([["ensure", "Probe"], "newSession", ["attach", "/tmp/new.jsonl"], ["prompt", "new task"], "wait"]);
+	expect(m.calls).toEqual([["ensure", "Probe"], "newSession", ["attach", m.file], ["prompt", "new task"], "wait"]);
 	expect(m.statuses).toEqual(["running", "idle"]);
+});
+
+test("writes the marker before prompting", async () => {
+	const m = mount();
+	await run(m.tool, { name: "Probe", task: "x" });
+	expect(m.marker.atPrompt).toBe(true);
+});
+
+test("does not strip a marked main session", async () => {
+	const m = mount();
+	await run(m.tool, { name: "Probe", task: "x" });
+	const result = m.handlers.before_agent_start(
+		{ systemPrompt: ["§ Context\nold"] },
+		{ agent: { kind: "main" }, sessionManager: { getSessionFile: () => m.file } },
+	);
+	expect(result).toBeUndefined();
+});
+
+test("drops context and keeps later sections", async () => {
+	const m = mount();
+	await run(m.tool, { name: "Probe", task: "x" });
+	const result = m.handlers.before_agent_start(
+		{ systemPrompt: [`§ Role\nrole\n\n§ Context\nold task${COOP}${TAIL}`] },
+		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
+	);
+	expect(result.systemPrompt).toEqual([`§ Role\nrole${COOP}${TAIL}`]);
+});
+
+test("keeps a role that quotes the context heading", async () => {
+	const m = mount();
+	await run(m.tool, { name: "Probe", task: "x" });
+	const result = m.handlers.before_agent_start(
+		{ systemPrompt: [`§ Role\nrole quotes § Context\nhere\n\n§ Context\nold${COOP}${TAIL}`] },
+		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
+	);
+	expect(result.systemPrompt).toEqual([`§ Role\nrole quotes § Context\nhere${COOP}${TAIL}`]);
+});
+
+test("keeps a role that quotes a standalone context heading", async () => {
+	const m = mount();
+	await run(m.tool, { name: "Probe", task: "x" });
+	const result = m.handlers.before_agent_start(
+		{ systemPrompt: [`§ Role\nrole\n\n§ Context\nquoted\n\n§ Context\nold${COOP}${TAIL}`] },
+		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
+	);
+	expect(result.systemPrompt).toEqual([`§ Role\nrole\n\n§ Context\nquoted${COOP}${TAIL}`]);
+});
+
+test("removes context that contains a section-like line", async () => {
+	const m = mount();
+	await run(m.tool, { name: "Probe", task: "x" });
+	const result = m.handlers.before_agent_start(
+		{ systemPrompt: [`§ Role\nrole\n\n§ Context\nold\n§ Coop\nfake${COOP}${TAIL}`] },
+		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
+	);
+	expect(result.systemPrompt).toEqual([`§ Role\nrole${COOP}${TAIL}`]);
+});
+
+test("drops a separate context block with a fake boundary", async () => {
+	const m = mount();
+	await run(m.tool, { name: "Probe", task: "x" });
+	const result = m.handlers.before_agent_start(
+		{ systemPrompt: ["§ Role\nrole", "§ Context\nold\n§ Coop\nfake"] },
+		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
+	);
+	expect(result.systemPrompt).toEqual(["§ Role\nrole"]);
+});
+
+test("keeps real sections in a separate context block", async () => {
+	const m = mount();
+	await run(m.tool, { name: "Probe", task: "x" });
+	const result = m.handlers.before_agent_start(
+		{ systemPrompt: ["§ Role\nrole", `§ Context\nold${COOP}${TAIL}`] },
+		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
+	);
+	expect(result.systemPrompt).toEqual(["§ Role\nrole", `${COOP.slice(1)}${TAIL}`]);
+});
+
+test("drops a separate context block and keeps the rest", async () => {
+	const m = mount();
+	await run(m.tool, { name: "Probe", task: "x" });
+	const result = m.handlers.before_agent_start(
+		{ systemPrompt: ["§ Role\nrole", "§ Context\nold task"] },
+		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
+	);
+	expect(result.systemPrompt).toEqual(["§ Role\nrole"]);
+});
+
+test("keeps context before the first reuse", async () => {
+	const m = mount();
+	const result = m.handlers.before_agent_start(
+		{ systemPrompt: ["§ Role\nrole\n\n§ Context\nfirst task"] },
+		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
+	);
+	expect(result).toBeUndefined();
+});
+
+test("removes the previous session's marker", async () => {
+	const m = mount();
+	const oldFile = join(root, "old-session.jsonl");
+	const nextFile = join(root, "next-session.jsonl");
+	files.push(oldFile, nextFile);
+	writeFileSync(`${oldFile}.reuse`, "");
+	let current = oldFile;
+	m.session.sessionManager.getSessionFile = () => current;
+	m.session.newSession = async () => {
+		current = nextFile;
+		return true;
+	};
+	await run(m.tool, { name: "Probe", task: "x" });
+	expect(existsSync(`${oldFile}.reuse`)).toBe(false);
+	expect(existsSync(`${nextFile}.reuse`)).toBe(true);
+});
+
+test("removes reuse from the reused subagent's tools", async () => {
+	const m = mount();
+	m.session.setTools(["reuse", "read"]);
+	await run(m.tool, { name: "Probe", task: "x" });
+	expect(m.session.getEnabledToolNames()).toEqual(["read"]);
+	expect(m.calls).toContainEqual(["tools", ["read"]]);
+});
+
+test("is limited to the main agent", async () => {
+	const m = mount();
+	const result = await m.tool.execute("call", { name: "Probe", task: "x" }, undefined, undefined, { agent: { kind: "sub" } });
+	expect(result.isError).toBe(true);
+	expect(text(result)).toContain("main agent");
+});
+
+test("removes reuse from subagent tools on session start", async () => {
+	const m = mount();
+	await m.handlers.session_start({}, { agent: { kind: "sub" } });
+	expect(m.active).toEqual(["read"]);
+	expect(m.sets).toEqual([["read"]]);
 });
 
 test("matches the display name", async () => {
