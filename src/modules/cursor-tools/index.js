@@ -355,11 +355,17 @@ export async function executeGlob(toolCallId, params, signal, onUpdate, ctx) {
 	const textBlock = result?.content?.[0];
 	const hostOnly = Array.isArray(files) && files.length > 1 && files.every(file => !file.includes("://"));
 	if (result?.isError !== true && textBlock?.type === "text" && hostOnly && !ARCHIVE.test(native.path)) {
-		const names = new Set(files);
-		const bases = new Set(files.map(file => file.split("/").pop()));
-		const notes = textBlock.text
-			.split("\n")
-			.filter(line => line !== "" && !names.has(line) && !bases.has(line) && !line.startsWith("#") && !line.startsWith("*"));
+		const remaining = new Map();
+		for (const file of files) {
+			for (const name of [file, file.split("/").pop()]) remaining.set(name, (remaining.get(name) ?? 0) + 1);
+		}
+		const notes = [];
+		for (const line of textBlock.text.split("\n")) {
+			if (line === "" || line.startsWith("#") || line.startsWith("*")) continue;
+			const left = remaining.get(line) ?? 0;
+			if (left > 0) remaining.set(line, left - 1);
+			else notes.push(line);
+		}
 		const body = [...sortByMtime(files, ctx?.cwd ?? process.cwd()), ...notes].join("\n");
 		if (Buffer.byteLength(body) <= 50 * 1024) textBlock.text = body;
 	}
