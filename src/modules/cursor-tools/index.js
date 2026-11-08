@@ -355,7 +355,11 @@ export async function executeGlob(toolCallId, params, signal, onUpdate, ctx) {
 	const textBlock = result?.content?.[0];
 	const hostOnly = Array.isArray(files) && files.length > 1 && files.every(file => !file.includes("://"));
 	if (result?.isError !== true && textBlock?.type === "text" && hostOnly && !ARCHIVE.test(native.path)) {
-		const notes = textBlock.text.split("\n").filter(line => /^(?:Requested limit|Skipped missing paths)/.test(line));
+		const names = new Set(files);
+		const bases = new Set(files.map(file => file.split("/").pop()));
+		const notes = textBlock.text
+			.split("\n")
+			.filter(line => line !== "" && !names.has(line) && !bases.has(line) && !line.startsWith("#") && !line.startsWith("*"));
 		const body = [...sortByMtime(files, ctx?.cwd ?? process.cwd()), ...notes].join("\n");
 		if (Buffer.byteLength(body) <= 50 * 1024) textBlock.text = body;
 	}
