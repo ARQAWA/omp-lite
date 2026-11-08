@@ -1,13 +1,11 @@
-// One dim line after a long turn: the whole run, tool work included.
+// One dim line after every turn: the whole run, tool work included.
 // Ported from pi-response-duration 1.0.1 (MIT, copyright 2026 tech-msc); see LICENSE.
 const TYPE = "omp-lite.turn-duration";
 const DIM = "\x1b[2m";
 const RESET = "\x1b[0m";
-const THRESHOLD_MS = 30000;
 
 export function durationLabel(ms) {
-	if (ms <= THRESHOLD_MS) return undefined;
-	const seconds = Math.ceil(ms / 1000);
+	const seconds = Math.max(1, Math.ceil(ms / 1000));
 	const minutes = Math.floor(seconds / 60);
 	if (minutes < 60) return minutes > 0 ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
 	const hours = Math.floor(minutes / 60);
@@ -56,7 +54,6 @@ export default function turnDuration(pi) {
 		for (const message of event.messages ?? []) if (message?.role === "assistant") last = message;
 		if (!last || runFailed(last.stopReason)) return;
 		const label = durationLabel(performance.now() - start);
-		if (!label) return;
 		pi.sendMessage({ customType: TYPE, content: [{ type: "text", text: `⏱ ${label}` }], display: true });
 	});
 }

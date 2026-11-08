@@ -20,6 +20,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-This file covers the ported module: the runtime behaviour, the 30 second
-threshold and the rounding follow https://github.com/tech-msc/pi-response-duration
-(package pi-response-duration 1.0.1). The OMP implementation is rewritten.
+This file covers the ported module: the rounding and the label format follow
+https://github.com/tech-msc/pi-response-duration (package pi-response-duration
+1.0.1). The 30 second threshold was removed at the owner's request. The OMP
+implementation is rewritten.
