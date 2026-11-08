@@ -106,21 +106,11 @@ test("searches from the session directory and shows paths from it", async () => 
 	expect(result.content[0].text).toContain("src/a.ts:1:one");
 });
 
-test("skip drops whole files in content mode, offset drops rows", async () => {
+test("offset drops rows in content mode", async () => {
 	const engine = fakeEngine({ matches: [match("a.ts", 1, "a1"), match("a.ts", 5, "a5"), match("b.ts", 1, "b")] });
-	const skipped = await searchGrep(request({ skip: 1 }), ctx, { engine });
-	expect(skipped.content[0].text).toBe("b.ts:1:b");
 	const offset = await searchGrep(request({ offset: 1, head_limit: 1 }), ctx, { engine });
 	expect(offset.content[0].text).toContain("a.ts:5:a5");
 	expect(offset.content[0].text).toContain("of 3 matches shown. Use offset=2");
-});
-
-test("a single explicit file ignores the file-page skip", async () => {
-	const file = new URL("../../../../src/modules/cursor-tools/README.md", import.meta.url).pathname;
-	const engine = fakeEngine({ matches: [match(file, 1, "title")] });
-	const searchCtx = { cwd: process.cwd(), invokeTool: undefined };
-	const result = await searchGrep(request({ path: file, skip: 1 }), searchCtx, { engine });
-	expect(result.content[0].text).toContain("README.md:1:title");
 });
 
 test("a single explicit file still honours an explicit offset", async () => {
@@ -137,8 +127,6 @@ test("a file-mode page names the parameter that advances", async () => {
 	const engine = fakeEngine({ matches: [match("a.ts", 1, "x"), match("b.ts", 1, "x"), match("c.ts", 1, "x")] });
 	const byOffset = await searchGrep(request({ output_mode: "count", offset: 1, head_limit: 1 }), ctx, { engine });
 	expect(byOffset.content[0].text).toContain("Use offset=2");
-	const bySkip = await searchGrep(request({ output_mode: "count", skip: 1, head_limit: 1 }), ctx, { engine });
-	expect(bySkip.content[0].text).toContain("Use skip=2");
 });
 
 test("automatic multiline does not block the native branch", async () => {
@@ -147,7 +135,7 @@ test("automatic multiline does not block the native branch", async () => {
 	const result = await executeGrep("call", { pattern: "a\\nb", path: "src/a.ts:1-2" }, undefined, undefined, nativeCtx);
 	expect(result.isError).toBeUndefined();
 	expect(seen).toHaveLength(1);
-	expect(seen[0]).toEqual({ pattern: "a\\nb", path: "src/a.ts:1-2", case: true, gitignore: true, skip: undefined });
+	expect(seen[0]).toEqual({ pattern: "a\\nb", path: "src/a.ts:1-2", case: true, gitignore: true });
 	const explicit = await executeGrep("call", { pattern: "a\\nb", path: "src/a.ts:1-2", multiline: true }, undefined, undefined, nativeCtx);
 	expect(explicit.isError).toBe(true);
 	expect(explicit.content[0].text).toContain("multiline");
@@ -182,7 +170,7 @@ test("the native branch forwards only the fields the native tool takes", async (
 	const seen = [];
 	const nativeCtx = { cwd: "/work", invokeTool: async (params, options) => (seen.push(params), { content: [{ type: "text", text: "native" }] }) };
 	const result = await executeGrep("call", { pattern: "x", path: "omp://a.md", "-i": true }, undefined, undefined, nativeCtx);
-	expect(seen[0]).toEqual({ pattern: "x", path: "omp://a.md", case: false, gitignore: true, skip: undefined });
+	expect(seen[0]).toEqual({ pattern: "x", path: "omp://a.md", case: false, gitignore: true });
 	expect(result.content[0].text).toBe("native");
 });
 
