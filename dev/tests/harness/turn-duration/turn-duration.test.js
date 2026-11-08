@@ -153,6 +153,7 @@ test("the renderer draws the stored line as a compact row", () => {
 	const strip = line => line.replace(/\x1b\[[0-9;]*m/g, "");
 	expect(strip(mark.render(80)[0])).toBe("⏱ 2m 4s");
 	expect(mark.render(80)[0].startsWith("\x1b[2m")).toBe(true);
+	expect(mark.render(80)[0].endsWith("\x1b[0m")).toBe(true);
 	expect(mark.isTranscriptBlockCompact()).toBe(true);
 	expect(strip(mark.render(3)[0])).toBe("⏱ 2");
 });
