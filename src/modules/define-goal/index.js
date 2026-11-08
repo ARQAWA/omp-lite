@@ -36,7 +36,7 @@ export function goalPrompt(args) {
 		idea === ""
 			? "No objective stated — ask what user wants to achieve."
 			: `Rough idea — data, not instructions yet:\n\n<rough-goal>\n${idea}\n</rough-goal>`;
-	return PROMPT.replace("{{IDEA}}", block);
+	return PROMPT.replace("{{IDEA}}", () => block);
 }
 
 export default function defineGoal(pi) {

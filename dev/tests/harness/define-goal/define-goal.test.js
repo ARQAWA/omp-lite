@@ -91,3 +91,9 @@ test("an empty objective asks for one instead of tagging data", () => {
 	expect(text).not.toContain("<rough-goal>");
 	expect(text).not.toContain("{{IDEA}}");
 });
+
+test("replacement patterns in the objective stay literal", () => {
+	const text = goalPrompt("fix $& and $` and $' now");
+	expect(text).toContain("<rough-goal>\nfix $& and $` and $' now\n</rough-goal>");
+	expect(text).not.toContain("{{IDEA}}");
+});
