@@ -50,6 +50,37 @@ test("a user turn prints one line with the whole duration", () => {
 	});
 });
 
+test("a later submission and a slash command do not re-arm the clock", () => {
+	const { handlers, sent, ctx, done } = mount();
+	const now = performance.now;
+	performance.now = () => 0;
+	handlers.input({ text: "first" }, ctx);
+	performance.now = () => 5000;
+	handlers.input({ text: "/model" }, ctx);
+	performance.now = () => 10000;
+	handlers.input({ text: "second" }, ctx);
+	performance.now = () => 60000;
+	done();
+	performance.now = now;
+	expect(sent.length).toBe(1);
+	expect(sent[0][0].content[0].text).toBe("⏱ 1m 0s");
+});
+
+test("a continuing agent_end keeps the measurement for the final completion", () => {
+	const { handlers, sent, ctx } = mount();
+	const now = performance.now;
+	performance.now = () => 0;
+	handlers.input({ text: "go" }, ctx);
+	performance.now = () => 40000;
+	handlers.agent_end({ messages: [{ role: "assistant", stopReason: "stop" }], willContinue: true }, ctx);
+	expect(sent).toEqual([]);
+	performance.now = () => 60000;
+	handlers.agent_end({ messages: [{ role: "assistant", stopReason: "stop" }] }, ctx);
+	performance.now = now;
+	expect(sent.length).toBe(1);
+	expect(sent[0][0].content[0].text).toBe("⏱ 1m 0s");
+});
+
 test("a run started without a submitted message stays silent", () => {
 	const { sent, done } = mount();
 	performance.now = () => 0;

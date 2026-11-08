@@ -123,6 +123,33 @@ test("plan, vibe and goal modes block the command", async () => {
 	expect(warned[0][1]).toBe("warning");
 });
 
+test("each conflicting mode blocks the command on its own", async () => {
+	const states = [
+		{ plan: "active", goal: "inactive", vibe: "inactive" },
+		{ plan: "paused", goal: "inactive", vibe: "inactive" },
+		{ plan: "inactive", goal: "active", vibe: "inactive" },
+		{ plan: "inactive", goal: "inactive", vibe: "active" },
+	];
+	for (const state of states) {
+		const commands = {};
+		const sent = [];
+		const pi = {
+			on: () => {},
+			registerCommand: (name, definition) => (commands[name] = definition),
+			getActiveTools: () => ["read"],
+			setActiveTools: async () => {},
+			sendUserMessage: () => sent.push(1),
+		};
+		defineGoal(pi);
+		await commands["define-goal"].handler("x", {
+			sessionModes: { getState: () => state },
+			ui: { notify: () => {} },
+			isIdle: () => true,
+		});
+		expect(sent).toEqual([]);
+	}
+});
+
 test("a streaming session gets the interview queued", async () => {
 	const commands = {};
 	const sent = [];

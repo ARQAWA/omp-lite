@@ -34,10 +34,13 @@ export default function turnDuration(pi) {
 	let started;
 	pi.registerMessageRenderer(TYPE, message => new Mark(String(message.content?.[0]?.text ?? "")));
 	// Only a submitted message arms the clock, so runs started by other extensions stay silent.
-	pi.on("input", () => {
+	// A command without a turn and a message queued behind a running turn must not re-arm it.
+	pi.on("input", event => {
+		if (started !== undefined || String(event?.text ?? "").trimStart().startsWith("/")) return;
 		started = performance.now();
 	});
 	pi.on("agent_end", (event, ctx) => {
+		if (event.willContinue) return;
 		const start = started;
 		started = undefined;
 		if (start === undefined || ctx.mode !== "tui" || ctx.agent?.kind !== "main") return;
