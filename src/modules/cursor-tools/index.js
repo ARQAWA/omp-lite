@@ -250,7 +250,7 @@ export async function searchGrep(request, ctx, options = {}) {
 	for (const match of outcome.matches ?? []) counts.set(display(match.path), (counts.get(display(match.path)) ?? 0) + (match.matchCount ?? 1));
 	const entries = request.mode === "count" ? [...counts].map(([path, count]) => ({ path, count })) : files.map(path => ({ path }));
 	const render = request.mode === "count" ? entry => [`${entry.path}:${entry.count}`] : entry => [entry.path];
-	const start = singleFile ? 0 : (request.offset ?? request.skip ?? 0);
+	const start = request.offset ?? (singleFile ? 0 : (request.skip ?? 0));
 	const page = paginate(entries, render, { offset: start, limit: request.headLimit ?? FILE_PAGE });
 	const footer = page.next === undefined ? tail : `\n[${fileContinuation(page.next)}]${tail}`;
 	return text(`${page.text || "No matches found"}${footer}`);
