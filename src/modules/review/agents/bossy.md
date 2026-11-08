@@ -4,7 +4,7 @@ description: Read-only blind reviewer at maximum effort. Used by the highreview 
 model:
   - deepseek/deepseek-flash
   - opencode-go/deepseek-v4.1-flash
-thinking-level: max
+thinking-level: high
 tools:
   - read
   - grep
