@@ -95,6 +95,10 @@
 			"to": "SYSTEM.md"
 		},
 		{
+			"from": "src/modules/task-delegation/index.js",
+			"to": "extensions/task-delegation.js"
+		},
+		{
 			"from": "src/modules/tool-summary/index.js",
 			"to": "extensions/tool-summary.js"
 		},
