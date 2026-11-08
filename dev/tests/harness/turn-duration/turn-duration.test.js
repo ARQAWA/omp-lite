@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
-import turnDuration, { durationLabel } from "../../../../src/modules/turn-duration/index.js";
+import turnDuration, { durationLabel, runFailed } from "../../../../src/modules/turn-duration/index.js";
 
-function mount(mode = "tui") {
+function mount(mode = "tui", stopReason = "stop") {
 	const handlers = {};
 	const sent = [];
 	const renderers = {};
@@ -11,25 +11,36 @@ function mount(mode = "tui") {
 		sendMessage: (message, options) => sent.push([message, options]),
 	};
 	turnDuration(pi);
-	return { handlers, sent, renderers, ctx: { mode, hasUI: true, agent: { kind: "main" } } };
+	return {
+		handlers,
+		sent,
+		renderers,
+		ctx: { mode, hasUI: true, agent: { kind: "main" } },
+		done: () => handlers.agent_end({ messages: [{ role: "assistant", stopReason }] }, { mode, agent: { kind: "main" } }),
+	};
 }
 
-test("short and non-completed measurements print nothing", () => {
+test("labels stay readable across seconds, minutes and hours", () => {
 	expect(durationLabel(30000)).toBeUndefined();
-	expect(durationLabel(5000)).toBeUndefined();
 	expect(durationLabel(31000)).toBe("31s");
 	expect(durationLabel(124000)).toBe("2m 4s");
-	expect(durationLabel(3600000)).toBe("1h");
-	expect(durationLabel(5400000)).toBe("1h 30m");
+	expect(durationLabel(3601000)).toBe("1h 1s");
+	expect(durationLabel(5400000)).toBe("1h 30m 0s");
 });
 
-test("a long turn prints one line with the whole duration", () => {
-	const { handlers, sent, ctx } = mount();
+test("failed and aborted runs are not labelled", () => {
+	expect(runFailed("error")).toBe(true);
+	expect(runFailed("aborted")).toBe(true);
+	expect(runFailed("stop")).toBe(false);
+});
+
+test("a user turn prints one line with the whole duration", () => {
+	const { handlers, sent, ctx, done } = mount();
 	const now = performance.now;
 	performance.now = () => 1000;
-	handlers.agent_start({}, ctx);
+	handlers.input({ text: "go" }, ctx);
 	performance.now = () => 95000;
-	handlers.agent_end({ messages: [] }, ctx);
+	done();
 	performance.now = now;
 	expect(sent.length).toBe(1);
 	expect(sent[0][0]).toEqual({
@@ -37,22 +48,42 @@ test("a long turn prints one line with the whole duration", () => {
 		content: [{ type: "text", text: "⏱ 1m 34s" }],
 		display: true,
 	});
-	expect(sent[0][1]).toBeUndefined();
 });
 
-test("a quick turn and a non-TUI session stay silent", () => {
+test("a run started without a submitted message stays silent", () => {
+	const { sent, done } = mount();
+	performance.now = () => 0;
+	done();
+	expect(sent).toEqual([]);
+});
+
+test("quick, aborted, print-mode and error turns stay silent", () => {
 	const quick = mount();
 	performance.now = () => 0;
-	quick.handlers.agent_start({}, quick.ctx);
+	quick.handlers.input({}, quick.ctx);
 	performance.now = () => 2000;
-	quick.handlers.agent_end({}, quick.ctx);
+	quick.done();
 	expect(quick.sent).toEqual([]);
+
+	const aborted = mount("tui", "aborted");
+	performance.now = () => 0;
+	aborted.handlers.input({}, aborted.ctx);
+	performance.now = () => 90000;
+	aborted.done();
+	expect(aborted.sent).toEqual([]);
+
+	const error = mount("tui", "error");
+	performance.now = () => 0;
+	error.handlers.input({}, error.ctx);
+	performance.now = () => 90000;
+	error.done();
+	expect(error.sent).toEqual([]);
 
 	const print = mount("print");
 	performance.now = () => 0;
-	print.handlers.agent_start({}, print.ctx);
+	print.handlers.input({}, print.ctx);
 	performance.now = () => 90000;
-	print.handlers.agent_end({}, print.ctx);
+	print.done();
 	expect(print.sent).toEqual([]);
 });
 

@@ -18,7 +18,9 @@ function mount() {
 		sendUserMessage: (text, options) => sent.push([text, options]),
 	};
 	defineGoal(pi);
-	const ctx = { ui: { addAutocompleteProvider: factory => factories.push(factory) } };
+	const ctx = {
+		ui: { addAutocompleteProvider: factory => factories.push(factory), notify: () => {} },
+	};
 	handlers.session_start({}, ctx);
 	return { handlers, ctx, factories, commands, sent, active };
 }
@@ -96,4 +98,47 @@ test("replacement patterns in the objective stay literal", () => {
 	const text = goalPrompt("fix $& and $` and $' now");
 	expect(text).toContain("<rough-goal>\nfix $& and $` and $' now\n</rough-goal>");
 	expect(text).not.toContain("{{IDEA}}");
+});
+
+test("plan, vibe and goal modes block the command", async () => {
+	const commands = {};
+	const sent = [];
+	const warned = [];
+	const pi = {
+		on: () => {},
+		registerCommand: (name, definition) => (commands[name] = definition),
+		getActiveTools: () => ["read"],
+		setActiveTools: async () => {},
+		sendUserMessage: () => sent.push(1),
+	};
+	defineGoal(pi);
+	const ctx = {
+		sessionModes: { getState: () => ({ plan: "active", goal: "inactive", vibe: "inactive" }) },
+		ui: { notify: (text, level) => warned.push([text, level]) },
+		isIdle: () => true,
+	};
+	await commands["define-goal"].handler("x", ctx);
+	expect(sent).toEqual([]);
+	expect(warned.length).toBe(1);
+	expect(warned[0][1]).toBe("warning");
+});
+
+test("a streaming session gets the interview queued", async () => {
+	const commands = {};
+	const sent = [];
+	const pi = {
+		on: () => {},
+		registerCommand: (name, definition) => (commands[name] = definition),
+		getActiveTools: () => ["goal"],
+		setActiveTools: async () => {},
+		sendUserMessage: (text, options) => sent.push([text, options]),
+	};
+	defineGoal(pi);
+	await commands["define-goal"].handler("x", {
+		sessionModes: { getState: () => ({ plan: "inactive", goal: "inactive", vibe: "inactive" }) },
+		ui: { notify: () => {} },
+		isIdle: () => false,
+	});
+	expect(sent.length).toBe(1);
+	expect(sent[0][1]).toEqual({ attribution: "agent", deliverAs: "followUp" });
 });

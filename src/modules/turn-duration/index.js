@@ -8,7 +8,13 @@ export function durationLabel(ms) {
 	const minutes = Math.floor(seconds / 60);
 	if (minutes < 60) return minutes > 0 ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
 	const hours = Math.floor(minutes / 60);
-	return minutes % 60 > 0 ? `${hours}h ${minutes % 60}m` : `${hours}h`;
+	const left = minutes % 60;
+	const rest = seconds % 60;
+	return left > 0 ? `${hours}h ${left}m ${rest}s` : `${hours}h ${rest}s`;
+}
+
+export function runFailed(stopReason) {
+	return stopReason === "aborted" || stopReason === "error";
 }
 
 class Mark {
@@ -27,13 +33,17 @@ class Mark {
 export default function turnDuration(pi) {
 	let started;
 	pi.registerMessageRenderer(TYPE, message => new Mark(String(message.content?.[0]?.text ?? "")));
-	pi.on("agent_start", () => {
+	// Only a submitted message arms the clock, so runs started by other extensions stay silent.
+	pi.on("input", () => {
 		started = performance.now();
 	});
-	pi.on("agent_end", (_event, ctx) => {
+	pi.on("agent_end", (event, ctx) => {
 		const start = started;
 		started = undefined;
 		if (start === undefined || ctx.mode !== "tui" || ctx.agent?.kind !== "main") return;
+		let last;
+		for (const message of event.messages ?? []) if (message?.role === "assistant") last = message;
+		if (!last || runFailed(last.stopReason)) return;
 		const label = durationLabel(performance.now() - start);
 		if (!label) return;
 		pi.sendMessage({ customType: TYPE, content: [{ type: "text", text: `⏱ ${label}` }], display: true });

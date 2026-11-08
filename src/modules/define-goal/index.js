@@ -42,10 +42,17 @@ export function goalPrompt(args) {
 export default function defineGoal(pi) {
 	pi.registerCommand("define-goal", {
 		description: "Define the goal in chat, then start goal mode",
-		handler: async (args, _ctx) => {
+		handler: async (args, ctx) => {
+			const modes = ctx.sessionModes?.getState?.();
+			if (modes && (modes.plan !== "inactive" || modes.goal !== "inactive" || modes.vibe === "active")) {
+				ctx.ui.notify("Define Goal needs plan, vibe and goal modes off.", "warning");
+				return;
+			}
 			const active = pi.getActiveTools();
 			if (!active.includes("goal")) await pi.setActiveTools([...active, "goal"]);
-			pi.sendUserMessage(goalPrompt(args), { attribution: "agent" });
+			const text = goalPrompt(args);
+			if (ctx.isIdle?.() === false) pi.sendUserMessage(text, { attribution: "agent", deliverAs: "followUp" });
+			else pi.sendUserMessage(text, { attribution: "agent" });
 		},
 	});
 	const wired = new WeakSet();
