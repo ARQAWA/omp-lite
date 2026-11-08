@@ -223,3 +223,23 @@ test("only a footer line is renamed, matched text is untouched", async () => {
 test("skipMatches reports an empty page when the offset passes the last match", () => {
 	expect(skipMatches("*1|a", 2)).toBe("No matches found");
 });
+
+test("a double-dot selector takes the native route and honours offset", async () => {
+	const seen = [];
+	const ctx = { cwd: "/work", invokeTool: async params => (seen.push(params), { content: [{ type: "text", text: "*10|a\n*20|b" }] }) };
+	const result = await executeGrep("call", { pattern: "x", path: "a.ts:10..20", offset: 1 }, undefined, undefined, ctx);
+	expect(seen).toHaveLength(1);
+	expect(result.content[0].text).toBe("*20|b");
+});
+
+test("an archive member counts as one file for offset", async () => {
+	const ctx = { cwd: "/work", invokeTool: async () => ({ content: [{ type: "text", text: "*1|a\n*2|b" }] }) };
+	const result = await executeGrep("call", { pattern: "x", path: "bundle.zip:src/a.ts", offset: 1 }, undefined, undefined, ctx);
+	expect(result.content[0].text).toBe("*2|b");
+});
+
+test("a native error keeps its diagnosis under offset", async () => {
+	const ctx = { cwd: "/work", invokeTool: async () => ({ isError: true, content: [{ type: "text", text: "Path not found: a.ts:1-2" }] }) };
+	const result = await executeGrep("call", { pattern: "x", path: "a.ts:1-2", offset: 1 }, undefined, undefined, ctx);
+	expect(result.content[0].text).toBe("Path not found: a.ts:1-2");
+});

@@ -60,13 +60,13 @@ test("registers both tools under omp's names and keeps pty calls exclusive", () 
 	const pi = { zod: chain, registerTool: tool => tools.push(tool), on: () => {} };
 	install(pi);
 	expect(tools.map(tool => tool.name)).toEqual(["grep", "glob", "read", "bash"]);
-	const approvals = tools.map(tool => (typeof tool.approval === "function" ? [tool.approval({ path: "a.ts" }), tool.approval({ path: "ssh://host/x" })] : tool.approval));
-	expect(approvals).toEqual([
-		["read", "exec"],
-		["read", "exec"],
-		["read", "exec"],
-		"exec",
-	]);
+	const grep = tools.find(tool => tool.name === "grep");
+	const glob = tools.find(tool => tool.name === "glob");
+	const read = tools.find(tool => tool.name === "read");
+	expect([grep.approval({ path: "a.ts" }), grep.approval({ path: "ssh://h/x" })]).toEqual(["read", "exec"]);
+	expect([glob.approval({ glob_pattern: "*.ts" }), glob.approval({ glob_pattern: "ssh://h/*" })]).toEqual(["read", "exec"]);
+	expect([read.approval({ path: "a.ts" }), read.approval({ path: "ssh://h/x" })]).toEqual(["read", "exec"]);
+	expect(tools.find(tool => tool.name === "bash").approval).toBe("exec");
 	for (const tool of tools) {
 		expect(tool.loadMode).toBe("essential");
 		expect(tool.description.length).toBeGreaterThan(100);

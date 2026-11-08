@@ -98,7 +98,7 @@ const COLLECTED = 100000;
 const TIMEOUT_MS = 20000;
 
 const ARCHIVE = /\.(?:zip|tar|tgz|gz|jar|war|ear|apk|asar|7z|rar|iso|cab|deb|rpm|lzh|arj):/i;
-const SELECTOR = /:(?:\d+-\d*|-\d+|\d+\+\d+|raw|conflicts|img|\d+(?:-\d+)?)(?:,-?\d+(?:-\d+)?)*$/;
+const SELECTOR = /:(?:\d+\.\.\d*|\d+-\d*|-\d+|\d+\+\d+|raw|conflicts|img|\d+(?:-\d+)?)(?:,-?\d+(?:(?:-|\.\.)\d*)?)*$/;
 const GLOB = /[*?[\]{}]/;
 
 /** Anything the native tool does better than we can is handed back to it. */
@@ -278,8 +278,10 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 			{ signal, onUpdate },
 		);
 		const textBlock = result?.content?.[0];
-		if (textBlock?.type === "text") {
-			const singleFile = hasSelector(request.path ?? "") && !String(request.path).includes(";");
+		if (textBlock?.type === "text" && result?.isError !== true) {
+			const path = String(request.path ?? "");
+			const oneRemote = Array.isArray(result?.details?.files) && result.details.files.length === 1 && path.includes("://");
+			const singleFile = !path.includes(";") && (hasSelector(path) || ARCHIVE.test(path) || oneRemote);
 			if (singleFile && request.offset > 0) textBlock.text = skipMatches(textBlock.text, request.offset);
 			textBlock.text = textBlock.text.replace(/^\[?Use skip=(\d+) for the next page\.?\]?$/gm, match => match.replace("skip=", "offset="));
 		}
@@ -342,7 +344,7 @@ export async function executeGlob(toolCallId, params, signal, onUpdate, ctx) {
 /** Rejects a path that already carries a selector; the native tool wants one form only. */
 function hasSelector(path) {
 	if (/:(?:raw|img|conflicts)(?::|$)/.test(path)) return true;
-	const match = /:(L?-?\d+(?:(?:-|\.\.)L?\d*)?(?:[+,]\d*)*(?::raw)?)$/.exec(path);
+	const match = /:(L?-?\d+(?:(?:-|\.\.)L?\d*)?(?:[+,]\d*)*(?:,(?:L?-?\d+)(?:(?:-|\.\.)L?\d*)?(?:[+,]\d*)*)*(?::raw)?)$/.exec(path);
 	if (!match) return false;
 	const before = path.slice(0, match.index);
 	if (before.endsWith("//")) return false;
@@ -468,7 +470,7 @@ export function install(pi, options = {}) {
 		label: "glob",
 		loadMode: "essential",
 		concurrency: "shared",
-		approval: args => (String(args?.path ?? args?.target_directory ?? "").includes("ssh://") ? "exec" : "read"),
+		approval: args => (`${args?.glob_pattern ?? ""} ${args?.target_directory ?? ""}`.includes("ssh://") ? "exec" : "read"),
 		strict: false,
 		description: GLOB_DESCRIPTION,
 		parameters: globSchema(z),
