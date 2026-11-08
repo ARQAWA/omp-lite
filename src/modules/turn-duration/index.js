@@ -33,16 +33,17 @@ class Mark {
 export default function turnDuration(pi) {
 	let started;
 	pi.registerMessageRenderer(TYPE, message => new Mark(String(message.content?.[0]?.text ?? "")));
-	// The unit is the run, not the keystroke: a command, a shell run or an empty line starts no run,
-	// a message queued behind a live run does not restart it, a continuation keeps the first start.
-	pi.on("agent_start", () => {
+	// The clock starts with the submission, the way the owner asked, and the unit is the turn:
+	// a queued message does not restart it, a continuation keeps it, any end of the main agent
+	// clears it, so a cancelled preparation cannot inflate the next turn.
+	pi.on("input", () => {
 		if (started === undefined) started = performance.now();
 	});
 	pi.on("agent_end", (event, ctx) => {
-		if (event.willContinue || ctx.mode !== "tui" || ctx.agent?.kind !== "main") return;
+		if (ctx.agent?.kind !== "main") return;
 		const start = started;
-		started = undefined;
-		if (start === undefined) return;
+		if (!event.willContinue) started = undefined;
+		if (start === undefined || event.willContinue || ctx.mode !== "tui") return;
 		let last;
 		for (const message of event.messages ?? []) if (message?.role === "assistant") last = message;
 		if (!last || runFailed(last.stopReason)) return;

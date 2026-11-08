@@ -51,7 +51,7 @@ test("failed and aborted runs are not labelled", () => {
 test("a run prints one line with the whole duration", () => {
 	const turn = mount();
 	at([1000, 95000], () => {
-		turn.start();
+		turn.handlers.input({ text: "go" }, turn.ctx);
 		turn.end();
 	});
 	expect(turn.sent.length).toBe(1);
@@ -65,8 +65,8 @@ test("a run prints one line with the whole duration", () => {
 test("a second start inside one turn does not restart the clock", () => {
 	const turn = mount();
 	at([0, 60000], () => {
-		turn.start();
-		turn.start();
+		turn.handlers.input({ text: "go" }, turn.ctx);
+		turn.handlers.input({ text: "second" }, turn.ctx);
 		turn.end();
 	});
 	expect(turn.sent[0].content[0].text).toBe("⏱ 1m 0s");
@@ -75,7 +75,7 @@ test("a second start inside one turn does not restart the clock", () => {
 test("a continuation keeps the measurement for the final completion", () => {
 	const turn = mount();
 	at([0, 40000], () => {
-		turn.start();
+		turn.handlers.input({ text: "go" }, turn.ctx);
 		turn.end("stop", true);
 	});
 	expect(turn.sent).toEqual([]);
@@ -93,7 +93,7 @@ test("quick, aborted, error and print-mode runs stay silent", () => {
 	]) {
 		const turn = mount(mode);
 		at([0, span], () => {
-			turn.start();
+			turn.handlers.input({ text: "go" }, turn.ctx);
 			turn.end(reason);
 		});
 		expect(turn.sent).toEqual([]);
@@ -103,17 +103,32 @@ test("quick, aborted, error and print-mode runs stay silent", () => {
 test("consecutive runs each measure from their own start", () => {
 	const turn = mount();
 	at([0, 40000], () => {
-		turn.start();
+		turn.handlers.input({ text: "go" }, turn.ctx);
 		turn.end();
 	});
 	at([100000, 160000], () => {
-		turn.start();
+		turn.handlers.input({ text: "go" }, turn.ctx);
 		turn.end();
 	});
 	expect(turn.sent.map(message => message.content[0].text)).toEqual(["⏱ 40s", "⏱ 1m 0s"]);
 });
 
-test("a run without a start event prints nothing", () => {
+test("a cancelled preparation does not inflate the next turn", () => {
+	const turn = mount();
+	at([0, 30000], () => {
+		turn.handlers.input({ text: "go" }, turn.ctx);
+		turn.end("aborted");
+	});
+	expect(turn.sent).toEqual([]);
+	at([50000, 95000], () => {
+		turn.handlers.input({ text: "again" }, turn.ctx);
+		turn.end();
+	});
+	expect(turn.sent.length).toBe(1);
+	expect(turn.sent[0].content[0].text).toBe("⏱ 45s");
+});
+
+test("a run without a submission prints nothing", () => {
 	const turn = mount();
 	at([0, 90000], () => turn.end());
 	expect(turn.sent).toEqual([]);
@@ -123,8 +138,7 @@ test("a subagent run neither prints nor resets the main clock", () => {
 	const turn = mount();
 	const sub = { mode: "tui", hasUI: true, agent: { kind: "sub" } };
 	at([0, 20000], () => {
-		turn.start();
-		turn.handlers.agent_start({}, sub);
+		turn.handlers.input({ text: "go" }, turn.ctx);
 		turn.handlers.agent_end({ messages: [{ role: "assistant", stopReason: "stop" }] }, sub);
 	});
 	expect(turn.sent).toEqual([]);
