@@ -103,6 +103,16 @@ test("a single explicit file ignores the file-page skip", async () => {
 	expect(result.content[0].text).toContain("README.md:1:title");
 });
 
+test("a single explicit file still honours an explicit offset", async () => {
+	const file = new URL("../../../../src/modules/cursor-tools/README.md", import.meta.url).pathname;
+	const engine = fakeEngine({ matches: [match(file, 1, "title"), match(file, 3, "body")] });
+	const searchCtx = { cwd: process.cwd(), invokeTool: undefined };
+	const first = await searchGrep(request({ path: file, output_mode: "count" }), searchCtx, { engine });
+	expect(first.content[0].text).toContain("README.md:2");
+	const second = await searchGrep(request({ path: file, output_mode: "count", offset: 1 }), searchCtx, { engine });
+	expect(second.content[0].text).toBe("No matches found");
+});
+
 test("a file-mode page names the parameter that advances", async () => {
 	const engine = fakeEngine({ matches: [match("a.ts", 1, "x"), match("b.ts", 1, "x"), match("c.ts", 1, "x")] });
 	const byOffset = await searchGrep(request({ output_mode: "count", offset: 1, head_limit: 1 }), ctx, { engine });
