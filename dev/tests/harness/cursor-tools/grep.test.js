@@ -233,9 +233,11 @@ test("a double-dot selector takes the native route and honours offset", async ()
 });
 
 test("an archive member counts as one file for offset", async () => {
-	const ctx = { cwd: "/work", invokeTool: async () => ({ content: [{ type: "text", text: "*1|a\n*2|b" }] }) };
-	const result = await executeGrep("call", { pattern: "x", path: "bundle.zip:src/a.ts", offset: 1 }, undefined, undefined, ctx);
-	expect(result.content[0].text).toBe("*2|b");
+	for (const path of ["bundle.zip:src/a.ts", "pkg.whl:pkg/a.py"]) {
+		const ctx = { cwd: "/work", invokeTool: async () => ({ content: [{ type: "text", text: "*1|a\n*2|b" }] }) };
+		const result = await executeGrep("call", { pattern: "x", path, offset: 1 }, undefined, undefined, ctx);
+		expect(result.content[0].text).toBe("*2|b");
+	}
 });
 
 test("a native error keeps its diagnosis under offset", async () => {

@@ -97,7 +97,7 @@ const FILE_PAGE = 20;
 const COLLECTED = 100000;
 const TIMEOUT_MS = 20000;
 
-const ARCHIVE = /\.(?:zip|tar|tgz|gz|jar|war|ear|apk|asar|7z|rar|iso|cab|deb|rpm|lzh|arj):/i;
+const ARCHIVE = /\.(?:zip|tar|tgz|tbz2|txz|gz|jar|war|ear|apk|whl|asar|7z|rar|iso|cab|deb|rpm|cpio|ar|lzh|arj):/i;
 const SELECTOR = /:(?:\d+\.\.\d*|\d+-\d*|-\d+|\d+\+\d+|raw|conflicts|img|\d+(?:-\d+)?)(?:,-?\d+(?:(?:-|\.\.)\d*)?)*$/;
 const GLOB = /[*?[\]{}]/;
 
@@ -280,8 +280,7 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 		const textBlock = result?.content?.[0];
 		if (textBlock?.type === "text" && result?.isError !== true) {
 			const path = String(request.path ?? "");
-			const oneRemote = Array.isArray(result?.details?.files) && result.details.files.length === 1 && path.includes("://");
-			const singleFile = !path.includes(";") && (hasSelector(path) || ARCHIVE.test(path) || oneRemote);
+			const singleFile = !path.includes(";") && (hasSelector(path) || ARCHIVE.test(path));
 			if (singleFile && request.offset > 0) textBlock.text = skipMatches(textBlock.text, request.offset);
 			textBlock.text = textBlock.text.replace(/^\[?Use skip=(\d+) for the next page\.?\]?$/gm, match => match.replace("skip=", "offset="));
 		}
