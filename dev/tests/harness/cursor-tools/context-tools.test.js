@@ -126,9 +126,15 @@ test("a filename equal to a notice prefix stays a single path", async () => {
 	try {
 		const path = join(dir, "Requested limit 500.ts");
 		writeFileSync(path, "a");
-		const ctx = { cwd: dir, invokeTool: async () => ({ details: { files: [path, join(dir, "b.ts")] }, content: [{ type: "text", text: "tree" }] }) };
+		const notice = "Requested limit 500 clamped to the max of 200";
+		const ctx = {
+			cwd: dir,
+			invokeTool: async () => ({ details: { files: [path, join(dir, "b.ts")] }, content: [{ type: "text", text: `${path}\n${notice}` }] }),
+		};
 		const result = await executeGlob("call", { glob_pattern: "*.ts", target_directory: dir }, undefined, undefined, ctx);
-		expect(result.content[0].text.split("\n").filter(line => line === path)).toHaveLength(1);
+		const lines = result.content[0].text.split("\n");
+		expect(lines.filter(line => line === path)).toHaveLength(1);
+		expect(lines.filter(line => line === notice)).toHaveLength(1);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
