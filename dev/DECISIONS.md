@@ -159,3 +159,27 @@
 **Границы:** только TUI. Старые карточки истории скрыты, отдельной строки для них нет. Счётчики считают вызовы, не уникальные файлы.
 
 **Носители правила:** модуль, README, тест `dev/tests/harness/tool-summary/`, установленные файлы `~/.omp/agent/extensions/tool-summary.js` и `tool-summary.json`. Механизм описан в `omp://extensions.md`.
+
+## D-016 — статуслайн на родной настройке OMP
+
+**Решение:** бар задаётся блоком `statusLine` в `~/.omp/agent/config.yml`. Кода нет. Модуль [status-line](../src/modules/status-line/README.md).
+
+**Основание:** поручение владельца от 2026-11-08: перенести статусбар из MyP минимальной кровью. Старый бар — 2022 строки в `extensions/RQW-statusbar`, включая патч рантайма Pi.
+
+**Причина:** у OMP есть родной статуслайн с 28 сегментами. `omp gallery --surface=segment --plain` показывает готовые `git`, `context_pct`, `subagents`, `token_rate`, `cache_hit`. Патч рантайма не нужен.
+
+**Границы:** сегмент `usage` и `cost` убраны по слову владельца. Цветные усилия невозможны: `omp://hooks.md` чистит ANSI из `ctx.ui.setStatus`. Своего сегмента расширение не добавить, в API только `registerCommand`, `registerTool`, `registerComposerShape`.
+
+**Носители правила:** модуль, README, блок `statusLine` в `config.yml`.
+
+## D-017 — /define-goal вместо /guided-goal
+
+**Решение:** файл-команда `define-goal.md` с текстом интервью и расширение, скрывающее встроенную `/guided-goal` из автокомплита. Модуль [define-goal](../src/modules/define-goal/README.md).
+
+**Основание:** поручение владельца от 2026-11-08: переименовать Guided Goal в Define Goal, старую спрятать расширением.
+
+**Причина:** имя встроенной команды вшито в бинарь, настройки спрятать её нет. `omp://slash-command-internals.md`: имена встроенных команд зарезервированы, реестр проверяется раньше файловых команд. Автокомплит-фильтр — костыль, способа в документации нет.
+
+**Границы:** встроенная команда остаётся рабочей, если набрать её руками. Автокомплит отдаёт имя без слэша (`guided-goal`), фильтр сравнивает имя без слэша. `registerComposerShape`, `registerTool` и `registerCommand` встроенную не перекрывают.
+
+**Носители правила:** модуль, README, тест `dev/tests/harness/define-goal/`, установленные `~/.omp/agent/commands/define-goal.md` и `~/.omp/agent/extensions/define-goal.js`.
