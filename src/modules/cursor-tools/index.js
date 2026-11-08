@@ -4,7 +4,6 @@
 // Cursor's block_until_ms: 0. The edit tool is switched to the apply-patch
 // contract, which is what Cursor speaks.
 
-import { statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import texts from "./descriptions.json";
 
@@ -129,7 +128,6 @@ export function parseGrep(params) {
 		["-C", input["-C"], 0],
 		["head_limit", input.head_limit, 1],
 		["offset", input.offset, 0],
-		["skip", input.skip, 0],
 	]) {
 		if (mode !== "content" && (name === "-A" || name === "-B" || name === "-C")) {
 			numbers[name] = undefined;
@@ -147,7 +145,7 @@ export function parseGrep(params) {
 			glob: input.glob,
 			type: input.type,
 			mode,
-			caseSensitive: input["-i"] === true ? false : input.case !== false,
+			caseSensitive: input["-i"] !== true,
 			gitignore: input.gitignore !== false,
 			multiline: input.multiline === true || automatic,
 			explicitMultiline: input.multiline === true,
@@ -155,7 +153,6 @@ export function parseGrep(params) {
 			contextAfter: mode === "content" ? (numbers["-A"] ?? numbers["-C"]) : undefined,
 			headLimit: numbers.head_limit,
 			offset: numbers.offset,
-			skip: numbers.skip,
 		},
 	};
 }
@@ -217,14 +214,6 @@ function notes(outcome) {
 	return parts.length === 0 ? "" : `\n[${parts.join("; ")}]`;
 }
 
-function isFile(path) {
-	try {
-		return statSync(path).isFile();
-	} catch {
-		return false;
-	}
-}
-
 /** Runs one search and renders it. `engine` is injected so tests never touch the real native module. */
 export async function searchGrep(request, ctx, options = {}) {
 	const natives = await (options.engine ?? defaultEngine());
@@ -235,16 +224,11 @@ export async function searchGrep(request, ctx, options = {}) {
 		const shown = relative(cwd, absolute);
 		return shown.startsWith("..") ? absolute : shown;
 	};
-	const singleFile = isFile(base);
 	const outcome = (await natives.grep(engineRequest(request, base, options.signal))) ?? {};
 	const tail = notes(outcome);
-	const fileContinuation = next =>
-		request.offset !== undefined ? `Use offset=${next} for the next page.` : `Use skip=${next} for the next page.`;
+	const fileContinuation = next => `Use offset=${next} for the next page.`;
 	if (request.mode === "content") {
-		const all = contentEntries(outcome.matches ?? [], display);
-		const skipFiles = singleFile ? 0 : (request.skip ?? 0);
-		const dropped = new Set([...new Set(all.map(entry => entry.file))].slice(0, skipFiles));
-		const entries = dropped.size === 0 ? all : all.filter(entry => !dropped.has(entry.file));
+		const entries = contentEntries(outcome.matches ?? [], display);
 		const page = paginate(entries, contentLines, { offset: request.offset ?? 0, limit: request.headLimit });
 		const shown = page.next === undefined ? entries.length : `${Math.min(page.next, entries.length)}+`;
 		const footer = page.next === undefined ? tail : `\n[${shown} of ${entries.length} matches shown. Use offset=${page.next} for the next page.]${tail}`;
@@ -255,7 +239,7 @@ export async function searchGrep(request, ctx, options = {}) {
 	for (const match of outcome.matches ?? []) counts.set(display(match.path), (counts.get(display(match.path)) ?? 0) + (match.matchCount ?? 1));
 	const entries = request.mode === "count" ? [...counts].map(([path, count]) => ({ path, count })) : files.map(path => ({ path }));
 	const render = request.mode === "count" ? entry => [`${entry.path}:${entry.count}`] : entry => [entry.path];
-	const start = request.offset ?? (singleFile ? 0 : (request.skip ?? 0));
+	const start = request.offset ?? 0;
 	const page = paginate(entries, render, { offset: start, limit: request.headLimit ?? FILE_PAGE });
 	const footer = page.next === undefined ? tail : `\n[${fileContinuation(page.next)}]${tail}`;
 	return text(`${page.text || "No matches found"}${footer}`);
@@ -271,7 +255,7 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 		if (refused !== undefined) return text(refused, true);
 		if (typeof ctx?.invokeTool !== "function") return text("native grep is unavailable in this runtime", true);
 		return ctx.invokeTool(
-			{ pattern: request.pattern, path: request.path, case: request.caseSensitive, gitignore: request.gitignore, skip: request.skip },
+			{ pattern: request.pattern, path: request.path, case: request.caseSensitive, gitignore: request.gitignore },
 			{ signal, onUpdate },
 		);
 	}
@@ -305,11 +289,77 @@ export async function executeBash(toolCallId, params, signal, onUpdate, ctx) {
 	return ctx.invokeTool(mapBashParams(params), { signal, onUpdate });
 }
 
+// -------------------------------------------------------------------- glob
+
+/** Cursor sends a pattern plus an optional directory; the rest of the arguments are native. */
+export function globRequest(params) {
+	const input = params ?? {};
+	const pattern = input.glob_pattern;
+	if (typeof pattern !== "string" || pattern === "") return { error: "glob_pattern must not be empty" };
+	const directory = input.target_directory;
+	const path = typeof directory === "string" && directory !== "" ? `${directory.replace(/\/+$/, "")}/${pattern}` : pattern;
+	return { params: { path, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
+}
+
+export async function executeGlob(toolCallId, params, signal, onUpdate, ctx) {
+	const mapped = globRequest(params);
+	if (mapped.error) return text(mapped.error, true);
+	if (typeof ctx?.invokeTool !== "function") return text("native glob is unavailable in this runtime", true);
+	const native = mapped.params;
+	for (const key of Object.keys(native)) if (native[key] === undefined) delete native[key];
+	return ctx.invokeTool(native, { signal, onUpdate });
+}
+
+// -------------------------------------------------------------------- read
+
+/** Rejects a path that already carries a selector; the native tool wants one form only. */
+function hasSelector(path) {
+	return /:(?:raw|img|conflicts|\d)/.test(path);
+}
+
+/** Cursor sends a 1-indexed offset and a line count; the native tool takes a path selector. */
+export function readRequest(params) {
+	const input = params ?? {};
+	const path = input.path;
+	if (typeof path !== "string" || path === "") return { error: "path must not be empty" };
+	const offset = input.offset;
+	const limit = input.limit;
+	if (offset === undefined && limit === undefined) return { params: { path } };
+	if (hasSelector(path)) return { error: "path already carries a selector; drop offset and limit" };
+	if (offset !== undefined && (!Number.isInteger(offset) || offset === 0)) return { error: "offset must be a non-zero integer" };
+	if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) return { error: "limit must be a positive integer" };
+	const start = offset ?? 1;
+	if (start < 0) {
+		if (limit === undefined) return { params: { path: `${path}:-${Math.abs(start)}:raw` } };
+		return { params: { path: `${path}:1-1:raw` }, tail: { path, offset, limit } };
+	}
+	if (limit !== undefined) return { params: { path: `${path}:${start}-${start + limit - 1}:raw` } };
+	return { params: { path: `${path}:${start}-:raw` } };
+}
+
+export async function executeRead(toolCallId, params, signal, onUpdate, ctx) {
+	const mapped = readRequest(params);
+	if (mapped.error) return text(mapped.error, true);
+	if (typeof ctx?.invokeTool !== "function") return text("native read is unavailable in this runtime", true);
+	if (mapped.tail === undefined) return ctx.invokeTool(mapped.params, { signal, onUpdate });
+	const head = await ctx.invokeTool(mapped.params, { signal, onUpdate });
+	if (head?.isError) return head;
+	const total = head?.details?.totalLines;
+	if (!Number.isInteger(total)) return text("cannot count lines for a negative offset", true);
+	const { path, offset, limit } = mapped.tail;
+	const start = total + offset + 1;
+	if (start < 1) return text("offset is past the start of the file", true);
+	const end = Math.min(total, start + limit - 1);
+	return ctx.invokeTool({ path: `${path}:${start}-${end}:raw` }, { signal, onUpdate });
+}
+
 // ------------------------------------------------------------- registration
 
 export const GREP_DESCRIPTION = texts.grep;
 
 export const BASH_DESCRIPTION = texts.bash;
+export const GLOB_DESCRIPTION = texts.glob;
+export const READ_DESCRIPTION = texts.read;
 
 function grepSchema(z) {
 	const d = texts.grepParameters;
@@ -323,12 +373,30 @@ function grepSchema(z) {
 		"-B": z.number().optional().describe(d["-B"]),
 		"-C": z.number().optional().describe(d["-C"]),
 		"-i": z.boolean().optional().describe(d["-i"]),
-		case: z.boolean().optional(),
 		gitignore: z.boolean().optional(),
 		multiline: z.boolean().optional().describe(d.multiline),
 		head_limit: z.number().optional().describe(d.head_limit),
 		offset: z.number().optional().describe(d.offset),
-		skip: z.number().optional(),
+	});
+}
+
+function globSchema(z) {
+	const d = texts.globParameters;
+	return z.object({
+		glob_pattern: z.string().describe(d.glob_pattern),
+		target_directory: z.string().optional().describe(d.target_directory),
+		hidden: z.boolean().optional(),
+		gitignore: z.boolean().optional(),
+		limit: z.number().optional(),
+	});
+}
+
+function readSchema(z) {
+	const d = texts.readParameters;
+	return z.object({
+		path: z.string().describe(d.path),
+		offset: z.number().optional().describe(d.offset),
+		limit: z.number().optional().describe(d.limit),
 	});
 }
 
@@ -336,9 +404,7 @@ function bashSchema(z) {
 	return z.object({
 		command: z.string(),
 		timeout: z.number().optional(),
-		cwd: z.string().optional(),
 		pty: z.boolean().optional(),
-		async: z.boolean().optional(),
 		name: z.string().optional(),
 		ready: z
 			.object({ log: z.string().optional(), port: z.number().optional(), host: z.string().optional(), timeout: z.number().optional() })
@@ -363,6 +429,26 @@ export function install(pi, options = {}) {
 		description: GREP_DESCRIPTION,
 		parameters: grepSchema(z),
 		execute: (toolCallId, params, signal, onUpdate, ctx) => executeGrep(toolCallId, params, signal, onUpdate, ctx, options),
+	});
+	pi.registerTool({
+		name: "glob",
+		label: "glob",
+		loadMode: "essential",
+		concurrency: "shared",
+		strict: false,
+		description: GLOB_DESCRIPTION,
+		parameters: globSchema(z),
+		execute: executeGlob,
+	});
+	pi.registerTool({
+		name: "read",
+		label: "read",
+		loadMode: "essential",
+		concurrency: "shared",
+		strict: false,
+		description: READ_DESCRIPTION,
+		parameters: readSchema(z),
+		execute: executeRead,
 	});
 	pi.registerTool({
 		name: "bash",

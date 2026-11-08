@@ -69,7 +69,5 @@ test("grep parameters carry their Cursor description on their own field", () => 
 	};
 	for (const [field, text] of Object.entries(expected)) expect(grep.parameters.shape[field].text).toBe(text);
 	expect(Object.keys(grep.parameters.shape).filter(field => grep.parameters.shape[field].text !== undefined)).toEqual(Object.keys(expected));
-	expect(grep.parameters.shape.case.text).toBeUndefined();
 	expect(grep.parameters.shape.gitignore.text).toBeUndefined();
-	expect(grep.parameters.shape.skip.text).toBeUndefined();
 });
