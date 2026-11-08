@@ -29,6 +29,7 @@
 - `tool-summary` — одна строка со счётчиками тулов вместо карточек. Тест: `dev/tests/harness/tool-summary/`.
 - `review` — навыки `blindreview`, `highreview`, `reviewer` и агенты `spotty`, `bossy`. Тестов нет: только ресурсы, проверка реальным запуском.
 - `define-goal` — `/define-goal` вместо встроенной `/guided-goal` и скрытие старой из автокомплита. Тест: `dev/tests/harness/define-goal/`.
+- `subscriptions` — метки `CC`, `CX`, `Go` с лимитами подписок. Тест: `dev/tests/harness/subscriptions/`.
 
 Настройки без кода:
 
