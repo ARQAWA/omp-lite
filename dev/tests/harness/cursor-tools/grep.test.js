@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { relative } from "node:path";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { contentEntries, contentLines, executeGrep, hostList, install, paginate, parseGrep, parseHostSelector, plainMessage, routeFor, searchGrep, skipMatches } from "../../../../src/modules/cursor-tools/index.js";
@@ -371,8 +372,52 @@ test("a host list returns every engine match without the native 200 cap", async 
 		const engine = { calls: [], grep: async request => (engine.calls.push(request.path), { matches }) };
 		const result = await executeGrep("call", { pattern: "x", path: "a.ts;a.ts" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
 		expect(engine.calls).toHaveLength(1);
-		expect(result.content[0].text).toContain("a.ts:250:line 250");
+		expect(result.content[0].text.split("\n")).toHaveLength(250);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("non-host lists keep the native route through the tool entry", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-native-list-"));
+	try {
+		writeFileSync(join(dir, "a.ts"), "x");
+		for (const path of ["a.ts;ssh://h/x", "a.ts;*.ts", "a.ts;missing", "a.ts;"]) {
+			const seen = [];
+			const ctx = { cwd: dir, invokeTool: async params => (seen.push(params), { content: [{ type: "text", text: "native" }] }) };
+			const result = await executeGrep("call", { pattern: "x", path }, undefined, undefined, ctx);
+			expect(seen).toHaveLength(1);
+			expect(result.content[0].text).toBe("native");
+		}
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("list results resolve against their own root and stay cwd-relative", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-list-roots-"));
+	const outside = mkdtempSync(join(tmpdir(), "grep-list-outside-"));
+	try {
+		mkdirSync(join(dir, "d1"));
+		mkdirSync(join(dir, "d2"));
+		writeFileSync(join(dir, "d1", "a.ts"), "x");
+		writeFileSync(join(dir, "d2", "a.ts"), "x");
+		writeFileSync(join(outside, "z.ts"), "x");
+		const engine = {
+			calls: [],
+			grep: async request => {
+				engine.calls.push(request.path);
+				if (request.path.endsWith("d1")) return { matches: [{ path: "a.ts", lineNumber: 1, line: "first" }] };
+				if (request.path.endsWith("d2")) return { matches: [{ path: "a.ts", lineNumber: 1, line: "second" }] };
+				return { matches: [{ path: join(outside, "z.ts"), lineNumber: 1, line: "third" }] };
+			},
+		};
+		const result = await executeGrep("call", { pattern: "x", path: "d1;d2" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		expect(result.content[0].text).toBe("d1/a.ts:1:first\nd2/a.ts:1:second");
+		const away = await executeGrep("call", { pattern: "x", path: "d1;d2" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine: { calls: [], grep: async () => ({ matches: [{ path: join(outside, "z.ts"), lineNumber: 1, line: "third" }] }) } });
+		expect(away.content[0].text).toBe(relative(dir, join(outside, "z.ts")) + ":1:third");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+		rmSync(outside, { recursive: true, force: true });
 	}
 });
