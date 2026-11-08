@@ -1,5 +1,8 @@
 // One dim line after a long turn: the whole run, tool work included.
+// Ported from pi-response-duration 1.0.1 (MIT, copyright 2026 tech-msc); see LICENSE.
 const TYPE = "omp-lite.turn-duration";
+const DIM = "\x1b[2m";
+const RESET = "\x1b[0m";
 const THRESHOLD_MS = 30000;
 
 export function durationLabel(ms) {
@@ -26,21 +29,26 @@ class Mark {
 		return true;
 	}
 	render(width) {
-		return [this.text.slice(0, Math.max(0, width))];
+		return [`${DIM}${this.text.slice(0, Math.max(0, width))}${RESET}`];
 	}
 }
 
 export default function turnDuration(pi) {
 	let started;
+	let running = false;
 	pi.registerMessageRenderer(TYPE, message => new Mark(String(message.content?.[0]?.text ?? "")));
 	// The clock starts with the submission, the way the owner asked, and the unit is the turn:
 	// a queued message does not restart it, a continuation keeps it, any end of the main agent
 	// clears it, so a cancelled preparation cannot inflate the next turn.
 	pi.on("input", () => {
-		if (started === undefined) started = performance.now();
+		if (!running) started = performance.now();
+	});
+	pi.on("agent_start", () => {
+		running = true;
 	});
 	pi.on("agent_end", (event, ctx) => {
 		if (ctx.agent?.kind !== "main") return;
+		if (!event.willContinue) running = false;
 		const start = started;
 		if (!event.willContinue) started = undefined;
 		if (start === undefined || event.willContinue || ctx.mode !== "tui") return;
