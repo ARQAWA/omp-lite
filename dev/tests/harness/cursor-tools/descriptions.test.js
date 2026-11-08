@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 import { BASH_DESCRIPTION, GREP_DESCRIPTION, install } from "../../../../src/modules/cursor-tools/index.js";
-import texts from "../../../../src/modules/cursor-tools/descriptions.json";
 
 const EXPECTED_GREP = `Search the workspace with ripgrep.
 
@@ -51,7 +50,25 @@ test("grep parameters carry their Cursor description on their own field", () => 
 	};
 	install(pi);
 	const grep = tools.find(tool => tool.name === "grep");
-	for (const [field, text] of Object.entries(texts.grepParameters)) expect(grep.parameters.shape[field].text).toBe(text);
+	const expected = {
+		pattern: "The regular expression pattern to search for in file contents",
+		path: "File or directory to search in. Defaults to the workspace root.",
+		glob: 'Glob pattern to filter files (e.g. "*.js", "*.{ts,tsx}")',
+		type: "File type to search. Common types: js, py, rust, go, java, etc. More efficient than include for standard file types.",
+		output_mode:
+			'Output mode: "content" shows matching lines (supports -A/-B/-C context, head_limit), "files_with_matches" shows file paths (supports head_limit), "count" shows match counts (supports head_limit). Defaults to "content".',
+		"-A": 'Number of lines to show after each match. Requires output_mode: "content", ignored otherwise.',
+		"-B": 'Number of lines to show before each match. Requires output_mode: "content", ignored otherwise.',
+		"-C": 'Number of lines to show before and after each match. Requires output_mode: "content", ignored otherwise.',
+		"-i": "Case insensitive search. Defaults to false",
+		multiline: "Enable multiline mode where . matches newlines and patterns can span lines. Default: false.",
+		head_limit:
+			'Limit output size. For "content" mode: limits total matches shown. For "files_with_matches" and "count" modes: limits number of files.',
+		offset:
+			'Skip first N entries. For "content" mode: skips first N matches. For "files_with_matches" and "count" modes: skips first N files. Use with head_limit for pagination.',
+	};
+	for (const [field, text] of Object.entries(expected)) expect(grep.parameters.shape[field].text).toBe(text);
+	expect(Object.keys(grep.parameters.shape).filter(field => grep.parameters.shape[field].text !== undefined)).toEqual(Object.keys(expected));
 	expect(grep.parameters.shape.case.text).toBeUndefined();
 	expect(grep.parameters.shape.gitignore.text).toBeUndefined();
 	expect(grep.parameters.shape.skip.text).toBeUndefined();

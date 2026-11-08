@@ -131,6 +131,10 @@ export function parseGrep(params) {
 		["offset", input.offset, 0],
 		["skip", input.skip, 0],
 	]) {
+		if (mode !== "content" && (name === "-A" || name === "-B" || name === "-C")) {
+			numbers[name] = undefined;
+			continue;
+		}
 		const value = whole(name, field, minimum);
 		if (value !== undefined && typeof value === "object") return value;
 		numbers[name] = value;

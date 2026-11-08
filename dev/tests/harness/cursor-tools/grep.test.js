@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { contentEntries, contentLines, executeGrep, paginate, parseGrep, plainMessage, routeFor, searchGrep } from "../../../../src/modules/cursor-tools/index.js";
+import { contentEntries, contentLines, executeGrep, install, paginate, parseGrep, plainMessage, routeFor, searchGrep } from "../../../../src/modules/cursor-tools/index.js";
 
 const match = (path, lineNumber, line, extra = {}) => ({ path, lineNumber, line, ...extra });
 
@@ -50,6 +50,19 @@ test("context flags are ignored outside content mode", () => {
 	expect(parsed.request.contextBefore).toBeUndefined();
 	expect(parsed.request.contextAfter).toBeUndefined();
 	expect(plainMessage(parsed.request)).not.toContain("-A/-B/-C");
+});
+
+const node = () => chain;
+const chain = new Proxy(node, { get: (_target, key) => (key === "then" ? undefined : node) });
+
+test("a count search ignores context through the tool entry", async () => {
+	const engine = fakeEngine({ matches: [match("a.ts", 1, "one"), match("a.ts", 4, "two")] });
+	const tools = [];
+	install({ zod: chain, registerTool: tool => tools.push(tool), on: () => {} }, { engine });
+	const grep = tools.find(tool => tool.name === "grep");
+	const result = await grep.execute("call", { pattern: "x", output_mode: "count", "-C": -1 }, undefined, undefined, ctx);
+	expect(result.isError).toBeUndefined();
+	expect(result.content[0].text).toBe("a.ts:2");
 });
 
 test("renders a match with its own context lines", () => {
