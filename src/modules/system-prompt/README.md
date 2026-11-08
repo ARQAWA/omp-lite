@@ -23,6 +23,8 @@
 
 **Удалено:** блоки `<mode_selection>`, `<dynamic_tools>` и `<terminal_files_information>`, строка про markdown-картинки.
 
+**Строка про саб-агентов.** Добавлена дословно из Codex CLI, тул `spawn_agent`: `Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.` Стоит в `<general>`.
+
 **Дислексия не дублируется.** Правило дислексии дописывает расширение [dyslexia](../dyslexia/index.js) в конец пользовательского сообщения. В промпте его нет.
 
 **Границы:** MCP-тулы приходят обычными тулами, блока их поиска нет. Режимов `plan`, `goal`, `vibe` в промпте нет; переключать их промптом нельзя.
