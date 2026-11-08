@@ -17,7 +17,7 @@ function mount(mode = "tui") {
 		sent,
 		renderers,
 		ctx,
-		start: () => handlers.before_agent_start({}, ctx),
+		start: () => handlers.agent_start({}, ctx),
 		end: (stopReason = "stop", willContinue = false) =>
 			handlers.agent_end({ messages: [{ role: "assistant", stopReason }], willContinue }, ctx),
 	};
@@ -100,6 +100,19 @@ test("quick, aborted, error and print-mode runs stay silent", () => {
 	}
 });
 
+test("consecutive runs each measure from their own start", () => {
+	const turn = mount();
+	at([0, 40000], () => {
+		turn.start();
+		turn.end();
+	});
+	at([100000, 160000], () => {
+		turn.start();
+		turn.end();
+	});
+	expect(turn.sent.map(message => message.content[0].text)).toEqual(["⏱ 40s", "⏱ 1m 0s"]);
+});
+
 test("a run without a start event prints nothing", () => {
 	const turn = mount();
 	at([0, 90000], () => turn.end());
@@ -111,7 +124,7 @@ test("a subagent run neither prints nor resets the main clock", () => {
 	const sub = { mode: "tui", hasUI: true, agent: { kind: "sub" } };
 	at([0, 20000], () => {
 		turn.start();
-		turn.handlers.before_agent_start({}, sub);
+		turn.handlers.agent_start({}, sub);
 		turn.handlers.agent_end({ messages: [{ role: "assistant", stopReason: "stop" }] }, sub);
 	});
 	expect(turn.sent).toEqual([]);
