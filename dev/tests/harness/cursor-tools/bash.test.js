@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
-import { executeBash, mapBashParams } from "../../../../src/modules/cursor-tools/bash.js";
-import { install } from "../../../../src/modules/cursor-tools/index.js";
+import { executeBash, install, mapBashParams } from "../../../../src/modules/cursor-tools/index.js";
 
 test("zero turns into an immediate background run", () => {
 	expect(mapBashParams({ command: "make", block_until_ms: 0 })).toEqual({ command: "make", async: true });
