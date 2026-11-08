@@ -34,7 +34,8 @@ function at(times, body) {
 }
 
 test("labels stay readable across seconds, minutes and hours", () => {
-	expect(durationLabel(30000)).toBeUndefined();
+	expect(durationLabel(0)).toBe("1s");
+	expect(durationLabel(2000)).toBe("2s");
 	expect(durationLabel(31000)).toBe("31s");
 	expect(durationLabel(124000)).toBe("2m 4s");
 	expect(durationLabel(3601000)).toBe("1h 1s");
@@ -84,9 +85,8 @@ test("a continuation keeps the measurement for the final completion", () => {
 	expect(turn.sent[0].content[0].text).toBe("⏱ 1m 0s");
 });
 
-test("quick, aborted, error and print-mode runs stay silent", () => {
+test("aborted, error and print-mode runs stay silent", () => {
 	for (const [mode, reason, span] of [
-		["tui", "stop", 2000],
 		["tui", "aborted", 90000],
 		["tui", "error", 90000],
 		["print", "stop", 90000],
@@ -167,4 +167,14 @@ test("a command followed by a message measures the message", () => {
 	});
 	expect(turn.sent.length).toBe(1);
 	expect(turn.sent[0].content[0].text).toBe("⏱ 45s");
+});
+
+test("a short turn still gets its line", () => {
+	const turn = mount();
+	at([0, 2000], () => {
+		turn.handlers.input({ text: "go" }, turn.ctx);
+		turn.end();
+	});
+	expect(turn.sent.length).toBe(1);
+	expect(turn.sent[0].content[0].text).toBe("⏱ 2s");
 });
