@@ -1,0 +1,169 @@
+{
+	"version": 1,
+	"target": "~/.omp/agent",
+	"files": [
+		{
+			"from": "src/modules/background-jobs/index.js",
+			"to": "extensions/background-jobs.js"
+		},
+		{
+			"from": "src/modules/codex-luna-search/codex-luna-search.js",
+			"to": "extensions/codex-luna-search.js"
+		},
+		{
+			"from": "src/modules/codex-transport/codex-parallel.js",
+			"to": "extensions/codex-parallel.js"
+		},
+		{
+			"from": "src/modules/compactions/index.js",
+			"to": "extensions/compactions.js"
+		},
+		{
+			"from": "src/modules/cursor-tools/index.js",
+			"to": "extensions/cursor-tools/index.js"
+		},
+		{
+			"from": "src/modules/cursor-tools/descriptions.json",
+			"to": "extensions/cursor-tools/descriptions.json"
+		},
+		{
+			"from": "src/modules/define-goal/index.js",
+			"to": "extensions/define-goal.js"
+		},
+		{
+			"from": "src/modules/define-goal/define-goal.md",
+			"to": "extensions/define-goal.md"
+		},
+		{
+			"from": "src/modules/dyslexia/index.js",
+			"to": "extensions/dyslexia.js"
+		},
+		{
+			"from": "src/modules/memory-tool-prompts/index.js",
+			"to": "extensions/memory-tool-prompts.js"
+		},
+		{
+			"from": "src/modules/memory-tool-prompts/memory-tool-prompts.descriptions.json",
+			"to": "extensions/memory-tool-prompts.descriptions.json"
+		},
+		{
+			"from": "src/modules/model-picker/index.js",
+			"to": "extensions/model-picker.js"
+		},
+		{
+			"from": "src/modules/model-picker/model-picker.json",
+			"to": "extensions/model-picker.json"
+		},
+		{
+			"from": "src/modules/review/skills/blindreview/SKILL.md",
+			"to": "skills/blindreview/SKILL.md"
+		},
+		{
+			"from": "src/modules/review/skills/highreview/SKILL.md",
+			"to": "skills/highreview/SKILL.md"
+		},
+		{
+			"from": "src/modules/review/skills/reviewer/SKILL.md",
+			"to": "skills/reviewer/SKILL.md"
+		},
+		{
+			"from": "src/modules/review/skills/reviewer/REVIEWER.md",
+			"to": "skills/reviewer/REVIEWER.md"
+		},
+		{
+			"from": "src/modules/review/agents/spotty.md",
+			"to": "agents/spotty.md"
+		},
+		{
+			"from": "src/modules/review/agents/bossy.md",
+			"to": "agents/bossy.md"
+		},
+		{
+			"from": "src/modules/skill-alias/index.js",
+			"to": "extensions/skill-alias.js"
+		},
+		{
+			"from": "src/modules/subagent-reuse/index.js",
+			"to": "extensions/subagent-reuse.js"
+		},
+		{
+			"from": "src/modules/subscriptions/index.js",
+			"to": "extensions/subscriptions.js"
+		},
+		{
+			"from": "src/modules/tool-summary/index.js",
+			"to": "extensions/tool-summary.js"
+		},
+		{
+			"from": "src/modules/tool-summary/tool-summary.json",
+			"to": "extensions/tool-summary.json"
+		},
+		{
+			"from": "src/modules/turn-duration/index.js",
+			"to": "extensions/turn-duration.js"
+		},
+		{
+			"from": "src/modules/turn-duration/LICENSE",
+			"to": "extensions/turn-duration.LICENSE"
+		},
+		{
+			"from": "src/modules/web-search/index.js",
+			"to": "extensions/codex-web-run/index.js"
+		},
+		{
+			"from": "src/modules/web-search/codex.js",
+			"to": "extensions/codex-web-run/codex.js"
+		},
+		{
+			"from": "src/modules/web-search/commands.js",
+			"to": "extensions/codex-web-run/commands.js"
+		},
+		{
+			"from": "src/modules/web-search/loop.js",
+			"to": "extensions/codex-web-run/loop.js"
+		},
+		{
+			"from": "src/modules/web-search/web-run.schema.json",
+			"to": "extensions/codex-web-run/web-run.schema.json"
+		}
+	],
+	"config": [
+		{
+			"from": "src/modules/runtime-config/config.yml",
+			"to": "config.yml",
+			"mode": "merge-missing"
+		},
+		{
+			"from": "src/modules/compaction-400k/thresholds.yml",
+			"to": "config.yml",
+			"mode": "merge"
+		},
+		{
+			"from": "src/modules/status-line/status-line.yml",
+			"to": "config.yml",
+			"mode": "merge"
+		},
+		{
+			"from": "src/modules/runtime-config/mnemopi.yml",
+			"to": "config.yml",
+			"mode": "merge"
+		}
+	],
+	"mnemopi": {
+		"api": "http://127.0.0.1:11434",
+		"model": "embeddinggemma-2:270m",
+		"settings": {
+			"memory.backend": "mnemopi",
+			"mnemopi.embeddingModel": "embeddinggemma-2:270m",
+			"mnemopi.embeddingApiUrl": "http://127.0.0.1:11434/v1",
+			"mnemopi.embeddingApiKey": "ollama"
+		},
+		"install": [
+			"brew install ollama",
+			"brew services start ollama",
+			"ollama pull embeddinggemma-2:270m"
+		],
+		"verify": "POST http://127.0.0.1:11434/v1/embeddings with the configured model and one input"
+	},
+	"configFallback": "config.yaml"
+}
