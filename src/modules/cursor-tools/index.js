@@ -4,7 +4,7 @@
 // Cursor's block_until_ms: 0. The edit tool is switched to the apply-patch
 // contract, which is what Cursor speaks.
 
-import { statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import texts from "./descriptions.json";
 
@@ -224,7 +224,20 @@ export async function searchGrep(request, ctx, options = {}) {
 		const shown = relative(cwd, absolute);
 		return shown.startsWith("..") ? absolute : shown;
 	};
-	const outcome = (await natives.grep(engineRequest(request, base, options.signal))) ?? {};
+	let outcome = (await natives.grep(engineRequest(request, base, options.signal))) ?? {};
+	if (request.ranges !== undefined) {
+		const inside = number => request.ranges.some(([start, end]) => number >= start && number <= end);
+		outcome = {
+			...outcome,
+			matches: (outcome.matches ?? [])
+				.filter(match => inside(match.lineNumber))
+				.map(match => ({
+					...match,
+					contextBefore: (match.contextBefore ?? []).filter(line => inside(line.lineNumber)),
+					contextAfter: (match.contextAfter ?? []).filter(line => inside(line.lineNumber)),
+				})),
+		};
+	}
 	const tail = notes(outcome);
 	const fileContinuation = next => `Use offset=${next} for the next page.`;
 	if (request.mode === "content") {
@@ -259,11 +272,44 @@ export function skipMatches(text, count) {
 	return remaining > 0 ? "No matches found" : kept.join("\n");
 }
 
+/** A host file with a line-range selector is searched by the engine, not the capped native tool. */
+export function parseHostSelector(path) {
+	if (typeof path !== "string" || path.includes("://") || path.includes(";") || ARCHIVE.test(path)) return undefined;
+	const match = /^(.*?):((?:L?-?\d+(?:(?:-|\.\.)L?\d*)?(?:\+\d*)?(?:,(?:L?-?\d+)(?:(?:-|\.\.)L?\d*)?(?:\+\d*)?)*))$/.exec(path);
+	if (!match) return undefined;
+	const base = match[1];
+	if (base === "" || !existsSync(base) || !statSync(base).isFile()) return undefined;
+	const ranges = [];
+	for (const part of match[2].split(",")) {
+		const value = part.replace(/^L/, "");
+		let range;
+		if (/^-\d+$/.test(value)) return undefined;
+		if (value.includes("+")) {
+			const [start, count] = value.split("+").map(Number);
+			range = [start, start + count - 1];
+		} else if (/(?:\.\.|-)/.test(value)) {
+			const [start, end] = value.split(/\.\.|-/);
+			range = [Number(start.replace(/^L/, "")), end === "" || end === undefined ? Infinity : Number(end.replace(/^L/, ""))];
+		} else {
+			const line = Number(value);
+			range = [line, line];
+		}
+		if (!Number.isInteger(range[0]) || range[0] < 1 || (range[1] !== Infinity && (!Number.isInteger(range[1]) || range[1] < range[0]))) return undefined;
+		ranges.push(range);
+	}
+	return { base, ranges };
+}
+
 /** Full tool body: route, then either delegate or search. */
 export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, options = {}) {
 	const parsed = parseGrep(params);
 	if (parsed.error !== undefined) return text(parsed.error, true);
 	const request = parsed.request;
+	const host = parseHostSelector(request.path);
+	if (host !== undefined) {
+		request.path = host.base;
+		request.ranges = host.ranges;
+	}
 	if (routeFor(request.path) === "native") {
 		const refused = plainMessage(request);
 		if (refused !== undefined) return text(refused, true);
