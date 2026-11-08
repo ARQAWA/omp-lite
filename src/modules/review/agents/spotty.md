@@ -2,9 +2,8 @@
 name: spotty
 description: Read-only blind reviewer at high effort. Used by the blindreview skill.
 model:
-  - deepseek/deepseek-flash
-  - opencode-go/deepseek-v4.1-flash
-thinking-level: low
+  - openai-codex/gpt-6.1-terra
+thinking-level: high
 tools:
   - read
   - grep

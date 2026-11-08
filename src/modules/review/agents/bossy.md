@@ -1,10 +1,9 @@
 ---
 name: bossy
-description: Read-only blind reviewer at maximum effort. Used by the highreview skill.
+description: Read-only blind reviewer at extra-high effort. Used by the highreview skill.
 model:
-  - deepseek/deepseek-flash
-  - opencode-go/deepseek-v4.1-flash
-thinking-level: high
+  - openai-codex/gpt-6.1-terra
+thinking-level: xhigh
 tools:
   - read
   - grep
