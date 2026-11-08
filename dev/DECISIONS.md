@@ -118,7 +118,7 @@
 
 ## D-012 — ревьюеры на сабагентах и навыках
 
-**Решение:** модуль `review` ставит навыки `blindreview`, `highreview`, `selfcheck`, `reviewer` и агентов `spotty`, `bossy`, `selfcheck`. `spotty` — `deepseek/deepseek-flash` high, `bossy` — max; при недоступности DeepSeek — `opencode-go/deepseek-v4.1-flash` с тем же уровнем. Своя законченная работа проходит selfcheck-форк: проверка, исправления, затем цикл ревьюера до CLEAN.
+**Решение:** модуль `review` ставит навыки `blindreview`, `highreview`, `selfcheck`, `reviewer` и агентов `spotty`, `bossy`, `selfcheck`. `spotty` — `deepseek/deepseek-flash` low, `bossy` — high; при недоступности DeepSeek — `opencode-go/deepseek-v4.1-flash` с тем же уровнем. Своя законченная работа проходит selfcheck-форк: проверка, исправления, затем цикл ревьюера до CLEAN.
 
 **Основание:** поручение владельца от 2026-11-08.
 
