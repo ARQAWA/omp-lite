@@ -1,11 +1,16 @@
 import { expect, test } from "bun:test";
+import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
 	GLOB_DESCRIPTION,
 	READ_DESCRIPTION,
+	executeGlob,
 	executeRead,
 	globRequest,
 	install,
 	readRequest,
+	sortByMtime,
 } from "../../../../src/modules/cursor-tools/index.js";
 
 test("glob maps the Cursor pattern and directory, keeping native fields", () => {
@@ -68,3 +73,21 @@ function fakeZod() {
 	};
 	return { string: leaf, number: leaf, boolean: leaf, object: () => leaf() };
 }
+
+test("glob returns host paths newest first", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "glob-mtime-"));
+	try {
+		const older = join(dir, "older.ts");
+		const newer = join(dir, "newer.ts");
+		writeFileSync(older, "a");
+		writeFileSync(newer, "b");
+		utimesSync(older, 1000, 1000);
+		utimesSync(newer, 2000, 2000);
+		expect(sortByMtime([older, newer])).toEqual([newer, older]);
+		const ctx = { invokeTool: async () => ({ details: { files: [older, newer] }, content: [{ type: "text", text: "# dir/\nolder.ts\nnewer.ts" }] }) };
+		const result = await executeGlob("call", { glob_pattern: "*.ts", target_directory: dir }, undefined, undefined, ctx);
+		expect(result.content[0].text.split("\n")).toEqual([newer, older]);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});

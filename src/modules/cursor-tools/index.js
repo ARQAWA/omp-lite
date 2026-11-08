@@ -4,6 +4,7 @@
 // Cursor's block_until_ms: 0. The edit tool is switched to the apply-patch
 // contract, which is what Cursor speaks.
 
+import { statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import texts from "./descriptions.json";
 
@@ -329,13 +330,35 @@ export function globRequest(params) {
 	return { params: { path: `${directory.replace(/\/+$/, "")}/${recursive}`, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
 }
 
+/** Newest first, as Cursor promises; only host paths can be ordered this way. */
+export function sortByMtime(files) {
+	return files
+		.map(file => {
+			try {
+				return [file, statSync(file.replace(/\/+$/, "")).mtimeMs];
+			} catch {
+				return [file, -Infinity];
+			}
+		})
+		.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+		.map(([file]) => file);
+}
+
 export async function executeGlob(toolCallId, params, signal, onUpdate, ctx) {
 	const mapped = globRequest(params);
 	if (mapped.error) return text(mapped.error, true);
 	if (typeof ctx?.invokeTool !== "function") return text("native glob is unavailable in this runtime", true);
 	const native = mapped.params;
 	for (const key of Object.keys(native)) if (native[key] === undefined) delete native[key];
-	return ctx.invokeTool(native, { signal, onUpdate });
+	const result = await ctx.invokeTool(native, { signal, onUpdate });
+	const files = result?.details?.files;
+	const textBlock = result?.content?.[0];
+	const hostOnly = Array.isArray(files) && files.length > 1 && files.every(file => !file.includes("://"));
+	if (result?.isError !== true && textBlock?.type === "text" && hostOnly && !ARCHIVE.test(native.path)) {
+		const notes = textBlock.text.split("\n").filter(line => /^(?:\[|Skipped missing paths)/.test(line));
+		textBlock.text = [...sortByMtime(files), ...notes].join("\n");
+	}
+	return result;
 }
 
 // -------------------------------------------------------------------- read
