@@ -1,6 +1,6 @@
 # tool-summary
 
-Расширение OMP. Прячет карточки тулов штатной настройкой и показывает одну строку со счётчиками над редактором.
+Расширение OMP. Прячет карточки тулов штатной настройкой и показывает одну строку со счётчиками под редактором.
 
 **Вход OMP:** `omp://extensions.md` — `ctx.ui.setWidget`, события `session_start`, `agent_start`, `tool_execution_start`, `tool_execution_end`, ключ `display.hideToolActivity`.
 
