@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { contentEntries, contentLines, executeGrep, install, paginate, parseGrep, plainMessage, routeFor, searchGrep, skipMatches } from "../../../../src/modules/cursor-tools/index.js";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { contentEntries, contentLines, executeGrep, install, paginate, parseGrep, parseHostSelector, plainMessage, routeFor, searchGrep, skipMatches } from "../../../../src/modules/cursor-tools/index.js";
 
 const match = (path, lineNumber, line, extra = {}) => ({ path, lineNumber, line, ...extra });
 
@@ -253,4 +256,25 @@ test("a one-file page from a remote multi-file scope keeps its match", async () 
 	};
 	const result = await executeGrep("call", { pattern: "x", path: "ssh://host/dir", offset: 1 }, undefined, undefined, ctx);
 	expect(result.content[0].text).toBe("*1|a");
+});
+
+test("a host file selector routes to the engine and filters the range", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-selector-"));
+	try {
+		const file = join(dir, "a.ts");
+		writeFileSync(file, "x\n".repeat(30));
+		expect(parseHostSelector(`${file}:10-20`)).toEqual({ base: file, ranges: [[10, 20]] });
+		expect(parseHostSelector(`${file}:10-`)).toEqual({ base: file, ranges: [[10, Infinity]] });
+		expect(parseHostSelector(`${file}:5`)).toEqual({ base: file, ranges: [[5, 5]] });
+		expect(parseHostSelector("bundle.zip:src/a.ts")).toBeUndefined();
+		const engine = fakeEngine({
+			matches: [match(file, 5, "a"), match(file, 10, "b"), match(file, 15, "c"), match(file, 25, "d")],
+		});
+		const result = await executeGrep("call", { pattern: "x", path: `${file}:10-20`, offset: 1 }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		expect(engine.calls).toHaveLength(1);
+		expect(engine.calls[0][0].path).toBe(file);
+		expect(result.content[0].text).toBe("a.ts:15:c");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
 });
