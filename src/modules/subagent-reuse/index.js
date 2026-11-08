@@ -20,12 +20,11 @@ const COOP =
 
 export function withoutContext(prompt) {
 	return prompt.flatMap(block => {
+		if (block.startsWith("§ Context\n")) return [];
 		const coop = block.lastIndexOf(COOP);
-		let at = block.startsWith("§ Context\n") ? 0 : -1;
-		if (at < 0) {
-			const found = coop < 0 ? block.lastIndexOf("\n\n§ Context\n") : block.lastIndexOf("\n\n§ Context\n", coop);
-			if (found >= 0) at = found + 2;
-		}
+		let at = -1;
+		const found = block.indexOf("\n\n§ Context\n");
+		if (found >= 0) at = found + 2;
 		if (at < 0) return [block];
 		const head = block.slice(0, at).replace(/\n+$/, "");
 		const rest = block.slice(at);

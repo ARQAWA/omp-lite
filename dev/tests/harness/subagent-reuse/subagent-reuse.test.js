@@ -147,24 +147,14 @@ test("drops context and keeps later sections", async () => {
 	expect(result.systemPrompt).toEqual([`§ Role\nrole${COOP}${TAIL}`]);
 });
 
-test("keeps a role that quotes the context heading", async () => {
+test("removes a context that contains its own heading", async () => {
 	const m = mount();
 	await run(m.tool, { name: "Probe", task: "x" });
 	const result = m.handlers.before_agent_start(
-		{ systemPrompt: [`§ Role\nrole quotes § Context\nhere\n\n§ Context\nold${COOP}${TAIL}`] },
+		{ systemPrompt: [`§ Role\nrole\n\n§ Context\nold\n\n§ Context\nmore${COOP}${TAIL}`] },
 		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
 	);
-	expect(result.systemPrompt).toEqual([`§ Role\nrole quotes § Context\nhere${COOP}${TAIL}`]);
-});
-
-test("keeps a role that quotes a standalone context heading", async () => {
-	const m = mount();
-	await run(m.tool, { name: "Probe", task: "x" });
-	const result = m.handlers.before_agent_start(
-		{ systemPrompt: [`§ Role\nrole\n\n§ Context\nquoted\n\n§ Context\nold${COOP}${TAIL}`] },
-		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
-	);
-	expect(result.systemPrompt).toEqual([`§ Role\nrole\n\n§ Context\nquoted${COOP}${TAIL}`]);
+	expect(result.systemPrompt).toEqual([`§ Role\nrole${COOP}${TAIL}`]);
 });
 
 test("removes context that contains a section-like line", async () => {
@@ -187,14 +177,14 @@ test("drops a separate context block with a fake boundary", async () => {
 	expect(result.systemPrompt).toEqual(["§ Role\nrole"]);
 });
 
-test("keeps real sections in a separate context block", async () => {
+test("removes a separate context block quoting the template", async () => {
 	const m = mount();
 	await run(m.tool, { name: "Probe", task: "x" });
 	const result = m.handlers.before_agent_start(
 		{ systemPrompt: ["§ Role\nrole", `§ Context\nold${COOP}${TAIL}`] },
 		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
 	);
-	expect(result.systemPrompt).toEqual(["§ Role\nrole", `${COOP.slice(1)}${TAIL}`]);
+	expect(result.systemPrompt).toEqual(["§ Role\nrole"]);
 });
 
 test("drops a separate context block and keeps the rest", async () => {
