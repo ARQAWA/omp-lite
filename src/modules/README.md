@@ -32,6 +32,7 @@
 - `subscriptions` — метки `CC`, `CX`, `Go` с лимитами подписок. Тест: `dev/tests/harness/subscriptions/`.
 - `background-jobs` — счётчик фоновых процессов в статуслайне. Тест: `dev/tests/harness/background-jobs/`.
 - `compactions` — счётчик компакшенов сессии в статуслайне. Тест: `dev/tests/harness/compactions/`.
+- `turn-duration` — строка `⏱ 2m 4s` после долгого хода. Тест: `dev/tests/harness/turn-duration/`.
 - `cursor-tools` — аргументы поиска курсора над родным движком: `grep` с контекстом, режимами и типом, `bash` с `block_until_ms: 0`, режим правок `apply_patch`. Тест: `dev/tests/harness/cursor-tools/`.
 
 Настройки без кода:
