@@ -1,0 +1,20 @@
+{
+  "labels": {
+    "read": "read",
+    "edit": "edit",
+    "search": "search",
+    "run": "run",
+    "other": "other",
+    "fail": "failed"
+  },
+  "tools": {
+    "read": "read",
+    "edit": "edit",
+    "write": "edit",
+    "grep": "search",
+    "glob": "search",
+    "find": "search",
+    "bash": "run",
+    "python": "run"
+  }
+}
