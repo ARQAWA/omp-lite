@@ -319,7 +319,7 @@ export const BASH_DESCRIPTION = `Executes a given command in a shell session wit
 IMPORTANT: Use this tool for terminal operations like git, npm, docker, etc. DO NOT use it for file operations (reading, writing, editing, searching, finding files, sleeping) - use the specialized tools for this instead.
 
 - Use grep, glob and read for file operations when applicable. If shell text search is necessary, use the \`grep\` tool, not shell \`grep\` or \`find\`.
-- Do not truncate output with \`head\`, \`tail\`, or \`sed -n\` solely to limit its size; large output is saved to an artifact file.
+- Do not truncate output with \`head\`, \`tail\`, or \`sed -n\` solely to limit its size.
 - Run independent commands as parallel bash calls. Chain dependent commands with \`&&\`.
 - Use the \`gh\` command via the bash tool for all GitHub-related tasks, including issues, pull requests, checks, and releases.`;
 
