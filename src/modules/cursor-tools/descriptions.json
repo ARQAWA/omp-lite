@@ -1,0 +1,18 @@
+{
+	"grep": "Search the workspace with ripgrep.\n\n- Use this tool instead of shell rg; respects .gitignore\n- Default scope is the workspace root; set path (absolute path) to narrow it\n- Supply a regex pattern; escape metacharacters, e.g. \"functionCall\\(\", \"\\{\", \"\\}\"\n- Prefer type over broad glob; wildcard globs like * bypass ignore rules and slow searches\n- Enable multiline only when a match spans lines—it can degrade performance\n- Context flags (-A, -B, -C) only affect content output\n- If results show \"N+ of M matches shown\", the output was truncated; tighten the query or raise head_limit",
+	"bash": "Executes a given command in a shell session with optional foreground timeout.\n\nIMPORTANT: Use this tool for terminal operations like git, npm, docker, etc. DO NOT use it for file operations (reading, writing, editing, searching, finding files, sleeping) - use the specialized tools for this instead.\n\n- Use grep, glob and read for file operations when applicable. If shell text search is necessary, use the `grep` tool, not shell `grep` or `find`.\n- Do not truncate output with `head`, `tail`, or `sed -n` solely to limit its size.\n- Run independent commands as parallel bash calls. Chain dependent commands with `&&`.\n- Use the `gh` command via the bash tool for all GitHub-related tasks, including issues, pull requests, checks, and releases.",
+	"grepParameters": {
+		"pattern": "The regular expression pattern to search for in file contents",
+		"path": "File or directory to search in. Defaults to the workspace root.",
+		"glob": "Glob pattern to filter files (e.g. \"*.js\", \"*.{ts,tsx}\")",
+		"type": "File type to search. Common types: js, py, rust, go, java, etc. More efficient than include for standard file types.",
+		"output_mode": "Output mode: \"content\" shows matching lines (supports -A/-B/-C context, head_limit), \"files_with_matches\" shows file paths (supports head_limit), \"count\" shows match counts (supports head_limit). Defaults to \"content\".",
+		"-A": "Number of lines to show after each match. Requires output_mode: \"content\", ignored otherwise.",
+		"-B": "Number of lines to show before each match. Requires output_mode: \"content\", ignored otherwise.",
+		"-C": "Number of lines to show before and after each match. Requires output_mode: \"content\", ignored otherwise.",
+		"-i": "Case insensitive search. Defaults to false",
+		"multiline": "Enable multiline mode where . matches newlines and patterns can span lines. Default: false.",
+		"head_limit": "Limit output size. For \"content\" mode: limits total matches shown. For \"files_with_matches\" and \"count\" modes: limits number of files.",
+		"offset": "Skip first N entries. For \"content\" mode: skips first N matches. For \"files_with_matches\" and \"count\" modes: skips first N files. Use with head_limit for pagination."
+	}
+}

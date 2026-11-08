@@ -6,6 +6,7 @@
 
 import { statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
+import texts from "./descriptions.json";
 
 // ---------------------------------------------------------------- rendering
 
@@ -302,64 +303,27 @@ export async function executeBash(toolCallId, params, signal, onUpdate, ctx) {
 
 // ------------------------------------------------------------- registration
 
-export const GREP_DESCRIPTION = `Search the workspace with ripgrep.
+export const GREP_DESCRIPTION = texts.grep;
 
-- Use this tool instead of shell rg; respects .gitignore
-- Default scope is the workspace root; set path (absolute path) to narrow it
-- Supply a regex pattern; escape metacharacters, e.g. "functionCall\\(", "\\{", "\\}"
-- Prefer type over broad glob; wildcard globs like * bypass ignore rules and slow searches
-- Enable multiline only when a match spans lines—it can degrade performance
-- Context flags (-A, -B, -C) only affect content output
-- If results show "N+ of M matches shown", the output was truncated; tighten the query or raise head_limit`;
-
-export const BASH_DESCRIPTION = `Executes a given command in a shell session with optional foreground timeout.
-
-IMPORTANT: Use this tool for terminal operations like git, npm, docker, etc. DO NOT use it for file operations (reading, writing, editing, searching, finding files, sleeping) - use the specialized tools for this instead.
-
-- Use grep, glob and read for file operations when applicable. If shell text search is necessary, use the \`grep\` tool, not shell \`grep\` or \`find\`.
-- Do not truncate output with \`head\`, \`tail\`, or \`sed -n\` solely to limit its size.
-- Run independent commands as parallel bash calls. Chain dependent commands with \`&&\`.
-- Use the \`gh\` command via the bash tool for all GitHub-related tasks, including issues, pull requests, checks, and releases.`;
+export const BASH_DESCRIPTION = texts.bash;
 
 function grepSchema(z) {
+	const d = texts.grepParameters;
 	return z.object({
-		pattern: z.string().describe("The regular expression pattern to search for in file contents"),
-		path: z.string().optional().describe("File or directory to search in. Defaults to the workspace root."),
-		glob: z.string().optional().describe('Glob pattern to filter files (e.g. "*.js", "*.{ts,tsx}")'),
-		type: z
-			.string()
-			.optional()
-			.describe(
-				"File type to search. Common types: js, py, rust, go, java, etc. More efficient than include for standard file types.",
-			),
-		output_mode: z
-			.string()
-			.optional()
-			.describe(
-				'Output mode: "content" shows matching lines (supports -A/-B/-C context, head_limit), "files_with_matches" shows file paths (supports head_limit), "count" shows match counts (supports head_limit). Defaults to "content".',
-			),
-		"-A": z.number().optional().describe('Number of lines to show after each match. Requires output_mode: "content".'),
-		"-B": z.number().optional().describe('Number of lines to show before each match. Requires output_mode: "content".'),
-		"-C": z.number().optional().describe('Number of lines to show before and after each match. Requires output_mode: "content".'),
-		"-i": z.boolean().optional().describe("Case insensitive search. Defaults to false"),
+		pattern: z.string().describe(d.pattern),
+		path: z.string().optional().describe(d.path),
+		glob: z.string().optional().describe(d.glob),
+		type: z.string().optional().describe(d.type),
+		output_mode: z.string().optional().describe(d.output_mode),
+		"-A": z.number().optional().describe(d["-A"]),
+		"-B": z.number().optional().describe(d["-B"]),
+		"-C": z.number().optional().describe(d["-C"]),
+		"-i": z.boolean().optional().describe(d["-i"]),
 		case: z.boolean().optional(),
 		gitignore: z.boolean().optional(),
-		multiline: z
-			.boolean()
-			.optional()
-			.describe("Enable multiline mode where . matches newlines and patterns can span lines. Default: false."),
-		head_limit: z
-			.number()
-			.optional()
-			.describe(
-				'Limit output size. For "content" mode: limits total matches shown. For "files_with_matches" and "count" modes: limits number of files.',
-			),
-		offset: z
-			.number()
-			.optional()
-			.describe(
-				'Skip first N entries. For "content" mode: skips first N matches. For "files_with_matches" and "count" modes: skips first N files. Use with head_limit for pagination.',
-			),
+		multiline: z.boolean().optional().describe(d.multiline),
+		head_limit: z.number().optional().describe(d.head_limit),
+		offset: z.number().optional().describe(d.offset),
 		skip: z.number().optional(),
 	});
 }
