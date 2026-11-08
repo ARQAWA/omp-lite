@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import turnDuration, { durationLabel, runFailed } from "../../../../src/modules/turn-duration/index.js";
+import turnDuration, { durationLabel, runFailed, startsTurn } from "../../../../src/modules/turn-duration/index.js";
 
 function mount(mode = "tui", stopReason = "stop") {
 	const handlers = {};
@@ -64,6 +64,26 @@ test("a later submission and a slash command do not re-arm the clock", () => {
 	performance.now = now;
 	expect(sent.length).toBe(1);
 	expect(sent[0][0].content[0].text).toBe("⏱ 1m 0s");
+});
+
+test("only submissions that start user work arm the clock", () => {
+	expect(startsTurn("hello")).toBe(true);
+	expect(startsTurn("/skill:blindreview x")).toBe(true);
+	expect(startsTurn("/define-goal ship it")).toBe(true);
+	expect(startsTurn("/model")).toBe(false);
+	expect(startsTurn("!pwd")).toBe(false);
+});
+
+test("an idle command or shell run leaves no timer for a later run", () => {
+	const { handlers, sent, ctx, done } = mount();
+	const now = performance.now;
+	performance.now = () => 0;
+	handlers.input({ text: "/model" }, ctx);
+	handlers.input({ text: "!pwd" }, ctx);
+	performance.now = () => 90000;
+	done();
+	performance.now = now;
+	expect(sent).toEqual([]);
 });
 
 test("a continuing agent_end keeps the measurement for the final completion", () => {
