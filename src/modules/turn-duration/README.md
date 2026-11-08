@@ -14,7 +14,7 @@
 
 Источник: пакет `pi-response-duration` 1.0.1 (MIT, copyright 2026 tech-msc). Текст лицензии — [LICENSE](LICENSE). Переписан под OMP: там нет `agent_before_settle` и `registerEntryRenderer`, поэтому строка идёт через `sendMessage` и `registerMessageRenderer`.
 
-**Вход:** `~/.omp/agent/extensions/turn-duration.js`. Механизм установки в репозитории ещё не реализован.
+**Вход:** `~/.omp/agent/extensions/turn-duration.js` и `turn-duration.LICENSE` рядом с ним. Механизм установки в репозитории ещё не реализован.
 
 **Выключить:** удалить файл.
 
