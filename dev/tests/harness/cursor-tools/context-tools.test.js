@@ -121,14 +121,40 @@ test("glob keeps native notices and leaves oversized bodies alone", async () => 
 	}
 });
 
-test("a notice identical to a filename survives once", async () => {
+test("a notice identical to a filename survives while other files exist", async () => {
 	const dir = mkdtempSync(join(tmpdir(), "glob-name-"));
 	try {
 		const notice = "Requested limit 500 clamped to the max of 200";
 		writeFileSync(join(dir, notice), "a");
-		const ctx = { cwd: dir, invokeTool: async () => ({ details: { files: [notice] }, content: [{ type: "text", text: `${notice}\n${notice}` }] }) };
+		writeFileSync(join(dir, "b.ts"), "b");
+		const ctx = {
+			cwd: dir,
+			invokeTool: async () => ({ details: { files: [notice, "b.ts"] }, content: [{ type: "text", text: `${notice}\n${notice}\nb.ts` }] }),
+		};
 		const result = await executeGlob("call", { glob_pattern: "*" }, undefined, undefined, ctx);
-		expect(result.content[0].text.split("\n")).toEqual([notice, notice]);
+		const lines = result.content[0].text.split("\n");
+		expect(lines.filter(line => line === notice)).toHaveLength(2);
+		expect(lines.filter(line => line === "b.ts")).toHaveLength(1);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("a filename matching a notice prefix stays a single path", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "glob-prefix-"));
+	try {
+		const name = "Requested limit 500.ts";
+		writeFileSync(join(dir, name), "a");
+		writeFileSync(join(dir, "b.ts"), "b");
+		const notice = "Requested limit 500 clamped to the max of 200";
+		const ctx = {
+			cwd: dir,
+			invokeTool: async () => ({ details: { files: [name, "b.ts"] }, content: [{ type: "text", text: `${name}\nb.ts\n${notice}` }] }),
+		};
+		const result = await executeGlob("call", { glob_pattern: "*.ts" }, undefined, undefined, ctx);
+		const lines = result.content[0].text.split("\n");
+		expect(lines.filter(line => line === name)).toHaveLength(1);
+		expect(lines.filter(line => line === notice)).toHaveLength(1);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
