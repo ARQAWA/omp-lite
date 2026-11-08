@@ -107,5 +107,7 @@ startup:
 edit:
   autoRepair:
     enabled: true
+bashInterceptor:
+  enabled: true
 lsp:
   diagnosticsOnEdit: true

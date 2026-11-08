@@ -159,3 +159,15 @@
 **Границы:** только TUI. Старые карточки истории скрыты, отдельной строки для них нет. Счётчики считают вызовы, не уникальные файлы.
 
 **Носители правила:** модуль, README, тест `dev/tests/harness/tool-summary/`, установленные файлы `~/.omp/agent/extensions/tool-summary.js` и `tool-summary.json`. Механизм описан в `omp://extensions.md`.
+
+## D-016 — тулы из My OMP Harness на микрофункциях
+
+**Решение:** модуль [file-workflow](../src/modules/file-workflow/README.md) ставит шесть тулов: `read`, `grep`, `glob`, `bash`, `edit`, `write`. Каждый держит имя штатного тула OMP, объявлен с `loadMode: essential` и передаёт вызов штатному тулу через `ctx.invokeTool`. Код перенесён из `~/Documents/ChatGPT/my-omp-harness/extensions/`, но разрезан на чистые функции: у каждой свой тест, `execute` только собирает цепочку. `edit` выбирает режим по модели: GPT получает `apply_patch`, остальные — `replace` через настройки `edit.mode` и `edit.modelVariants`.
+
+**Основание:** поручение владельца от 2026-11-08: тулы Cursor на базе OMP, каждый собран из маленьких детерминированных функций, функция проверяется отдельно, тул — только сборка.
+
+**Причина:** монолиты референса не проверяются по частям. `ctx.invokeTool` по `omp://extensions.md` даёт штатное поведение и боковые эффекты без своего кода. Нативные имена сохраняют рендеры и делегирование внутренних URL. `loadMode: essential` держит шесть тулов в каждом запросе: ими работает основной агент.
+
+**Границы:** поля `todo` в схемах нет. `read` не обслуживает `xd://eval/<topic>`. Своих рендеров нет. `growToBlocks` получает границы блоков готовыми, поэтому остаётся чистой функцией.
+
+**Носители правила:** модуль, README модуля, тест `dev/tests/harness/file-workflow/`, `bashInterceptor.enabled: true` в [config.yml](../src/modules/runtime-config/config.yml). Установка: `cp -R src/modules/file-workflow ~/.omp/agent/extensions/file-workflow`. Механизмы: `omp://extensions.md`, `omp://extension-loading.md`, `omp://tools/edit.md`, `omp://settings.md`, `omp://tools/bash.md`.
