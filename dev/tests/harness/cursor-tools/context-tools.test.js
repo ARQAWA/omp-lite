@@ -121,6 +121,73 @@ test("glob keeps native notices and leaves oversized bodies alone", async () => 
 	}
 });
 
+test("a notice identical to a filename survives once", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "glob-name-"));
+	try {
+		const notice = "Requested limit 500 clamped to the max of 200";
+		writeFileSync(join(dir, notice), "a");
+		const ctx = { cwd: dir, invokeTool: async () => ({ details: { files: [notice] }, content: [{ type: "text", text: `${notice}\n${notice}` }] }) };
+		const result = await executeGlob("call", { glob_pattern: "*" }, undefined, undefined, ctx);
+		expect(result.content[0].text.split("\n")).toEqual([notice, notice]);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+function fakeZod() {
+	const leaf = () => {
+		const node = { optional: () => node, describe: () => node };
+		return node;
+	};
+	return { string: leaf, number: leaf, boolean: leaf, object: () => leaf() };
+}
+
+test("glob returns host paths newest first", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "glob-mtime-"));
+	try {
+		const older = join(dir, "older.ts");
+		const newer = join(dir, "newer.ts");
+		writeFileSync(older, "a");
+		writeFileSync(newer, "b");
+		utimesSync(older, 1000, 1000);
+		utimesSync(newer, 2000, 2000);
+		expect(sortByMtime([older, newer])).toEqual([newer, older]);
+		expect(sortByMtime(["older.ts", "newer.ts"], dir)).toEqual(["newer.ts", "older.ts"]);
+		const tools = [];
+		install({ zod: fakeZod(), registerTool: tool => tools.push(tool), on: () => {} });
+		const ctx = { cwd: dir, invokeTool: async () => ({ details: { files: ["older.ts", "newer.ts"] }, content: [{ type: "text", text: "older.ts\nnewer.ts" }] }) };
+		const result = await tools.find(tool => tool.name === "glob").execute("call", { glob_pattern: "*.ts" }, undefined, undefined, ctx);
+		expect(result.content[0].text.split("\n")).toEqual(["newer.ts", "older.ts"]);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("glob keeps native notices and leaves oversized bodies alone", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "glob-notes-"));
+	try {
+		const first = join(dir, "a.ts");
+		const second = join(dir, "[b].ts");
+		writeFileSync(first, "a");
+		writeFileSync(second, "b");
+		utimesSync(first, 1000, 1000);
+		utimesSync(second, 2000, 2000);
+		const notices = "# dir/\n[b].ts\na.ts\nRequested limit 500 clamped to the max of 200\nScan incomplete, NOT proof of absence";
+		const ctx = {
+			cwd: dir,
+			invokeTool: async () => ({ details: { files: [first, second] }, content: [{ type: "text", text: notices }] }),
+		};
+		const result = await executeGlob("call", { glob_pattern: "*.ts", target_directory: dir }, undefined, undefined, ctx);
+		expect(result.content[0].text).toBe(
+			`${second}\n${first}\nRequested limit 500 clamped to the max of 200\nScan incomplete, NOT proof of absence`,
+		);
+		const huge = { cwd: "/", invokeTool: async () => ({ details: { files: ["/a", "/b"].fill("/x".repeat(40000)) }, content: [{ type: "text", text: "native body" }] }) };
+		const kept = await executeGlob("call", { glob_pattern: "*.ts" }, undefined, undefined, huge);
+		expect(kept.content[0].text).toBe("native body");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
 test("a filename equal to a notice prefix stays a single path", async () => {
 	const dir = mkdtempSync(join(tmpdir(), "glob-name-"));
 	try {
