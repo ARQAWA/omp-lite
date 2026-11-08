@@ -11,7 +11,7 @@ import {
 test("glob maps the Cursor pattern and directory, keeping native fields", () => {
 	expect(globRequest({ glob_pattern: "*.ts" })).toEqual({ params: { path: "*.ts" } });
 	expect(globRequest({ glob_pattern: "*.ts", target_directory: "/work/src/", hidden: false, limit: 5 })).toEqual({
-		params: { path: "/work/src/*.ts", hidden: false, gitignore: undefined, limit: 5 },
+		params: { path: "/work/src/**/*.ts", hidden: false, gitignore: undefined, limit: 5 },
 	});
 	expect(globRequest({ glob_pattern: "" }).error).toBe("glob_pattern must not be empty");
 });
@@ -23,6 +23,8 @@ test("read maps Cursor offset and limit to an exact raw selector", () => {
 	expect(readRequest({ path: "a.ts", offset: -5 })).toEqual({ params: { path: "a.ts:-5:raw" } });
 	expect(readRequest({ path: "a.ts", offset: -5, limit: 2 }).tail).toEqual({ path: "a.ts", offset: -5, limit: 2 });
 	expect(readRequest({ path: "a.ts:1-3", offset: 2 }).error).toBe("path already carries a selector; drop offset and limit");
+	expect(readRequest({ path: "a.ts:-5", offset: 2 }).error).toBe("path already carries a selector; drop offset and limit");
+	expect(readRequest({ path: "https://example.com:8080/page", offset: 2 }).params.path).toBe("https://example.com:8080/page:2-:raw");
 	expect(readRequest({ path: "a.ts", offset: 0 }).error).toBe("offset must be a non-zero integer");
 });
 
@@ -46,7 +48,7 @@ test("the registered glob and read entries forward the mapped native call", asyn
 	const ctx = { invokeTool: async params => (seen.push(params), { content: [{ type: "text", text: "ok" }] }) };
 	await tools.find(tool => tool.name === "glob").execute("call", { glob_pattern: "*.ts", target_directory: "/w", gitignore: false }, undefined, undefined, ctx);
 	await tools.find(tool => tool.name === "read").execute("call", { path: "a.ts", offset: 3, limit: 2 }, undefined, undefined, ctx);
-	expect(seen).toEqual([{ path: "/w/*.ts", gitignore: false }, { path: "a.ts:3-4:raw" }]);
+	expect(seen).toEqual([{ path: "/w/**/*.ts", gitignore: false }, { path: "a.ts:3-4:raw" }]);
 });
 
 test("glob and read carry the captured Cursor texts under our names", () => {

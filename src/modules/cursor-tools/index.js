@@ -164,7 +164,6 @@ const NATIVE_LIMITS = [
 	["multiline", request => request.explicitMultiline],
 	["glob", request => request.glob !== undefined],
 	["head_limit", request => request.headLimit !== undefined],
-	["offset", request => request.offset !== undefined],
 ];
 
 export function plainMessage(request) {
@@ -254,10 +253,19 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 		const refused = plainMessage(request);
 		if (refused !== undefined) return text(refused, true);
 		if (typeof ctx?.invokeTool !== "function") return text("native grep is unavailable in this runtime", true);
-		return ctx.invokeTool(
-			{ pattern: request.pattern, path: request.path, case: request.caseSensitive, gitignore: request.gitignore },
+		const result = await ctx.invokeTool(
+			{
+				pattern: request.pattern,
+				path: request.path,
+				case: request.caseSensitive,
+				gitignore: request.gitignore,
+				skip: request.offset,
+			},
 			{ signal, onUpdate },
 		);
+		const textBlock = result?.content?.[0];
+		if (textBlock?.type === "text") textBlock.text = textBlock.text.replace(/Use skip=(\d+)/g, "Use offset=$1");
+		return result;
 	}
 	try {
 		return await searchGrep(request, ctx, { ...options, signal });
@@ -297,8 +305,9 @@ export function globRequest(params) {
 	const pattern = input.glob_pattern;
 	if (typeof pattern !== "string" || pattern === "") return { error: "glob_pattern must not be empty" };
 	const directory = input.target_directory;
-	const path = typeof directory === "string" && directory !== "" ? `${directory.replace(/\/+$/, "")}/${pattern}` : pattern;
-	return { params: { path, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
+	if (typeof directory !== "string" || directory === "") return { params: { path: pattern, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
+	const recursive = pattern.startsWith("**/") ? pattern : `**/${pattern}`;
+	return { params: { path: `${directory.replace(/\/+$/, "")}/${recursive}`, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
 }
 
 export async function executeGlob(toolCallId, params, signal, onUpdate, ctx) {
@@ -314,7 +323,12 @@ export async function executeGlob(toolCallId, params, signal, onUpdate, ctx) {
 
 /** Rejects a path that already carries a selector; the native tool wants one form only. */
 function hasSelector(path) {
-	return /:(?:raw|img|conflicts|\d)/.test(path);
+	if (/:(?:raw|img|conflicts)(?::|$)/.test(path)) return true;
+	const match = /:(L?-?\d+(?:-L?\d*)?(?:[+,]\d*)*(?::raw)?)$/.exec(path);
+	if (!match) return false;
+	const before = path.slice(0, match.index);
+	if (before.endsWith("//")) return false;
+	return !/^[a-z][a-z0-9+.-]*:\/\/[^/]*$/i.test(before);
 }
 
 /** Cursor sends a 1-indexed offset and a line count; the native tool takes a path selector. */
@@ -425,6 +439,7 @@ export function install(pi, options = {}) {
 		label: "grep",
 		loadMode: "essential",
 		concurrency: "shared",
+		approval: "read",
 		strict: false,
 		description: GREP_DESCRIPTION,
 		parameters: grepSchema(z),
@@ -435,6 +450,7 @@ export function install(pi, options = {}) {
 		label: "glob",
 		loadMode: "essential",
 		concurrency: "shared",
+		approval: "read",
 		strict: false,
 		description: GLOB_DESCRIPTION,
 		parameters: globSchema(z),
@@ -445,6 +461,7 @@ export function install(pi, options = {}) {
 		label: "read",
 		loadMode: "essential",
 		concurrency: "shared",
+		approval: "read",
 		strict: false,
 		description: READ_DESCRIPTION,
 		parameters: readSchema(z),
