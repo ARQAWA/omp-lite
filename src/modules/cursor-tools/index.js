@@ -77,7 +77,7 @@ export function install(pi, options = {}) {
 		name: "bash",
 		label: "bash",
 		loadMode: "essential",
-		concurrency: "shared",
+		concurrency: args => (args?.pty === true ? "exclusive" : "shared"),
 		approval: "exec",
 		strict: false,
 		description: BASH_DESCRIPTION,

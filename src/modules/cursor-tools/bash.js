@@ -16,10 +16,13 @@ export function text(value, isError = false) {
 }
 
 export async function executeBash(toolCallId, params, signal, onUpdate, ctx) {
-	if (typeof ctx?.invokeTool !== "function") return text("native bash is unavailable in this runtime", true);
-	const mapped = mapBashParams(params);
-	if (params?.block_until_ms !== undefined && params.block_until_ms !== 0) {
+	const blockUntilMs = params?.block_until_ms;
+	if (blockUntilMs !== undefined && blockUntilMs !== 0) {
 		return text("block_until_ms only accepts 0; other values would race the shared auto-background threshold", true);
 	}
-	return ctx.invokeTool(mapped, { signal, onUpdate });
+	if (blockUntilMs === 0 && (params.pty === true || params.name !== undefined)) {
+		return text("block_until_ms: 0 cannot be combined with pty or a named service", true);
+	}
+	if (typeof ctx?.invokeTool !== "function") return text("native bash is unavailable in this runtime", true);
+	return ctx.invokeTool(mapBashParams(params), { signal, onUpdate });
 }

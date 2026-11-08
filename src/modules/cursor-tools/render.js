@@ -2,41 +2,44 @@
 // Every page is cut between whole entries, so the entry that did not fit starts the next page.
 
 export const PAGE_BUDGET = 15000;
-const ITEM_LIMIT = PAGE_BUDGET - 1000;
+const TAIL = 400;
 
-/** A single entry cannot be dropped, so an oversized one keeps its head and tail. */
+/** An oversized entry keeps its head and its tail, because the match may sit anywhere. */
 export function cut(text) {
-	if (text.length <= ITEM_LIMIT) return text;
-	return `${text.slice(0, ITEM_LIMIT - 2)}…${text.slice(-1)}`;
+	if (text.length <= PAGE_BUDGET) return text;
+	return `${text.slice(0, PAGE_BUDGET - TAIL - 1)}…${text.slice(-TAIL)}`;
 }
 
-/** One entry per match line, with the context lines that belong to it. */
+/**
+ * One entry per match line. A context line belongs to the next match in the file,
+ * or to the last one after it, so a page never carries another match's context.
+ */
 export function contentEntries(matches, display = path => path) {
 	const byFile = new Map();
 	for (const match of matches) {
 		const file = display(match.path);
-		let lines = byFile.get(file);
-		if (lines === undefined) byFile.set(file, (lines = new Map()));
-		for (const side of [match.contextBefore ?? [], match.contextAfter ?? []]) {
-			for (const line of side) {
-				if (!lines.has(line.lineNumber)) lines.set(line.lineNumber, { lineNumber: line.lineNumber, line: line.line, isContext: true });
-			}
-		}
-		lines.set(match.lineNumber, { lineNumber: match.lineNumber, line: match.line, isContext: false });
+		let list = byFile.get(file);
+		if (list === undefined) byFile.set(file, (list = []));
+		list.push(match);
 	}
 	const entries = [];
-	for (const [file, lines] of byFile) {
-		const pending = [];
-		let entry;
-		for (const line of [...lines.values()].sort((a, b) => a.lineNumber - b.lineNumber)) {
-			if (line.isContext) {
-				if (entry === undefined) pending.push(line);
-				else entry.lines.push(line);
-				continue;
+	for (const [file, list] of byFile) {
+		list.sort((a, b) => a.lineNumber - b.lineNumber);
+		const owned = list.map(() => new Map());
+		list.forEach((match, index) => owned[index].set(match.lineNumber, { lineNumber: match.lineNumber, line: match.line, isContext: false }));
+		const context = new Map();
+		for (const match of list) {
+			for (const side of [match.contextBefore ?? [], match.contextAfter ?? []]) {
+				for (const line of side) if (!context.has(line.lineNumber)) context.set(line.lineNumber, line);
 			}
-			entry = { file, lines: [...pending.splice(0), line] };
-			entries.push(entry);
 		}
+		for (const line of context.values()) {
+			if (owned.some(map => map.has(line.lineNumber))) continue;
+			let owner = list.findIndex(match => match.lineNumber > line.lineNumber);
+			if (owner === -1) owner = list.length - 1;
+			owned[owner].set(line.lineNumber, { lineNumber: line.lineNumber, line: line.line, isContext: true });
+		}
+		for (const map of owned) entries.push({ file, lines: [...map.values()].sort((a, b) => a.lineNumber - b.lineNumber) });
 	}
 	return entries;
 }
