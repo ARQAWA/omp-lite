@@ -1,15 +1,18 @@
 import { expect, test } from "bun:test";
-import { BASH_DESCRIPTION, GREP_DESCRIPTION } from "../../../../src/modules/cursor-tools/index.js";
+import { BASH_DESCRIPTION, GREP_DESCRIPTION, install } from "../../../../src/modules/cursor-tools/index.js";
 
-test("grep keeps the Cursor guidance under our names", () => {
-	expect(GREP_DESCRIPTION).toContain("Search the workspace with ripgrep.");
-	expect(GREP_DESCRIPTION).toContain("respects .gitignore");
-	expect(GREP_DESCRIPTION).not.toContain(".cursorignore");
-	expect(GREP_DESCRIPTION).not.toContain("Use rg");
-	expect(GREP_DESCRIPTION).toContain("escape metacharacters");
-	expect(GREP_DESCRIPTION).toContain("set path (absolute path) to narrow it");
-	expect(GREP_DESCRIPTION).toContain("Context flags (-A, -B, -C) only affect content output");
-	expect(GREP_DESCRIPTION).toContain('If results show "N+ of M matches shown"');
+const EXPECTED_GREP = `Search the workspace with ripgrep.
+
+- Use this tool instead of shell rg; respects .gitignore
+- Default scope is the workspace root; set path (absolute path) to narrow it
+- Supply a regex pattern; escape metacharacters, e.g. "functionCall\\(", "\\{", "\\}"
+- Prefer type over broad glob; wildcard globs like * bypass ignore rules and slow searches
+- Enable multiline only when a match spans lines—it can degrade performance
+- Context flags (-A, -B, -C) only affect content output
+- If results show "N+ of M matches shown", the output was truncated; tighten the query or raise head_limit`;
+
+test("grep carries the captured Cursor text under our names", () => {
+	expect(GREP_DESCRIPTION).toBe(EXPECTED_GREP);
 });
 
 const EXPECTED_BASH = `Executes a given command in a shell session with optional foreground timeout.
@@ -23,4 +26,19 @@ IMPORTANT: Use this tool for terminal operations like git, npm, docker, etc. DO 
 
 test("bash carries the captured Cursor text under our names", () => {
 	expect(BASH_DESCRIPTION).toBe(EXPECTED_BASH);
+});
+
+test("grep parameters carry the Cursor descriptions", () => {
+	const seen = [];
+	const leaf = () => {
+		const node = { optional: () => node, describe: text => (seen.push(text), node) };
+		return node;
+	};
+	const pi = { zod: { string: leaf, number: leaf, boolean: leaf, object: () => leaf() }, registerTool: () => {}, on: () => {} };
+	install(pi);
+	expect(seen).toContain("The regular expression pattern to search for in file contents");
+	expect(seen).toContain("Enable multiline mode where . matches newlines and patterns can span lines. Default: false.");
+	expect(seen.some(text => text.includes("Cursor workspace root"))).toBe(false);
+	expect(seen.some(text => text.includes("-n line numbers"))).toBe(false);
+	expect(seen.some(text => text.includes("rg --type"))).toBe(false);
 });
