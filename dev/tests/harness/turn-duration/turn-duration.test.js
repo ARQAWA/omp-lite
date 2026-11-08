@@ -1,23 +1,38 @@
 import { expect, test } from "bun:test";
-import turnDuration, { durationLabel, runFailed, startsTurn } from "../../../../src/modules/turn-duration/index.js";
+import turnDuration, { durationLabel, runFailed } from "../../../../src/modules/turn-duration/index.js";
 
-function mount(mode = "tui", stopReason = "stop") {
+function mount(mode = "tui") {
 	const handlers = {};
 	const sent = [];
 	const renderers = {};
 	const pi = {
 		on: (event, handler) => (handlers[event] = handler),
 		registerMessageRenderer: (type, render) => (renderers[type] = render),
-		sendMessage: (message, options) => sent.push([message, options]),
+		sendMessage: message => sent.push(message),
 	};
 	turnDuration(pi);
+	const ctx = { mode, hasUI: true, agent: { kind: "main" } };
 	return {
 		handlers,
 		sent,
 		renderers,
-		ctx: { mode, hasUI: true, agent: { kind: "main" } },
-		done: () => handlers.agent_end({ messages: [{ role: "assistant", stopReason }] }, { mode, agent: { kind: "main" } }),
+		ctx,
+		submit: text => handlers.input({ text }, ctx),
+		start: () => handlers.before_agent_start({}, ctx),
+		end: (stopReason = "stop", willContinue = false) =>
+			handlers.agent_end({ messages: [{ role: "assistant", stopReason }], willContinue }, ctx),
 	};
+}
+
+function at(times, body) {
+	const now = performance.now;
+	let index = 0;
+	performance.now = () => times[Math.min(index++, times.length - 1)];
+	try {
+		return body();
+	} finally {
+		performance.now = now;
+	}
 }
 
 test("labels stay readable across seconds, minutes and hours", () => {
@@ -35,112 +50,98 @@ test("failed and aborted runs are not labelled", () => {
 });
 
 test("a user turn prints one line with the whole duration", () => {
-	const { handlers, sent, ctx, done } = mount();
-	const now = performance.now;
-	performance.now = () => 1000;
-	handlers.input({ text: "go" }, ctx);
-	performance.now = () => 95000;
-	done();
-	performance.now = now;
-	expect(sent.length).toBe(1);
-	expect(sent[0][0]).toEqual({
+	const turn = mount();
+	at([1000, 95000], () => {
+		turn.submit("go");
+		turn.start();
+		turn.end();
+	});
+	expect(turn.sent.length).toBe(1);
+	expect(turn.sent[0]).toEqual({
 		customType: "omp-lite.turn-duration",
 		content: [{ type: "text", text: "⏱ 1m 34s" }],
 		display: true,
 	});
 });
 
-test("a later submission and a slash command do not re-arm the clock", () => {
-	const { handlers, sent, ctx, done } = mount();
-	const now = performance.now;
-	performance.now = () => 0;
-	handlers.input({ text: "first" }, ctx);
-	performance.now = () => 5000;
-	handlers.input({ text: "/model" }, ctx);
-	performance.now = () => 10000;
-	handlers.input({ text: "second" }, ctx);
-	performance.now = () => 60000;
-	done();
-	performance.now = now;
-	expect(sent.length).toBe(1);
-	expect(sent[0][0].content[0].text).toBe("⏱ 1m 0s");
+test("a run started without a submission stays silent", () => {
+	const turn = mount();
+	at([0, 90000], () => {
+		turn.start();
+		turn.end();
+	});
+	expect(turn.sent).toEqual([]);
 });
 
-test("only submissions that start user work arm the clock", () => {
-	expect(startsTurn("hello")).toBe(true);
-	expect(startsTurn("/skill:blindreview x")).toBe(true);
-	expect(startsTurn("/define-goal ship it")).toBe(true);
-	expect(startsTurn("/model")).toBe(false);
-	expect(startsTurn("!pwd")).toBe(false);
+test("a command or shell line does not shift the next turn", () => {
+	const turn = mount();
+	at([0, 45000], () => {
+		turn.submit("/model");
+		turn.submit("!pwd");
+		turn.submit("hello");
+		turn.start();
+		turn.end();
+	});
+	expect(turn.sent.length).toBe(1);
+	expect(turn.sent[0].content[0].text).toBe("⏱ 45s");
 });
 
-test("an idle command or shell run leaves no timer for a later run", () => {
-	const { handlers, sent, ctx, done } = mount();
-	const now = performance.now;
-	performance.now = () => 0;
-	handlers.input({ text: "/model" }, ctx);
-	handlers.input({ text: "!pwd" }, ctx);
-	performance.now = () => 90000;
-	done();
-	performance.now = now;
-	expect(sent).toEqual([]);
+test("a skill or unknown slash prompt still gets its line", () => {
+	const turn = mount();
+	at([0, 40000], () => {
+		turn.submit("/skill:blindreview check this");
+		turn.start();
+		turn.end();
+	});
+	expect(turn.sent.length).toBe(1);
+	expect(turn.sent[0].content[0].text).toBe("⏱ 40s");
 });
 
-test("a continuing agent_end keeps the measurement for the final completion", () => {
-	const { handlers, sent, ctx } = mount();
-	const now = performance.now;
-	performance.now = () => 0;
-	handlers.input({ text: "go" }, ctx);
-	performance.now = () => 40000;
-	handlers.agent_end({ messages: [{ role: "assistant", stopReason: "stop" }], willContinue: true }, ctx);
-	expect(sent).toEqual([]);
-	performance.now = () => 60000;
-	handlers.agent_end({ messages: [{ role: "assistant", stopReason: "stop" }] }, ctx);
-	performance.now = now;
-	expect(sent.length).toBe(1);
-	expect(sent[0][0].content[0].text).toBe("⏱ 1m 0s");
+test("a message queued behind a live run does not restart the clock", () => {
+	const turn = mount();
+	at([0, 60000], () => {
+		turn.submit("go");
+		turn.start();
+		turn.submit("second");
+		turn.start();
+		turn.end();
+	});
+	expect(turn.sent[0].content[0].text).toBe("⏱ 1m 0s");
 });
 
-test("a run started without a submitted message stays silent", () => {
-	const { sent, done } = mount();
-	performance.now = () => 0;
-	done();
-	expect(sent).toEqual([]);
+test("a continuation keeps the measurement for the final completion", () => {
+	const turn = mount();
+	at([0, 40000], () => {
+		turn.submit("go");
+		turn.start();
+		turn.end("stop", true);
+	});
+	expect(turn.sent).toEqual([]);
+	at([60000], () => turn.end());
+	expect(turn.sent.length).toBe(1);
+	expect(turn.sent[0].content[0].text).toBe("⏱ 1m 0s");
 });
 
-test("quick, aborted, print-mode and error turns stay silent", () => {
-	const quick = mount();
-	performance.now = () => 0;
-	quick.handlers.input({}, quick.ctx);
-	performance.now = () => 2000;
-	quick.done();
-	expect(quick.sent).toEqual([]);
-
-	const aborted = mount("tui", "aborted");
-	performance.now = () => 0;
-	aborted.handlers.input({}, aborted.ctx);
-	performance.now = () => 90000;
-	aborted.done();
-	expect(aborted.sent).toEqual([]);
-
-	const error = mount("tui", "error");
-	performance.now = () => 0;
-	error.handlers.input({}, error.ctx);
-	performance.now = () => 90000;
-	error.done();
-	expect(error.sent).toEqual([]);
-
-	const print = mount("print");
-	performance.now = () => 0;
-	print.handlers.input({}, print.ctx);
-	performance.now = () => 90000;
-	print.done();
-	expect(print.sent).toEqual([]);
+test("quick, aborted, error and print-mode turns stay silent", () => {
+	for (const [mode, reason, span] of [
+		["tui", "stop", 2000],
+		["tui", "aborted", 90000],
+		["tui", "error", 90000],
+		["print", "stop", 90000],
+	]) {
+		const turn = mount(mode);
+		at([0, span], () => {
+			turn.submit("go");
+			turn.start();
+			turn.end(reason);
+		});
+		expect(turn.sent).toEqual([]);
+	}
 });
 
 test("the renderer draws the stored line as a compact row", () => {
-	const { renderers } = mount();
-	const mark = renderers["omp-lite.turn-duration"]({ content: [{ type: "text", text: "⏱ 2m 4s" }] });
+	const turn = mount();
+	const mark = turn.renderers["omp-lite.turn-duration"]({ content: [{ type: "text", text: "⏱ 2m 4s" }] });
 	expect(mark.render(80)).toEqual(["⏱ 2m 4s"]);
 	expect(mark.isTranscriptBlockCompact()).toBe(true);
 	expect(mark.render(3)).toEqual(["⏱ 2"]);
