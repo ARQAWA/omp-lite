@@ -12,13 +12,15 @@ test("grep keeps the Cursor guidance under our names", () => {
 	expect(GREP_DESCRIPTION).toContain('If results show "N+ of M matches shown"');
 });
 
-test("bash keeps the Cursor guidance under our names", () => {
-	expect(BASH_DESCRIPTION).toContain("Executes a given command in a shell session with optional foreground timeout.");
-	expect(BASH_DESCRIPTION).toContain("Use grep, glob and read for file operations");
-	expect(BASH_DESCRIPTION).not.toContain("Use rg");
-	expect(BASH_DESCRIPTION).not.toContain("Shell");
-	expect(BASH_DESCRIPTION).toContain("Run independent commands as parallel bash calls");
-	expect(BASH_DESCRIPTION).toContain("Use the gh command");
-	expect(BASH_DESCRIPTION).toContain("use the `grep` tool, not shell `grep` or `find`");
-	expect(BASH_DESCRIPTION).not.toContain("block_until_ms");
+const EXPECTED_BASH = `Executes a given command in a shell session with optional foreground timeout.
+
+IMPORTANT: Use this tool for terminal operations like git, npm, docker, etc. DO NOT use it for file operations (reading, writing, editing, searching, finding files, sleeping) - use the specialized tools for this instead.
+
+- Use grep, glob and read for file operations when applicable. If shell text search is necessary, use the \`grep\` tool, not shell \`grep\` or \`find\`.
+- Do not truncate output with \`head\`, \`tail\`, or \`sed -n\` solely to limit its size; large output is kept whole.
+- Run independent commands as parallel bash calls. Chain dependent commands with \`&&\`.
+- Use the \`gh\` command via the bash tool for all GitHub-related tasks, including issues, pull requests, checks, and releases.`;
+
+test("bash carries the captured Cursor text under our names", () => {
+	expect(BASH_DESCRIPTION).toBe(EXPECTED_BASH);
 });

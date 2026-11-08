@@ -44,6 +44,17 @@ test("delegates the mapped arguments to the native tool", async () => {
 const node = () => chain;
 const chain = new Proxy(node, { get: (_target, key) => (key === "then" ? undefined : node) });
 
+test("the registered bash entry forwards working_directory as cwd", async () => {
+	const tools = [];
+	const pi = { zod: chain, registerTool: tool => tools.push(tool), on: () => {} };
+	install(pi);
+	const bash = tools.find(tool => tool.name === "bash");
+	let seen;
+	const ctx = { invokeTool: async params => ((seen = params), { content: [{ type: "text", text: "ok" }] }) };
+	await bash.execute("call", { command: "pwd", working_directory: "/tmp" }, undefined, undefined, ctx);
+	expect(seen).toEqual({ command: "pwd", cwd: "/tmp" });
+});
+
 test("registers both tools under omp's names and keeps pty calls exclusive", () => {
 	const tools = [];
 	const pi = { zod: chain, registerTool: tool => tools.push(tool), on: () => {} };
