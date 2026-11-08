@@ -345,7 +345,7 @@ test("a pure host list searches each entry with the engine", async () => {
 		writeFileSync(join(dir, "a.ts"), "x");
 		mkdirSync(join(dir, "sub"));
 		writeFileSync(join(dir, "sub", "b.ts"), "x");
-		expect(hostList("a.ts;sub", dir)).toEqual(["a.ts", "sub"]);
+		expect(hostList("a.ts; sub", dir)).toEqual(["a.ts", "sub"]);
 		expect(hostList("a.ts;ssh://h/x", dir)).toBeUndefined();
 		expect(hostList("a.ts;missing", dir)).toBeUndefined();
 		const engine = {
@@ -356,7 +356,7 @@ test("a pure host list searches each entry with the engine", async () => {
 				return { matches: [match(file, 1, "hit")] };
 			},
 		};
-		const result = await executeGrep("call", { pattern: "x", path: "a.ts;sub" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		const result = await executeGrep("call", { pattern: "x", path: "a.ts; sub" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
 		expect(engine.calls).toHaveLength(2);
 		expect(result.content[0].text).toBe("a.ts:1:hit\nsub/b.ts:1:hit");
 	} finally {
