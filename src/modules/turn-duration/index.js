@@ -13,6 +13,13 @@ export function durationLabel(ms) {
 	return left > 0 ? `${hours}h ${left}m ${rest}s` : `${hours}h ${rest}s`;
 }
 
+export function startsTurn(text) {
+	const value = text.trimStart();
+	if (value.startsWith("!")) return false;
+	if (!value.startsWith("/")) return true;
+	return value.startsWith("/skill:") || /^\/define-goal(?:\s|$)/.test(value);
+}
+
 export function runFailed(stopReason) {
 	return stopReason === "aborted" || stopReason === "error";
 }
@@ -34,9 +41,9 @@ export default function turnDuration(pi) {
 	let started;
 	pi.registerMessageRenderer(TYPE, message => new Mark(String(message.content?.[0]?.text ?? "")));
 	// Only a submitted message arms the clock, so runs started by other extensions stay silent.
-	// A command without a turn and a message queued behind a running turn must not re-arm it.
+	// A shell run, a command without a turn and a message queued behind a running turn must not arm it.
 	pi.on("input", event => {
-		if (started !== undefined || String(event?.text ?? "").trimStart().startsWith("/")) return;
+		if (started !== undefined || !startsTurn(String(event?.text ?? ""))) return;
 		started = performance.now();
 	});
 	pi.on("agent_end", (event, ctx) => {
