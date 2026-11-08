@@ -53,6 +53,7 @@ const usage = reports => async () => JSON.stringify({ reports });
 function mount(read, mode = "tui") {
 	const handlers = {};
 	const painted = [];
+	let tick;
 	const pi = { on: (event, handler) => (handlers[event] = handler) };
 	subscriptions(pi, read);
 	const ctx = {
@@ -60,42 +61,55 @@ function mount(read, mode = "tui") {
 		hasUI: true,
 		agent: { kind: "main" },
 		ui: { setStatus: (key, text) => painted.push([key, text]) },
-		setInterval: () => {},
+		setInterval: callback => {
+			tick = callback;
+		},
 	};
 	handlers.session_start({}, ctx);
-	return { handlers, painted };
+	return { handlers, painted, tick: () => tick() };
 }
 
 test("a successful read paints every mark through the extension entry", async () => {
 	const { painted } = mount(
 		usage([
-			report("anthropic", [["7d", 0.55]]),
-			report("openai-codex", [["7d", 0.88]]),
-			report("opencode-go", [["7d", 0.86], ["monthly", 0.93]]),
+			report("anthropic", [["7d", 0.41]]),
+			report("openai-codex", [["7d", 0.62]]),
+			report("opencode-go", [["7d", 0.73], ["monthly", 0.84]]),
 		]),
 	);
 	await flush();
 	expect(painted).toEqual([
-		["10-cc", "CC 55%"],
-		["20-cx", "CX 88%"],
-		["30-go", "Go 86%/93%"],
+		["10-cc", "CC 41%"],
+		["20-cx", "CX 62%"],
+		["30-go", "Go 73%/84%"],
 	]);
 });
 
 test("a missing subscription clears its stale mark", async () => {
-	const { painted } = mount(usage([report("anthropic", [["7d", 0.55]])]));
+	const { painted } = mount(usage([report("anthropic", [["7d", 0.41]])]));
 	await flush();
 	expect(painted).toEqual([
 		["20-cx", undefined],
 		["30-go", undefined],
-		["10-cc", "CC 55%"],
+		["10-cc", "CC 41%"],
 	]);
 });
 
-test("a failed read keeps the previous marks", async () => {
-	const { painted } = mount(async () => {
-		throw new Error("offline");
+test("a failed refresh keeps the marks already on screen", async () => {
+	let offline = false;
+	const { painted, tick } = mount(async () => {
+		if (offline) throw new Error("offline");
+		return JSON.stringify({ reports: [report("anthropic", [["7d", 0.41]])] });
 	});
 	await flush();
-	expect(painted).toEqual([]);
+	expect(painted).toEqual([
+		["20-cx", undefined],
+		["30-go", undefined],
+		["10-cc", "CC 41%"],
+	]);
+	const paintedBefore = painted.length;
+	offline = true;
+	tick();
+	await flush();
+	expect(painted.length).toBe(paintedBefore);
 });

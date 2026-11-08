@@ -13,6 +13,6 @@
 
 **Установка:** слить [status-line.yml](status-line.yml) в `config.yml` и перезапустить OMP.
 
-**Выключить:** удалить блоки из `config.yml`.
+**Выключить:** удалить блок `statusLine` и строку `composer.tokenRate: false`. Остальные ключи `composer` не трогать.
 
 **Тесты:** кода нет. Проверка — `omp gallery --surface=segment` и живой запуск.
