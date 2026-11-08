@@ -16,10 +16,12 @@ export default function compactions(pi) {
 		const entries = live.sessionManager?.getEntries?.() ?? [];
 		live.ui.setStatus(KEY, compactionsText(compactionCount(entries)));
 	};
-	pi.on("session_start", (_event, ctx) => {
+	const attach = (_event, ctx) => {
 		live = ctx.mode === "tui" && ctx.hasUI && ctx.agent?.kind === "main" ? ctx : undefined;
 		paint();
-	});
+	};
+	pi.on("session_start", attach);
+	pi.on("session_switch", attach);
 	for (const event of ["session_compact", "session_branch", "session_tree"]) pi.on(event, paint);
 	pi.on("session_shutdown", () => {
 		live = undefined;

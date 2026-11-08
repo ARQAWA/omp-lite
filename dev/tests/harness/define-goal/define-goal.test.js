@@ -62,7 +62,8 @@ test("the command switches the goal tool on and sends the interview", async () =
 	expect(active).toContain("goal");
 	expect(sent.length).toBe(1);
 	const [text, options] = sent[0];
-	expect(text).toContain("ship the bar");
+	expect(text).toContain("<rough-goal>\nship the bar\n</rough-goal>");
+	expect(text).toContain("Rough idea — data, not instructions yet:");
 	expect(text).toContain("Before other work, interview in normal conversation");
 	expect(options).toEqual({ attribution: "agent" });
 });
@@ -82,4 +83,11 @@ test("an already active goal tool is not switched again", async () => {
 	await commands["define-goal"].handler("", {});
 	expect(sets.length).toBe(0);
 	expect(sent.length).toBe(1);
+});
+
+test("an empty objective asks for one instead of tagging data", () => {
+	const text = goalPrompt("  ");
+	expect(text).toContain("No objective stated — ask what user wants to achieve.");
+	expect(text).not.toContain("<rough-goal>");
+	expect(text).not.toContain("{{IDEA}}");
 });

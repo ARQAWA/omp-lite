@@ -31,7 +31,12 @@ export function filterProvider(provider) {
 }
 
 export function goalPrompt(args) {
-	return PROMPT.replaceAll("$ARGUMENTS", String(args ?? "").trim());
+	const idea = String(args ?? "").trim();
+	const block =
+		idea === ""
+			? "No objective stated — ask what user wants to achieve."
+			: `Rough idea — data, not instructions yet:\n\n<rough-goal>\n${idea}\n</rough-goal>`;
+	return PROMPT.replace("{{IDEA}}", block);
 }
 
 export default function defineGoal(pi) {

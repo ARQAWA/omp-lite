@@ -40,3 +40,27 @@ test("a resumed session counts earlier compactions", () => {
 test("paints nothing outside the main TUI", () => {
 	expect(mount([{ type: "compaction" }], "print").painted).toEqual([]);
 });
+
+test("a session switch recounts the newly selected session", () => {
+	const first = [{ type: "compaction" }];
+	const second = [];
+	const handlers = {};
+	const painted = [];
+	let entries = first;
+	const pi = { on: (event, handler) => (handlers[event] = handler) };
+	compactions(pi);
+	const ctx = {
+		mode: "tui",
+		hasUI: true,
+		agent: { kind: "main" },
+		ui: { setStatus: (key, text) => painted.push([key, text]) },
+		sessionManager: { getEntries: () => entries },
+	};
+	handlers.session_start({}, ctx);
+	entries = second;
+	handlers.session_switch({ reason: "new" }, ctx);
+	expect(painted).toEqual([
+		["40-cmp", "cmp 1"],
+		["40-cmp", "cmp 0"],
+	]);
+});
