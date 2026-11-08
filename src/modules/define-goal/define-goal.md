@@ -1,12 +1,6 @@
----
-description: Define the goal in chat, then start goal mode
-argument-hint: "[rough objective]"
----
+`/define-goal`: goal mode — one persistent autonomous objective loop until success criteria met or stop condition fires.
 
-Goal mode — one persistent autonomous objective loop until success criteria met or stop condition fires.
-
-Rough objective from the user, if empty ask what they want to achieve:
-$ARGUMENTS
+{{IDEA}}
 
 Before other work, interview in normal conversation:
 - Exactly one concise question/reply; then stop for answer. While interviewing: no tool calls, preamble, or other work.
