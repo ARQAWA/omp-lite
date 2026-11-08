@@ -265,8 +265,11 @@ test("a host file selector routes to the engine and filters the range", async ()
 		writeFileSync(file, "x\n".repeat(30));
 		expect(parseHostSelector(`${file}:10-20`)).toEqual({ base: file, ranges: [[10, 20]] });
 		expect(parseHostSelector(`${file}:10-`)).toEqual({ base: file, ranges: [[10, Infinity]] });
-		expect(parseHostSelector(`${file}:5`)).toEqual({ base: file, ranges: [[5, 5]] });
+		expect(parseHostSelector(`${file}:5`)).toEqual({ base: file, ranges: [[5, Infinity]] });
+		expect(parseHostSelector(`${file}:L5+L3`)).toEqual({ base: file, ranges: [[5, 7]] });
+		expect(parseHostSelector("a.ts:10-20", dir)).toEqual({ base: file, ranges: [[10, 20]] });
 		expect(parseHostSelector("bundle.zip:src/a.ts")).toBeUndefined();
+		expect(routeFor("dir:L10-L20")).toBe("native");
 		const engine = fakeEngine({
 			matches: [match(file, 5, "a"), match(file, 10, "b"), match(file, 15, "c"), match(file, 25, "d")],
 		});
@@ -274,6 +277,20 @@ test("a host file selector routes to the engine and filters the range", async ()
 		expect(engine.calls).toHaveLength(1);
 		expect(engine.calls[0][0].path).toBe(file);
 		expect(result.content[0].text).toBe("a.ts:15:c");
+		const counts = await executeGrep("call", { pattern: "x", path: "a.ts:10-20", output_mode: "count" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		expect(counts.content[0].text).toBe("a.ts:2");
+		expect(engine.calls[1][0].mode).toBe("content");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("a literal filename with a colon beats selector parsing", () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-literal-"));
+	try {
+		writeFileSync(join(dir, "a.ts"), "x");
+		writeFileSync(join(dir, "a.ts:10-20"), "literal");
+		expect(parseHostSelector("a.ts:10-20", dir)).toBeUndefined();
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}

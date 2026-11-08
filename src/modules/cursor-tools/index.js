@@ -99,7 +99,7 @@ const COLLECTED = 100000;
 const TIMEOUT_MS = 20000;
 
 const ARCHIVE = /\.(?:tar\.(?:gz|bz2|xz|zst|z)|tar|tbz2|tbz|tgz|txz|tzst|zip|jar|war|ear|apk|whl|ipa|xpi|vsix|nupkg|cbz|rar|cbr|7z|iso|cab|cpio|rpm|deb|ar|a|lib|lzh|lha|arj|asar|gz|bz2|xz|zst|z|lzma):/i;
-const SELECTOR = /:(?:\d+\.\.\d*|\d+-\d*|-\d+|\d+\+\d+|raw|conflicts|img|\d+(?:-\d+)?)(?:,-?\d+(?:(?:-|\.\.)\d*)?)*$/;
+const SELECTOR = /:(?:L?\d+\.\.L?\d*|L?\d+-L?\d*|-L?\d+|L?\d+\+L?\d+|raw|conflicts|img|L?\d+(?:-L?\d+)?)(?:,-?L?\d+(?:(?:-|\.\.)L?\d*)?)*$/;
 const GLOB = /[*?[\]{}]/;
 
 /** Anything the native tool does better than we can is handed back to it. */
@@ -191,7 +191,7 @@ function engineRequest(request, base, signal) {
 		multiline: request.multiline,
 		hidden: true,
 		gitignore: request.gitignore,
-		mode: ENGINE_MODES[request.mode],
+		mode: request.ranges !== undefined ? ENGINE_MODES.content : ENGINE_MODES[request.mode],
 		maxCount: COLLECTED,
 		timeoutMs: TIMEOUT_MS,
 		contextBefore: request.contextBefore,
@@ -273,26 +273,27 @@ export function skipMatches(text, count) {
 }
 
 /** A host file with a line-range selector is searched by the engine, not the capped native tool. */
-export function parseHostSelector(path) {
+export function parseHostSelector(path, cwd = process.cwd()) {
 	if (typeof path !== "string" || path.includes("://") || path.includes(";") || ARCHIVE.test(path)) return undefined;
-	const match = /^(.*?):((?:L?-?\d+(?:(?:-|\.\.)L?\d*)?(?:\+\d*)?(?:,(?:L?-?\d+)(?:(?:-|\.\.)L?\d*)?(?:\+\d*)?)*))$/.exec(path);
+	const literal = resolve(cwd, path);
+	if (existsSync(literal) && statSync(literal).isFile()) return undefined;
+	const match = /^(.*?):((?:L?-?\d+(?:(?:-|\.\.)L?\d*)?(?:\+L?\d*)?(?:,(?:L?-?\d+)(?:(?:-|\.\.)L?\d*)?(?:\+L?\d*)?)*))$/.exec(path);
 	if (!match) return undefined;
-	const base = match[1];
-	if (base === "" || !existsSync(base) || !statSync(base).isFile()) return undefined;
+	const base = resolve(cwd, match[1]);
+	if (match[1] === "" || !existsSync(base) || !statSync(base).isFile()) return undefined;
 	const ranges = [];
 	for (const part of match[2].split(",")) {
 		const value = part.replace(/^L/, "");
 		let range;
 		if (/^-\d+$/.test(value)) return undefined;
 		if (value.includes("+")) {
-			const [start, count] = value.split("+").map(Number);
+			const [start, count] = value.split("+").map(part => Number(part.replace(/^L/, "")));
 			range = [start, start + count - 1];
 		} else if (/(?:\.\.|-)/.test(value)) {
 			const [start, end] = value.split(/\.\.|-/);
 			range = [Number(start.replace(/^L/, "")), end === "" || end === undefined ? Infinity : Number(end.replace(/^L/, ""))];
 		} else {
-			const line = Number(value);
-			range = [line, line];
+			range = [Number(value), Infinity];
 		}
 		if (!Number.isInteger(range[0]) || range[0] < 1 || (range[1] !== Infinity && (!Number.isInteger(range[1]) || range[1] < range[0]))) return undefined;
 		ranges.push(range);
@@ -305,7 +306,7 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 	const parsed = parseGrep(params);
 	if (parsed.error !== undefined) return text(parsed.error, true);
 	const request = parsed.request;
-	const host = parseHostSelector(request.path);
+	const host = parseHostSelector(request.path, ctx?.cwd ?? process.cwd());
 	if (host !== undefined) {
 		request.path = host.base;
 		request.ranges = host.ranges;
