@@ -111,11 +111,16 @@ test("a file-mode page names the parameter that advances", async () => {
 	expect(bySkip.content[0].text).toContain("Use skip=2");
 });
 
-test("the two-character backslash-n turns multiline on without being rejected", () => {
-	const parsed = parseGrep({ pattern: "a\\nb", path: "src/a.ts:1-2" });
-	expect(parsed.request.multiline).toBe(true);
-	expect(parsed.request.explicitMultiline).toBe(false);
-	expect(parsed.request.path).toBe("src/a.ts:1-2");
+test("automatic multiline does not block the native branch", async () => {
+	const seen = [];
+	const nativeCtx = { cwd: "/work", invokeTool: async (params, options) => (seen.push(params), { content: [{ type: "text", text: "native" }] }) };
+	const result = await executeGrep("call", { pattern: "a\\nb", path: "src/a.ts:1-2" }, undefined, undefined, nativeCtx);
+	expect(result.isError).toBeUndefined();
+	expect(seen).toHaveLength(1);
+	expect(seen[0]).toEqual({ pattern: "a\\nb", path: "src/a.ts:1-2", case: true, gitignore: true, skip: undefined });
+	const explicit = await executeGrep("call", { pattern: "a\\nb", path: "src/a.ts:1-2", multiline: true }, undefined, undefined, nativeCtx);
+	expect(explicit.isError).toBe(true);
+	expect(explicit.content[0].text).toContain("multiline");
 });
 
 test("content search asks the engine for context and reports a next page", async () => {
