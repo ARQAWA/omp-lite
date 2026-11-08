@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
-import { executeGrep, parseGrep, routeFor, searchGrep } from "../../../../src/modules/cursor-tools/grep.js";
-import { contentEntries, contentLines, paginate } from "../../../../src/modules/cursor-tools/render.js";
+import { contentEntries, contentLines, executeGrep, paginate, parseGrep, routeFor, searchGrep } from "../../../../src/modules/cursor-tools/index.js";
 
 const match = (path, lineNumber, line, extra = {}) => ({ path, lineNumber, line, ...extra });
 
@@ -88,11 +87,35 @@ test("searches from the session directory and shows paths from it", async () => 
 });
 
 test("skip drops whole files in content mode, offset drops rows", async () => {
-	const engine = fakeEngine({ matches: [match("a.ts", 1, "a"), match("b.ts", 1, "b")] });
+	const engine = fakeEngine({ matches: [match("a.ts", 1, "a1"), match("a.ts", 5, "a5"), match("b.ts", 1, "b")] });
 	const skipped = await searchGrep(request({ skip: 1 }), ctx, { engine });
 	expect(skipped.content[0].text).toBe("b.ts:1:b");
-	const offset = await searchGrep(request({ offset: 1 }), ctx, { engine });
-	expect(offset.content[0].text).toContain("b.ts:1:b");
+	const offset = await searchGrep(request({ offset: 1, head_limit: 1 }), ctx, { engine });
+	expect(offset.content[0].text).toContain("a.ts:5:a5");
+	expect(offset.content[0].text).toContain("of 3 matches shown. Use offset=2");
+});
+
+test("a single explicit file ignores the file-page skip", async () => {
+	const file = new URL("../../../../src/modules/cursor-tools/README.md", import.meta.url).pathname;
+	const engine = fakeEngine({ matches: [match(file, 1, "title")] });
+	const searchCtx = { cwd: process.cwd(), invokeTool: undefined };
+	const result = await searchGrep(request({ path: file, skip: 1 }), searchCtx, { engine });
+	expect(result.content[0].text).toContain("README.md:1:title");
+});
+
+test("a file-mode page names the parameter that advances", async () => {
+	const engine = fakeEngine({ matches: [match("a.ts", 1, "x"), match("b.ts", 1, "x"), match("c.ts", 1, "x")] });
+	const byOffset = await searchGrep(request({ output_mode: "count", offset: 1, head_limit: 1 }), ctx, { engine });
+	expect(byOffset.content[0].text).toContain("Use offset=2");
+	const bySkip = await searchGrep(request({ output_mode: "count", skip: 1, head_limit: 1 }), ctx, { engine });
+	expect(bySkip.content[0].text).toContain("Use skip=2");
+});
+
+test("the two-character backslash-n turns multiline on without being rejected", () => {
+	const parsed = parseGrep({ pattern: "a\\nb", path: "src/a.ts:1-2" });
+	expect(parsed.request.multiline).toBe(true);
+	expect(parsed.request.explicitMultiline).toBe(false);
+	expect(parsed.request.path).toBe("src/a.ts:1-2");
 });
 
 test("content search asks the engine for context and reports a next page", async () => {
