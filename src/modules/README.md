@@ -31,6 +31,7 @@
 - `define-goal` — `/define-goal` вместо встроенной `/guided-goal` и скрытие старой из автокомплита. Тест: `dev/tests/harness/define-goal/`.
 - `subscriptions` — метки `CC`, `CX`, `Go` с лимитами подписок. Тест: `dev/tests/harness/subscriptions/`.
 - `background-jobs` — счётчик фоновых процессов в статуслайне. Тест: `dev/tests/harness/background-jobs/`.
+- `compactions` — счётчик компакшенов сессии в статуслайне. Тест: `dev/tests/harness/compactions/`.
 
 Настройки без кода:
 

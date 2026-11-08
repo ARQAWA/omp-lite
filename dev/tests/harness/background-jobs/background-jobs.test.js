@@ -24,8 +24,8 @@ test("counts running jobs", () => {
 });
 
 test("paints the count and clears at idle", () => {
-	expect(mount([{}, {}])).toEqual([["jobs", "⚙ 2"]]);
-	expect(mount([])).toEqual([["jobs", undefined]]);
+	expect(mount([{}, {}])).toEqual([["50-jobs", "⚙ 2"]]);
+	expect(mount([])).toEqual([["50-jobs", undefined]]);
 });
 
 test("paints nothing outside the main TUI", () => {
