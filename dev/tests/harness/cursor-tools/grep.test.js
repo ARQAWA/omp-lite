@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { contentEntries, contentLines, executeGrep, install, paginate, parseGrep, plainMessage, routeFor, searchGrep } from "../../../../src/modules/cursor-tools/index.js";
+import { contentEntries, contentLines, executeGrep, install, paginate, parseGrep, plainMessage, routeFor, searchGrep, skipMatches } from "../../../../src/modules/cursor-tools/index.js";
 
 const match = (path, lineNumber, line, extra = {}) => ({ path, lineNumber, line, ...extra });
 
@@ -202,7 +202,24 @@ test("the engine branch reports failures and forwards cancellation", async () =>
 test("the native route pages through offset as skip", async () => {
 	const seen = [];
 	const ctx = { cwd: "/work", invokeTool: async params => (seen.push(params), { content: [{ type: "text", text: "Use skip=2 for the next page" }] }) };
-	const result = await executeGrep("call", { pattern: "x", path: "src/a.ts:1-2", offset: 1 }, undefined, undefined, ctx);
+	const result = await executeGrep("call", { pattern: "x", path: "src; other", offset: 1 }, undefined, undefined, ctx);
 	expect(seen[0].skip).toBe(1);
 	expect(result.content[0].text).toContain("Use offset=2");
+});
+
+test("a single-file native search drops leading match lines for offset", async () => {
+	const ctx = { cwd: "/work", invokeTool: async () => ({ content: [{ type: "text", text: "*1|a\n*2|b\n*3|c" }] }) };
+	const result = await executeGrep("call", { pattern: "x", path: "src/a.ts:1-3", offset: 1 }, undefined, undefined, ctx);
+	expect(result.content[0].text).toBe("*2|b\n*3|c");
+});
+
+test("only a footer line is renamed, matched text is untouched", async () => {
+	const ctx = { cwd: "/work", invokeTool: async () => ({ content: [{ type: "text", text: "see Use skip=2 in docs\n[Use skip=2 for the next page.]" }] }) };
+	const result = await executeGrep("call", { pattern: "x", path: "src; other", offset: 1 }, undefined, undefined, ctx);
+	expect(result.content[0].text).toContain("see Use skip=2 in docs");
+	expect(result.content[0].text).toContain("[Use offset=2 for the next page.]");
+});
+
+test("skipMatches reports an empty page when the offset passes the last match", () => {
+	expect(skipMatches("*1|a", 2)).toBe("No matches found");
 });

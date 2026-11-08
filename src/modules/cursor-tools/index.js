@@ -244,6 +244,20 @@ export async function searchGrep(request, ctx, options = {}) {
 	return text(`${page.text || "No matches found"}${footer}`);
 }
 
+/** Drops the leading matched lines, so a single-file native search honours the match offset. */
+export function skipMatches(text, count) {
+	let remaining = count;
+	const kept = [];
+	for (const line of text.split("\n")) {
+		if (remaining > 0 && line.startsWith("*")) {
+			remaining--;
+			continue;
+		}
+		kept.push(line);
+	}
+	return remaining > 0 ? "No matches found" : kept.join("\n");
+}
+
 /** Full tool body: route, then either delegate or search. */
 export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, options = {}) {
 	const parsed = parseGrep(params);
@@ -264,7 +278,11 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 			{ signal, onUpdate },
 		);
 		const textBlock = result?.content?.[0];
-		if (textBlock?.type === "text") textBlock.text = textBlock.text.replace(/Use skip=(\d+)/g, "Use offset=$1");
+		if (textBlock?.type === "text") {
+			const singleFile = hasSelector(request.path ?? "") && !String(request.path).includes(";");
+			if (singleFile && request.offset > 0) textBlock.text = skipMatches(textBlock.text, request.offset);
+			textBlock.text = textBlock.text.replace(/^\[?Use skip=(\d+) for the next page\.?\]?$/gm, match => match.replace("skip=", "offset="));
+		}
 		return result;
 	}
 	try {
@@ -324,7 +342,7 @@ export async function executeGlob(toolCallId, params, signal, onUpdate, ctx) {
 /** Rejects a path that already carries a selector; the native tool wants one form only. */
 function hasSelector(path) {
 	if (/:(?:raw|img|conflicts)(?::|$)/.test(path)) return true;
-	const match = /:(L?-?\d+(?:-L?\d*)?(?:[+,]\d*)*(?::raw)?)$/.exec(path);
+	const match = /:(L?-?\d+(?:(?:-|\.\.)L?\d*)?(?:[+,]\d*)*(?::raw)?)$/.exec(path);
 	if (!match) return false;
 	const before = path.slice(0, match.index);
 	if (before.endsWith("//")) return false;
@@ -439,7 +457,7 @@ export function install(pi, options = {}) {
 		label: "grep",
 		loadMode: "essential",
 		concurrency: "shared",
-		approval: "read",
+		approval: args => (String(args?.path ?? "").includes("ssh://") ? "exec" : "read"),
 		strict: false,
 		description: GREP_DESCRIPTION,
 		parameters: grepSchema(z),
@@ -450,7 +468,7 @@ export function install(pi, options = {}) {
 		label: "glob",
 		loadMode: "essential",
 		concurrency: "shared",
-		approval: "read",
+		approval: args => (String(args?.path ?? args?.target_directory ?? "").includes("ssh://") ? "exec" : "read"),
 		strict: false,
 		description: GLOB_DESCRIPTION,
 		parameters: globSchema(z),
@@ -461,7 +479,7 @@ export function install(pi, options = {}) {
 		label: "read",
 		loadMode: "essential",
 		concurrency: "shared",
-		approval: "read",
+		approval: args => (String(args?.path ?? "").includes("ssh://") ? "exec" : "read"),
 		strict: false,
 		description: READ_DESCRIPTION,
 		parameters: readSchema(z),
