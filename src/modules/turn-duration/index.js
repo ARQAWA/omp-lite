@@ -35,7 +35,7 @@ export default function turnDuration(pi) {
 	pi.registerMessageRenderer(TYPE, message => new Mark(String(message.content?.[0]?.text ?? "")));
 	// The unit is the run, not the keystroke: a command, a shell run or an empty line starts no run,
 	// a message queued behind a live run does not restart it, a continuation keeps the first start.
-	pi.on("before_agent_start", () => {
+	pi.on("agent_start", () => {
 		if (started === undefined) started = performance.now();
 	});
 	pi.on("agent_end", (event, ctx) => {
