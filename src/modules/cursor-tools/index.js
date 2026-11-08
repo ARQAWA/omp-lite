@@ -331,11 +331,11 @@ export function globRequest(params) {
 }
 
 /** Newest first, as Cursor promises; only host paths can be ordered this way. */
-export function sortByMtime(files) {
+export function sortByMtime(files, cwd = process.cwd()) {
 	return files
 		.map(file => {
 			try {
-				return [file, statSync(file.replace(/\/+$/, "")).mtimeMs];
+				return [file, statSync(resolve(cwd, file.replace(/\/+$/, ""))).mtimeMs];
 			} catch {
 				return [file, -Infinity];
 			}
@@ -355,8 +355,9 @@ export async function executeGlob(toolCallId, params, signal, onUpdate, ctx) {
 	const textBlock = result?.content?.[0];
 	const hostOnly = Array.isArray(files) && files.length > 1 && files.every(file => !file.includes("://"));
 	if (result?.isError !== true && textBlock?.type === "text" && hostOnly && !ARCHIVE.test(native.path)) {
-		const notes = textBlock.text.split("\n").filter(line => /^(?:\[|Skipped missing paths)/.test(line));
-		textBlock.text = [...sortByMtime(files), ...notes].join("\n");
+		const notes = textBlock.text.split("\n").filter(line => /^(?:Requested limit|Skipped missing paths)/.test(line));
+		const body = [...sortByMtime(files, ctx?.cwd ?? process.cwd()), ...notes].join("\n");
+		if (Buffer.byteLength(body) <= 50 * 1024) textBlock.text = body;
 	}
 	return result;
 }
