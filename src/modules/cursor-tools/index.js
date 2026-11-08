@@ -301,20 +301,28 @@ export async function executeBash(toolCallId, params, signal, onUpdate, ctx) {
 
 // ------------------------------------------------------------- registration
 
-const GREP_DESCRIPTION = `Search the workspace with ripgrep.
+export const GREP_DESCRIPTION = `Search the workspace with ripgrep.
 
 - Use this tool instead of shell search commands; it respects .gitignore
-- Default scope is the workspace root; set path to narrow it
+- Default scope is the workspace root; set path to narrow it, relative paths resolve from the session directory
+- Supply a regex pattern; escape metacharacters, e.g. "functionCall\\(", "\\{", "\\}"
+- Prefer type over broad glob; wildcard globs like * bypass ignore rules and slow searches
+- Multiline turns on by itself when the pattern contains a newline; it can degrade performance
 - output_mode: "content" shows matching lines, "files_with_matches" shows file paths, "count" shows per-file match counts
-- -A/-B/-C add context lines and only work with output_mode "content"
+- Context flags (-A, -B, -C) only affect content output; other modes refuse them
 - head_limit caps the page; the reply names the offset for the next page
+- If results show "N+ of M matches shown", the output was truncated; tighten the query or raise head_limit
 - Paths with an archive member, a line selector (file.ts:10-20), a mask, a semicolon list or an internal URL fall back to the native tool, which rejects the extra arguments`;
 
-const BASH_DESCRIPTION = `Execute a shell command in the session workspace.
+export const BASH_DESCRIPTION = `Executes a given command in a shell session with an optional backgrounding timeout.
 
-- block_until_ms: 0 starts the command in the background right away; any other value is refused
-- Do not search or read files with the shell; use grep, glob and read
-- Large output is kept whole; do not trim it with head or tail`;
+IMPORTANT: Use this tool for terminal operations like git, npm, docker, etc. DO NOT use it for file operations (reading, writing, editing, searching, finding files, sleeping) - use the specialized tools for this instead.
+
+- Use grep, glob and read for file operations when applicable. If shell text search is necessary, use the grep tool, not shell grep or find.
+- Do not truncate output with head, tail, or sed -n solely to limit its size; large output is kept whole.
+- Run independent commands as parallel bash calls. Chain dependent commands with &&.
+- Use the gh command via the bash tool for all GitHub-related tasks, including issues, pull requests, checks, and releases.
+- block_until_ms: 0 starts the command in the background immediately; any other value is refused, and 0 cannot be combined with pty or a named service.`;
 
 function grepSchema(z) {
 	return z.object({
