@@ -10,7 +10,7 @@ export default function backgroundJobs(pi) {
 		if (ctx.mode !== "tui" || !ctx.hasUI || ctx.agent?.kind !== "main") return;
 		const paint = () => {
 			const running = ctx.getAsyncJobSnapshot?.()?.running?.length ?? 0;
-			ctx.ui.setStatus("jobs", jobsText(running));
+			ctx.ui.setStatus("50-jobs", jobsText(running));
 		};
 		paint();
 		ctx.setInterval(paint, INTERVAL_MS);

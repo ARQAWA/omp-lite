@@ -2,7 +2,7 @@
 // Data comes from the documented `omp usage --json`; subscriptions without a window stay silent.
 import { execFile } from "node:child_process";
 
-const KEYS = ["cc", "cx", "go"];
+const KEYS = ["10-cc", "20-cx", "30-go"];
 const INTERVAL_MS = 300000;
 const TIMEOUT_MS = 20000;
 
@@ -17,12 +17,12 @@ export function marks(reports) {
 	const byProvider = new Map(reports.map(report => [report.provider, report]));
 	const out = [];
 	const cc = percent(windowOf(byProvider.get("anthropic"), "7d")?.amount);
-	if (cc) out.push(["cc", `CC ${cc}`]);
+	if (cc) out.push(["10-cc", `CC ${cc}`]);
 	const cx = percent(windowOf(byProvider.get("openai-codex"), "7d")?.amount);
-	if (cx) out.push(["cx", `CX ${cx}`]);
+	if (cx) out.push(["20-cx", `CX ${cx}`]);
 	const go = byProvider.get("opencode-go");
 	const goWindows = [percent(windowOf(go, "7d")?.amount), percent(windowOf(go, "monthly")?.amount)].filter(Boolean);
-	if (goWindows.length > 0) out.push(["go", `Go ${goWindows.join("/")}`]);
+	if (goWindows.length > 0) out.push(["30-go", `Go ${goWindows.join("/")}`]);
 	return out;
 }
 
