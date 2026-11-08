@@ -357,7 +357,7 @@ export async function executeGlob(toolCallId, params, signal, onUpdate, ctx) {
 	if (result?.isError !== true && textBlock?.type === "text" && hostOnly && !ARCHIVE.test(native.path)) {
 		const remaining = new Map();
 		for (const file of files) {
-			for (const name of [file, file.split("/").pop()]) remaining.set(name, (remaining.get(name) ?? 0) + 1);
+			for (const name of new Set([file, file.split("/").pop()])) remaining.set(name, (remaining.get(name) ?? 0) + 1);
 		}
 		const notes = [];
 		for (const line of textBlock.text.split("\n")) {
