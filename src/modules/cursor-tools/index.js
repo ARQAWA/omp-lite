@@ -97,7 +97,7 @@ const FILE_PAGE = 20;
 const COLLECTED = 100000;
 const TIMEOUT_MS = 20000;
 
-const ARCHIVE = /\.(?:tar\.(?:gz|bz2|xz|zst|z)|tbz2|tbz|tgz|txz|tzst|zip|jar|war|ear|apk|whl|ipa|xpi|vsix|nupkg|cbz|rar|cbr|7z|iso|cab|cpio|rpm|deb|ar|a|lib|lzh|lha|arj|asar|gz|bz2|xz|zst|z|lzma):/i;
+const ARCHIVE = /\.(?:tar\.(?:gz|bz2|xz|zst|z)|tar|tbz2|tbz|tgz|txz|tzst|zip|jar|war|ear|apk|whl|ipa|xpi|vsix|nupkg|cbz|rar|cbr|7z|iso|cab|cpio|rpm|deb|ar|a|lib|lzh|lha|arj|asar|gz|bz2|xz|zst|z|lzma):/i;
 const SELECTOR = /:(?:\d+\.\.\d*|\d+-\d*|-\d+|\d+\+\d+|raw|conflicts|img|\d+(?:-\d+)?)(?:,-?\d+(?:(?:-|\.\.)\d*)?)*$/;
 const GLOB = /[*?[\]{}]/;
 
