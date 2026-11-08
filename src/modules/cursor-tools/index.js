@@ -282,7 +282,9 @@ export function parseHostSelector(path, cwd = process.cwd()) {
 	const base = resolve(cwd, match[1]);
 	if (match[1] === "" || !existsSync(base) || !statSync(base).isFile()) return undefined;
 	const ranges = [];
-	for (const part of match[2].split(",")) {
+	const parts = match[2].split(",");
+	const standalone = parts.length === 1;
+	for (const part of parts) {
 		const value = part.replace(/^L/, "");
 		let range;
 		if (/^-\d+$/.test(value)) return undefined;
@@ -293,7 +295,8 @@ export function parseHostSelector(path, cwd = process.cwd()) {
 			const [start, end] = value.split(/\.\.|-/);
 			range = [Number(start.replace(/^L/, "")), end === "" || end === undefined ? Infinity : Number(end.replace(/^L/, ""))];
 		} else {
-			range = [Number(value), Infinity];
+			const line = Number(value);
+			range = standalone ? [line, Infinity] : [line, line];
 		}
 		if (!Number.isInteger(range[0]) || range[0] < 1 || (range[1] !== Infinity && (!Number.isInteger(range[1]) || range[1] < range[0]))) return undefined;
 		ranges.push(range);
@@ -306,12 +309,18 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 	const parsed = parseGrep(params);
 	if (parsed.error !== undefined) return text(parsed.error, true);
 	const request = parsed.request;
-	const host = parseHostSelector(request.path, ctx?.cwd ?? process.cwd());
+	const cwd = ctx?.cwd ?? process.cwd();
+	const literal = typeof request.path === "string" && SELECTOR.test(request.path) && !ARCHIVE.test(request.path) ? resolve(cwd, request.path) : undefined;
+	if (literal !== undefined && existsSync(literal) && statSync(literal).isFile()) {
+		request.path = literal;
+		request.literal = true;
+	}
+	const host = request.literal === true ? undefined : parseHostSelector(request.path, cwd);
 	if (host !== undefined) {
 		request.path = host.base;
 		request.ranges = host.ranges;
 	}
-	if (routeFor(request.path) === "native") {
+	if (request.literal !== true && routeFor(request.path) === "native") {
 		const refused = plainMessage(request);
 		if (refused !== undefined) return text(refused, true);
 		if (typeof ctx?.invokeTool !== "function") return text("native grep is unavailable in this runtime", true);
