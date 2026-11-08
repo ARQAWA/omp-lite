@@ -17,7 +17,6 @@ function mount(mode = "tui") {
 		sent,
 		renderers,
 		ctx,
-		submit: text => handlers.input({ text }, ctx),
 		start: () => handlers.before_agent_start({}, ctx),
 		end: (stopReason = "stop", willContinue = false) =>
 			handlers.agent_end({ messages: [{ role: "assistant", stopReason }], willContinue }, ctx),
@@ -49,10 +48,9 @@ test("failed and aborted runs are not labelled", () => {
 	expect(runFailed("stop")).toBe(false);
 });
 
-test("a user turn prints one line with the whole duration", () => {
+test("a run prints one line with the whole duration", () => {
 	const turn = mount();
 	at([1000, 95000], () => {
-		turn.submit("go");
 		turn.start();
 		turn.end();
 	});
@@ -64,45 +62,10 @@ test("a user turn prints one line with the whole duration", () => {
 	});
 });
 
-test("a run started without a submission stays silent", () => {
-	const turn = mount();
-	at([0, 90000], () => {
-		turn.start();
-		turn.end();
-	});
-	expect(turn.sent).toEqual([]);
-});
-
-test("a command or shell line does not shift the next turn", () => {
-	const turn = mount();
-	at([0, 45000], () => {
-		turn.submit("/model");
-		turn.submit("!pwd");
-		turn.submit("hello");
-		turn.start();
-		turn.end();
-	});
-	expect(turn.sent.length).toBe(1);
-	expect(turn.sent[0].content[0].text).toBe("⏱ 45s");
-});
-
-test("a skill or unknown slash prompt still gets its line", () => {
-	const turn = mount();
-	at([0, 40000], () => {
-		turn.submit("/skill:blindreview check this");
-		turn.start();
-		turn.end();
-	});
-	expect(turn.sent.length).toBe(1);
-	expect(turn.sent[0].content[0].text).toBe("⏱ 40s");
-});
-
-test("a message queued behind a live run does not restart the clock", () => {
+test("a second start inside one turn does not restart the clock", () => {
 	const turn = mount();
 	at([0, 60000], () => {
-		turn.submit("go");
 		turn.start();
-		turn.submit("second");
 		turn.start();
 		turn.end();
 	});
@@ -112,7 +75,6 @@ test("a message queued behind a live run does not restart the clock", () => {
 test("a continuation keeps the measurement for the final completion", () => {
 	const turn = mount();
 	at([0, 40000], () => {
-		turn.submit("go");
 		turn.start();
 		turn.end("stop", true);
 	});
@@ -122,7 +84,7 @@ test("a continuation keeps the measurement for the final completion", () => {
 	expect(turn.sent[0].content[0].text).toBe("⏱ 1m 0s");
 });
 
-test("quick, aborted, error and print-mode turns stay silent", () => {
+test("quick, aborted, error and print-mode runs stay silent", () => {
 	for (const [mode, reason, span] of [
 		["tui", "stop", 2000],
 		["tui", "aborted", 90000],
@@ -131,12 +93,31 @@ test("quick, aborted, error and print-mode turns stay silent", () => {
 	]) {
 		const turn = mount(mode);
 		at([0, span], () => {
-			turn.submit("go");
 			turn.start();
 			turn.end(reason);
 		});
 		expect(turn.sent).toEqual([]);
 	}
+});
+
+test("a run without a start event prints nothing", () => {
+	const turn = mount();
+	at([0, 90000], () => turn.end());
+	expect(turn.sent).toEqual([]);
+});
+
+test("a subagent run neither prints nor resets the main clock", () => {
+	const turn = mount();
+	const sub = { mode: "tui", hasUI: true, agent: { kind: "sub" } };
+	at([0, 20000], () => {
+		turn.start();
+		turn.handlers.before_agent_start({}, sub);
+		turn.handlers.agent_end({ messages: [{ role: "assistant", stopReason: "stop" }] }, sub);
+	});
+	expect(turn.sent).toEqual([]);
+	at([50000], () => turn.end());
+	expect(turn.sent.length).toBe(1);
+	expect(turn.sent[0].content[0].text).toBe("⏱ 50s");
 });
 
 test("the renderer draws the stored line as a compact row", () => {
