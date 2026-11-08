@@ -26,6 +26,7 @@
 - `skill-alias` — короткий `/имя` вместо `/skill:имя`. Тест: `dev/tests/harness/skill-alias/`.
 - `memory-tool-prompts` — точная подмена описаний тулов памяти в рантайме. Тест: `dev/tests/harness/memory-tool-prompts/`.
 - `model-picker` — компактный пикер модели и усилия, Shift+стрелки, фильтр. Тест: `dev/tests/harness/model-picker/`.
+- `tool-summary` — одна строка со счётчиками тулов вместо карточек. Тест: `dev/tests/harness/tool-summary/`.
 - `review` — навыки `blindreview`, `highreview`, `selfcheck`, `reviewer` и агенты `spotty`, `bossy`, `selfcheck`. Тестов нет: только ресурсы, проверка реальным запуском.
 
 Каждый README описывает свой модуль.
