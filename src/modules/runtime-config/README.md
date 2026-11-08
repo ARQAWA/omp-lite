@@ -2,7 +2,7 @@
 
 Сырой снимок. Полный нестандартный `config.yml`, 110 строк. Роли моделей, фильтр моделей `enabledModels` и скрытые провайдеры `disabledProviders`, память `mnemopi` с локальными эмбеддингами, предсказание промптов, тема и статусная строка, `find` выключен, проверка обновлений при старте выключена, карточки тулов скрыты.
 
-**Вход:** файл целиком в `~/.omp/agent/config.yml`. Ключи: `omp://settings.md`, `omp://models.md`, `omp://mnemosyne-memory-backend.md`.
+**Вход:** файл целиком в `~/.omp/agent/config.yml`, а блок памяти — фрагментом `mnemopi.yml` через [манифест](../../../install.manifest.json). Ключи: `omp://settings.md`, `omp://models.md`, `omp://mnemosyne-memory-backend.md`.
 
 **Зависимости:** эндпоинт эмбеддингов `127.0.0.1:11434`.
 

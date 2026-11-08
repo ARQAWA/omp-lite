@@ -9,7 +9,7 @@
 
 `composer.tokenRate: false` убирает второй счётчик tok/s: он живёт в композере, а не в статуслайне.
 
-**Вход:** блоки `statusLine` и `composer.tokenRate` в `~/.omp/agent/config.yml`. Механизм установки в репозитории ещё не реализован.
+**Вход:** блоки `statusLine` и `composer.tokenRate` в `~/.omp/agent/config.yml`. Фрагмент и режим слияния перечислены в [манифесте](../../../install.manifest.json).
 
 **Выключить:** удалить блок `statusLine` и строку `composer.tokenRate: false`. Остальные ключи `composer` не трогать.
 
