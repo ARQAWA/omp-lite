@@ -304,14 +304,12 @@ export async function executeBash(toolCallId, params, signal, onUpdate, ctx) {
 
 export const GREP_DESCRIPTION = `Search the workspace with ripgrep.
 
-- Use this tool instead of shell search commands; it respects .gitignore
+- Use this tool instead of shell rg; respects .gitignore
 - Default scope is the workspace root; set path (absolute path) to narrow it
 - Supply a regex pattern; escape metacharacters, e.g. "functionCall\\(", "\\{", "\\}"
 - Prefer type over broad glob; wildcard globs like * bypass ignore rules and slow searches
-- Multiline turns on by itself when the pattern contains a newline; it can degrade performance
-- output_mode: "content" shows matching lines, "files_with_matches" shows file paths, "count" shows per-file match counts
-- Context flags (-A, -B, -C) only affect content output; other modes refuse them
-- head_limit caps the page; the reply names the offset for the next page
+- Enable multiline only when a match spans lines—it can degrade performance
+- Context flags (-A, -B, -C) only affect content output
 - If results show "N+ of M matches shown", the output was truncated; tighten the query or raise head_limit`;
 
 export const BASH_DESCRIPTION = `Executes a given command in a shell session with optional foreground timeout.
@@ -325,20 +323,43 @@ IMPORTANT: Use this tool for terminal operations like git, npm, docker, etc. DO 
 
 function grepSchema(z) {
 	return z.object({
-		pattern: z.string(),
-		path: z.string().optional(),
-		glob: z.string().optional(),
-		type: z.string().optional(),
-		output_mode: z.string().optional(),
-		"-A": z.number().optional(),
-		"-B": z.number().optional(),
-		"-C": z.number().optional(),
-		"-i": z.boolean().optional(),
+		pattern: z.string().describe("The regular expression pattern to search for in file contents"),
+		path: z.string().optional().describe("File or directory to search in. Defaults to the workspace root."),
+		glob: z.string().optional().describe('Glob pattern to filter files (e.g. "*.js", "*.{ts,tsx}")'),
+		type: z
+			.string()
+			.optional()
+			.describe(
+				"File type to search. Common types: js, py, rust, go, java, etc. More efficient than include for standard file types.",
+			),
+		output_mode: z
+			.string()
+			.optional()
+			.describe(
+				'Output mode: "content" shows matching lines (supports -A/-B/-C context, head_limit), "files_with_matches" shows file paths (supports head_limit), "count" shows match counts (supports head_limit). Defaults to "content".',
+			),
+		"-A": z.number().optional().describe('Number of lines to show after each match. Requires output_mode: "content".'),
+		"-B": z.number().optional().describe('Number of lines to show before each match. Requires output_mode: "content".'),
+		"-C": z.number().optional().describe('Number of lines to show before and after each match. Requires output_mode: "content".'),
+		"-i": z.boolean().optional().describe("Case insensitive search. Defaults to false"),
 		case: z.boolean().optional(),
 		gitignore: z.boolean().optional(),
-		multiline: z.boolean().optional(),
-		head_limit: z.number().optional(),
-		offset: z.number().optional(),
+		multiline: z
+			.boolean()
+			.optional()
+			.describe("Enable multiline mode where . matches newlines and patterns can span lines. Default: false."),
+		head_limit: z
+			.number()
+			.optional()
+			.describe(
+				'Limit output size. For "content" mode: limits total matches shown. For "files_with_matches" and "count" modes: limits number of files.',
+			),
+		offset: z
+			.number()
+			.optional()
+			.describe(
+				'Skip first N entries. For "content" mode: skips first N matches. For "files_with_matches" and "count" modes: skips first N files. Use with head_limit for pagination.',
+			),
 		skip: z.number().optional(),
 	});
 }
