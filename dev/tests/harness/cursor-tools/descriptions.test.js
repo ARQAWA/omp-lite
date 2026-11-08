@@ -13,12 +13,12 @@ test("grep keeps the Cursor guidance under our names", () => {
 });
 
 test("bash keeps the Cursor guidance under our names", () => {
-	expect(BASH_DESCRIPTION).toContain("Executes a given command in a shell session");
+	expect(BASH_DESCRIPTION).toContain("Executes a given command in a shell session with optional foreground timeout.");
 	expect(BASH_DESCRIPTION).toContain("Use grep, glob and read for file operations");
 	expect(BASH_DESCRIPTION).not.toContain("Use rg");
 	expect(BASH_DESCRIPTION).not.toContain("Shell");
 	expect(BASH_DESCRIPTION).toContain("Run independent commands as parallel bash calls");
 	expect(BASH_DESCRIPTION).toContain("Use the gh command");
-	expect(BASH_DESCRIPTION).toContain("block_until_ms: 0 starts the command in the background");
-	expect(BASH_DESCRIPTION).toContain("cannot be combined with pty or a named service");
+	expect(BASH_DESCRIPTION).toContain("use the `grep` tool, not shell `grep` or `find`");
+	expect(BASH_DESCRIPTION).not.toContain("block_until_ms");
 });

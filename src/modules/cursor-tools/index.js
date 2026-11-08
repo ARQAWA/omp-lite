@@ -281,7 +281,8 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 
 /** Drops the Cursor field and, for zero, asks the native tool to start in the background. */
 export function mapBashParams(params) {
-	const { block_until_ms: blockUntilMs, ...rest } = params ?? {};
+	const { block_until_ms: blockUntilMs, working_directory: workingDirectory, ...rest } = params ?? {};
+	if (workingDirectory !== undefined && rest.cwd === undefined) rest.cwd = workingDirectory;
 	if (blockUntilMs !== 0) return rest;
 	if (rest.pty === true || rest.name !== undefined) return rest;
 	return { ...rest, async: true };
@@ -313,15 +314,14 @@ export const GREP_DESCRIPTION = `Search the workspace with ripgrep.
 - head_limit caps the page; the reply names the offset for the next page
 - If results show "N+ of M matches shown", the output was truncated; tighten the query or raise head_limit`;
 
-export const BASH_DESCRIPTION = `Executes a given command in a shell session with an optional backgrounding timeout.
+export const BASH_DESCRIPTION = `Executes a given command in a shell session with optional foreground timeout.
 
 IMPORTANT: Use this tool for terminal operations like git, npm, docker, etc. DO NOT use it for file operations (reading, writing, editing, searching, finding files, sleeping) - use the specialized tools for this instead.
 
-- Use grep, glob and read for file operations when applicable. If shell text search is necessary, use the grep tool, not shell grep or find.
+- Use grep, glob and read for file operations when applicable. If shell text search is necessary, use the \`grep\` tool, not shell \`grep\` or \`find\`.
 - Do not truncate output with head, tail, or sed -n solely to limit its size; large output is kept whole.
 - Run independent commands as parallel bash calls. Chain dependent commands with &&.
-- Use the gh command via the bash tool for all GitHub-related tasks, including issues, pull requests, checks, and releases.
-- block_until_ms: 0 starts the command in the background immediately; any other value is refused, and 0 cannot be combined with pty or a named service.`;
+- Use the gh command via the bash tool for all GitHub-related tasks, including issues, pull requests, checks, and releases.`;
 
 function grepSchema(z) {
 	return z.object({
@@ -354,6 +354,7 @@ function bashSchema(z) {
 		ready: z
 			.object({ log: z.string().optional(), port: z.number().optional(), host: z.string().optional(), timeout: z.number().optional() })
 			.optional(),
+		working_directory: z.string().optional(),
 		block_until_ms: z.number().optional(),
 	});
 }

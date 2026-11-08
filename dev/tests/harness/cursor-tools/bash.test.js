@@ -5,6 +5,11 @@ test("zero turns into an immediate background run", () => {
 	expect(mapBashParams({ command: "make", block_until_ms: 0 })).toEqual({ command: "make", async: true });
 });
 
+test("working_directory becomes cwd unless cwd is already set", () => {
+	expect(mapBashParams({ command: "ls", working_directory: "/tmp" })).toEqual({ command: "ls", cwd: "/tmp" });
+	expect(mapBashParams({ command: "ls", cwd: "/a", working_directory: "/tmp" })).toEqual({ command: "ls", cwd: "/a" });
+});
+
 test("no threshold keeps the call untouched", () => {
 	expect(mapBashParams({ command: "ls" })).toEqual({ command: "ls" });
 });
