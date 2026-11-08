@@ -11,7 +11,7 @@ function mount() {
 		on: (event, handler) => (handlers[event] = handler),
 	};
 	toolSummary(pi);
-	const ctx = { ui: { setWidget: (id, content) => painted.push([id, content]) } };
+	const ctx = { ui: { setWidget: (id, content, options) => painted.push([id, content, options]) } };
 	handlers.session_start({}, ctx);
 	return { handlers, painted };
 }
@@ -34,7 +34,7 @@ test("one widget line accumulates calls", () => {
 	handlers.tool_execution_start(start("a", "read"));
 	handlers.tool_execution_start(start("b", "grep"));
 	handlers.tool_execution_end(end("b", true));
-	expect(painted.at(-1)).toEqual(["tool-summary", ["read 1 · search 1 · failed 1"]]);
+	expect(painted.at(-1)).toEqual(["tool-summary", ["read 1 · search 1 · failed 1"], { placement: "belowEditor" }]);
 });
 
 test("a new agent step clears the line", () => {
@@ -42,5 +42,5 @@ test("a new agent step clears the line", () => {
 	handlers.agent_start();
 	handlers.tool_execution_start(start("a", "bash"));
 	handlers.agent_start();
-	expect(painted.at(-1)).toEqual(["tool-summary", undefined]);
+	expect(painted.at(-1)).toEqual(["tool-summary", undefined, { placement: "belowEditor" }]);
 });

@@ -22,7 +22,11 @@ export default function toolSummary(pi) {
 	let calls = [];
 
 	const paint = () => {
-		ctx?.ui?.setWidget?.("tool-summary", calls.length > 0 ? [summarize(calls)] : undefined);
+		ctx?.ui?.setWidget?.(
+			"tool-summary",
+			calls.length > 0 ? [summarize(calls)] : undefined,
+			{ placement: "belowEditor" },
+		);
 	};
 	const reset = () => {
 		calls = [];
