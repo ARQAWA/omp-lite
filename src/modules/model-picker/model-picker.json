@@ -1,0 +1,28 @@
+{
+  "title": "Model / effort",
+  "filterLabel": "Filter: ",
+  "noModels": "No models",
+  "noModelsAvailable": "No models available",
+  "noAuth": "No authentication for ",
+  "switchFailed": "Could not switch to ",
+  "effortNeeds": "Effort needs {n} columns",
+  "hintWide": "↑↓ model · ←→ effort · type to filter · ",
+  "hintMedium": "↑↓←→ move · ",
+  "hintEnter": "Enter",
+  "hintOk": " OK · ",
+  "hintEsc": "Esc",
+  "hintCancel": " cancel",
+  "hintShort": "Enter/Esc",
+  "minName": 4,
+  "effortOrder": ["auto", "off", "minimal", "low", "medium", "high", "xhigh", "max"],
+  "efforts": {
+    "auto": { "mode": "ansi", "color": 250 },
+    "off": { "mode": "ansi", "color": 252 },
+    "minimal": { "mode": "theme", "color": "thinkingMinimal" },
+    "low": { "mode": "theme", "color": "thinkingLow" },
+    "medium": { "mode": "theme", "color": "thinkingMedium" },
+    "high": { "mode": "theme", "color": "thinkingHigh" },
+    "xhigh": { "mode": "theme", "color": "thinkingXhigh" },
+    "max": { "mode": "theme", "color": "thinkingMax" }
+  }
+}
