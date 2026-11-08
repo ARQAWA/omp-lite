@@ -28,6 +28,7 @@
 - `model-picker` — компактный пикер модели и усилия, Shift+стрелки, фильтр. Тест: `dev/tests/harness/model-picker/`.
 - `tool-summary` — одна строка со счётчиками тулов вместо карточек. Тест: `dev/tests/harness/tool-summary/`.
 - `review` — навыки `blindreview`, `highreview`, `reviewer` и агенты `spotty`, `bossy`. Тестов нет: только ресурсы, проверка реальным запуском.
+- `file-workflow` — шесть тулов в форме Cursor: `read`, `grep`, `glob`, `bash`, `edit`, `write`. Тест: `dev/tests/harness/file-workflow/`.
 
 Каждый README описывает свой модуль.
 
