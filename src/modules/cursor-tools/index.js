@@ -223,6 +223,7 @@ export async function searchGrep(request, ctx, options = {}) {
 	const display = path => {
 		const absolute = isAbsolute(path) ? path : join(displayBase, path);
 		const shown = relative(cwd, absolute);
+		if (request.paths !== undefined) return shown;
 		return shown.startsWith("..") ? absolute : shown;
 	};
 	const parts = [];
@@ -231,7 +232,7 @@ export async function searchGrep(request, ctx, options = {}) {
 	for (const entry of request.paths ?? [request.path]) {
 		const entryBase = entry === undefined ? cwd : isAbsolute(entry) ? entry : resolve(cwd, entry);
 		const part = (await natives.grep(engineRequest(request, entryBase, options.signal))) ?? {};
-		parts.push(...(part.matches ?? []));
+		parts.push(...(part.matches ?? []).map(match => ({ ...match, path: isAbsolute(match.path) ? match.path : join(entryBase, match.path) })));
 		limitReached = limitReached || part.limitReached === true;
 		skippedOversized += part.skippedOversized ?? 0;
 	}
@@ -328,7 +329,7 @@ export function parseHostSelector(path, cwd = process.cwd()) {
 /** A pure host path list can go through the engine, one entry at a time. */
 export function hostList(path, cwd) {
 	if (typeof path !== "string" || !path.includes(";")) return undefined;
-	const entries = path.split(";");
+	const entries = path.split(";").map(entry => entry.trim());
 	if (entries.some(entry => entry === "" || entry.includes("://") || ARCHIVE.test(entry) || SELECTOR.test(entry) || GLOB.test(entry))) return undefined;
 	if (entries.some(entry => !existsSync(resolve(cwd, entry)))) return undefined;
 	return [...new Set(entries)];
