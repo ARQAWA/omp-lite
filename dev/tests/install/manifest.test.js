@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 
 const root = join(import.meta.dir, "../../..");
 const manifest = JSON.parse(readFileSync(join(root, "install.manifest.json"), "utf8"));
+const rootTargets = new Set(["SYSTEM.md"]);
 
 test("the manifest covers every product module", () => {
 	const modules = readdirSync(join(root, "src/modules")).filter(name => statSync(join(root, "src/modules", name)).isDirectory()).sort();
@@ -22,7 +23,7 @@ test("every source exists and no development file is installed", () => {
 test("targets stay inside the agent root and are unique", () => {
 	const targets = new Set();
 	for (const entry of manifest.files) {
-		expect(entry.to.startsWith("extensions/") || entry.to.startsWith("skills/") || entry.to.startsWith("agents/")).toBe(true);
+		expect(entry.to.startsWith("extensions/") || entry.to.startsWith("skills/") || entry.to.startsWith("agents/") || rootTargets.has(entry.to)).toBe(true);
 		expect(entry.to.split("/")).not.toContain("..");
 		expect(targets.has(entry.to)).toBe(false);
 		targets.add(entry.to);

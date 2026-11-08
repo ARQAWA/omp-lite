@@ -91,6 +91,10 @@
 			"to": "extensions/subscriptions.js"
 		},
 		{
+			"from": "src/modules/system-prompt/SYSTEM.md",
+			"to": "SYSTEM.md"
+		},
+		{
 			"from": "src/modules/tool-summary/index.js",
 			"to": "extensions/tool-summary.js"
 		},
