@@ -113,7 +113,9 @@ test("plan, vibe and goal modes block the command", async () => {
 	};
 	defineGoal(pi);
 	const ctx = {
-		sessionModes: { getState: () => ({ plan: "active", goal: "inactive", vibe: "inactive" }) },
+		sessionModes: {
+			getState: () => ({ plan: { status: "active" }, goal: { status: "inactive" }, vibe: { status: "inactive" } }),
+		},
 		ui: { notify: (text, level) => warned.push([text, level]) },
 		isIdle: () => true,
 	};
@@ -123,12 +125,35 @@ test("plan, vibe and goal modes block the command", async () => {
 	expect(warned[0][1]).toBe("warning");
 });
 
+test("inactive object states do not block the command", async () => {
+	const commands = {};
+	const sent = [];
+	const warned = [];
+	const pi = {
+		on: () => {},
+		registerCommand: (name, definition) => (commands[name] = definition),
+		getActiveTools: () => ["read"],
+		setActiveTools: async () => {},
+		sendUserMessage: () => sent.push(1),
+	};
+	defineGoal(pi);
+	await commands["define-goal"].handler("x", {
+		sessionModes: {
+			getState: () => ({ plan: { status: "inactive" }, goal: { status: "inactive" }, vibe: { status: "inactive" } }),
+		},
+		ui: { notify: (text, level) => warned.push([text, level]) },
+		isIdle: () => true,
+	});
+	expect(sent.length).toBe(1);
+	expect(warned).toEqual([]);
+});
+
 test("each conflicting mode blocks the command on its own", async () => {
 	const states = [
-		{ plan: "active", goal: "inactive", vibe: "inactive" },
-		{ plan: "paused", goal: "inactive", vibe: "inactive" },
-		{ plan: "inactive", goal: "active", vibe: "inactive" },
-		{ plan: "inactive", goal: "inactive", vibe: "active" },
+		{ plan: { status: "active" }, goal: { status: "inactive" }, vibe: { status: "inactive" } },
+		{ plan: { status: "paused" }, goal: { status: "inactive" }, vibe: { status: "inactive" } },
+		{ plan: { status: "inactive" }, goal: { status: "active" }, vibe: { status: "inactive" } },
+		{ plan: { status: "inactive" }, goal: { status: "inactive" }, vibe: { status: "active" } },
 	];
 	for (const state of states) {
 		const commands = {};
@@ -162,7 +187,9 @@ test("a streaming session gets the interview queued", async () => {
 	};
 	defineGoal(pi);
 	await commands["define-goal"].handler("x", {
-		sessionModes: { getState: () => ({ plan: "inactive", goal: "inactive", vibe: "inactive" }) },
+		sessionModes: {
+			getState: () => ({ plan: { status: "inactive" }, goal: { status: "inactive" }, vibe: { status: "inactive" } }),
+		},
 		ui: { notify: () => {} },
 		isIdle: () => false,
 	});

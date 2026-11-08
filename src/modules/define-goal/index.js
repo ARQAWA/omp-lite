@@ -10,6 +10,7 @@ const PROMPT = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "defin
 	.trim();
 
 const name = item => String(item?.value ?? "").replace(/^\/+/, "").split(/\s/, 1)[0];
+const status = mode => (typeof mode === "string" ? mode : mode?.status);
 
 export function withoutHidden(items) {
 	return items.filter(item => !HIDDEN.has(name(item)));
@@ -44,7 +45,10 @@ export default function defineGoal(pi) {
 		description: "Define the goal in chat, then start goal mode",
 		handler: async (args, ctx) => {
 			const modes = ctx.sessionModes?.getState?.();
-			if (modes && (modes.plan !== "inactive" || modes.goal !== "inactive" || modes.vibe === "active")) {
+			if (
+				modes &&
+				(status(modes.plan) !== "inactive" || status(modes.goal) !== "inactive" || status(modes.vibe) === "active")
+			) {
 				ctx.ui.notify("Define Goal needs plan, vibe and goal modes off.", "warning");
 				return;
 			}
