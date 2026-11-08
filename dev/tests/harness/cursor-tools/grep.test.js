@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { contentEntries, contentLines, executeGrep, paginate, parseGrep, routeFor, searchGrep } from "../../../../src/modules/cursor-tools/index.js";
+import { contentEntries, contentLines, executeGrep, paginate, parseGrep, plainMessage, routeFor, searchGrep } from "../../../../src/modules/cursor-tools/index.js";
 
 const match = (path, lineNumber, line, extra = {}) => ({ path, lineNumber, line, ...extra });
 
@@ -43,6 +43,13 @@ test("parses Cursor arguments and rejects bad ones", () => {
 	expect(parseGrep({ pattern: "x", "-A": -1 }).error).toBe("-A must be a number of at least 0");
 	expect(parseGrep({ pattern: "x", head_limit: 0 }).error).toBe("head_limit must be a number of at least 1");
 	expect(request({ pattern: "a\nb" }).multiline).toBe(true);
+});
+
+test("context flags are ignored outside content mode", () => {
+	const parsed = parseGrep({ pattern: "x", output_mode: "count", "-C": 2 });
+	expect(parsed.request.contextBefore).toBeUndefined();
+	expect(parsed.request.contextAfter).toBeUndefined();
+	expect(plainMessage(parsed.request)).not.toContain("-A/-B/-C");
 });
 
 test("renders a match with its own context lines", () => {
