@@ -304,15 +304,14 @@ export async function executeBash(toolCallId, params, signal, onUpdate, ctx) {
 export const GREP_DESCRIPTION = `Search the workspace with ripgrep.
 
 - Use this tool instead of shell search commands; it respects .gitignore
-- Default scope is the workspace root; set path to narrow it, relative paths resolve from the session directory
+- Default scope is the workspace root; set path (absolute path) to narrow it
 - Supply a regex pattern; escape metacharacters, e.g. "functionCall\\(", "\\{", "\\}"
 - Prefer type over broad glob; wildcard globs like * bypass ignore rules and slow searches
 - Multiline turns on by itself when the pattern contains a newline; it can degrade performance
 - output_mode: "content" shows matching lines, "files_with_matches" shows file paths, "count" shows per-file match counts
 - Context flags (-A, -B, -C) only affect content output; other modes refuse them
 - head_limit caps the page; the reply names the offset for the next page
-- If results show "N+ of M matches shown", the output was truncated; tighten the query or raise head_limit
-- Paths with an archive member, a line selector (file.ts:10-20), a mask, a semicolon list or an internal URL fall back to the native tool, which rejects the extra arguments`;
+- If results show "N+ of M matches shown", the output was truncated; tighten the query or raise head_limit`;
 
 export const BASH_DESCRIPTION = `Executes a given command in a shell session with an optional backgrounding timeout.
 
