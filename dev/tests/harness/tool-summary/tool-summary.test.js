@@ -7,15 +7,13 @@ const end = (toolCallId, isError = false) => ({ type: "tool_execution_end", tool
 function mount() {
 	const handlers = {};
 	const painted = [];
-	let presenter;
 	const pi = {
 		on: (event, handler) => (handlers[event] = handler),
-		registerTranscriptPresenter: handler => (presenter = handler),
 	};
 	toolSummary(pi);
 	const ctx = { ui: { setWidget: (id, content) => painted.push([id, content]) } };
 	handlers.session_start({}, ctx);
-	return { handlers, painted, presenter };
+	return { handlers, painted };
 }
 
 test("summarize counts tool kinds and failures", () => {
@@ -45,10 +43,4 @@ test("a new agent step clears the line", () => {
 	handlers.tool_execution_start(start("a", "bash"));
 	handlers.agent_start();
 	expect(painted.at(-1)).toEqual(["tool-summary", undefined]);
-});
-
-test("tool cards are hidden, other blocks keep their drawing", () => {
-	const { presenter } = mount();
-	expect(presenter({ type: "toolCall", id: "a" })).toBe("hidden");
-	expect(presenter({ type: "message", id: "1", message: {} })).toBeUndefined();
 });

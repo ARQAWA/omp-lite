@@ -71,14 +71,12 @@ find:
   enabled: "off"
 display:
   showTokenUsage: false
-  hideToolActivity: false
+  hideToolActivity: true
   subagentLivePreview: false
   smoothStreaming: true
   showTurnTime: true
   shellVisualization: false
   collapseCompacted: false
-extensionRenderers:
-  transcriptPresenters: true
 tui:
   imeSafeCursor: true
 task:

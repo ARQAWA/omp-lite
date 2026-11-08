@@ -1,18 +1,16 @@
 # tool-summary
 
-Расширение OMP. Прячет карточки тулов и показывает одну строку со счётчиками над редактором.
+Расширение OMP. Прячет карточки тулов штатной настройкой и показывает одну строку со счётчиками над редактором.
 
-**Вход OMP:** `omp://extensions.md` — `registerTranscriptPresenter`, `ctx.ui.setWidget`, события `session_start`, `agent_start`, `tool_execution_start`, `tool_execution_end`.
+**Вход OMP:** `omp://extensions.md` — `ctx.ui.setWidget`, события `session_start`, `agent_start`, `tool_execution_start`, `tool_execution_end`, `omp://settings.md` — `display.hideToolActivity`.
 
-**Настройки OMP:**
+**Настройка OMP:**
 ```yaml
 display:
-  hideToolActivity: false
-extensionRenderers:
-  transcriptPresenters: true
+  hideToolActivity: true
 ```
 
-**Строка:** `read 2 · edit 1 · run 3 · failed 1`. Нулевые части опущены. Счётчики начинаются заново на каждом шаге агента. Ctrl+O показывает карточки как обычно.
+**Строка:** `read 2 · edit 1 · run 3 · failed 1`. Нулевые части опущены. Счётчики начинаются заново на каждом шаге агента.
 
 **Установка:** скопировать два файла в `~/.omp/agent/extensions/`:
 ```bash
@@ -22,6 +20,6 @@ cp src/modules/tool-summary/tool-summary.json ~/.omp/agent/extensions/tool-summa
 
 **Выключить:** удалить `tool-summary.js`.
 
-**Границы:** только TUI. Старые карточки истории тоже скрыты, строки для них нет.
+**Границы:** только TUI. Старые карточки истории скрыты, отдельной строки для них нет.
 
 **Тесты:** `bun test dev/tests/harness/tool-summary`.

@@ -44,6 +44,4 @@ export default function toolSummary(pi) {
 		call.isError = true;
 		paint();
 	});
-
-	pi.registerTranscriptPresenter(block => (block.type === "toolCall" ? "hidden" : undefined));
 }
