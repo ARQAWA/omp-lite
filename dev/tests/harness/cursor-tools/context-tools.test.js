@@ -25,6 +25,7 @@ test("read maps Cursor offset and limit to an exact raw selector", () => {
 	expect(readRequest({ path: "a.ts:1-3", offset: 2 }).error).toBe("path already carries a selector; drop offset and limit");
 	expect(readRequest({ path: "a.ts:-5", offset: 2 }).error).toBe("path already carries a selector; drop offset and limit");
 	expect(readRequest({ path: "https://example.com:8080/page", offset: 2 }).params.path).toBe("https://example.com:8080/page:2-:raw");
+	expect(readRequest({ path: "a.ts:10..20", offset: 2 }).error).toBe("path already carries a selector; drop offset and limit");
 	expect(readRequest({ path: "a.ts", offset: 0 }).error).toBe("offset must be a non-zero integer");
 });
 
