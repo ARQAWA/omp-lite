@@ -268,6 +268,7 @@ test("a host file selector routes to the engine and filters the range", async ()
 		expect(parseHostSelector(`${file}:5`)).toEqual({ base: file, ranges: [[5, Infinity]] });
 		expect(parseHostSelector(`${file}:L5+L3`)).toEqual({ base: file, ranges: [[5, 7]] });
 		expect(parseHostSelector("a.ts:10-20", dir)).toEqual({ base: file, ranges: [[10, 20]] });
+		expect(parseHostSelector(`${file}:2,5`)).toEqual({ base: file, ranges: [[2, 2], [5, 5]] });
 		expect(parseHostSelector("bundle.zip:src/a.ts")).toBeUndefined();
 		expect(routeFor("dir:L10-L20")).toBe("native");
 		const engine = fakeEngine({
@@ -291,6 +292,20 @@ test("a literal filename with a colon beats selector parsing", () => {
 		writeFileSync(join(dir, "a.ts"), "x");
 		writeFileSync(join(dir, "a.ts:10-20"), "literal");
 		expect(parseHostSelector("a.ts:10-20", dir)).toBeUndefined();
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("a literal colon filename uses the engine in count mode", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-literal-count-"));
+	try {
+		writeFileSync(join(dir, "a.ts:10-20"), "literal");
+		const engine = fakeEngine({ matches: [match(join(dir, "a.ts:10-20"), 1, "literal")] });
+		const result = await executeGrep("call", { pattern: "literal", path: "a.ts:10-20", output_mode: "count" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		expect(engine.calls).toHaveLength(1);
+		expect(engine.calls[0][0].path).toBe(join(dir, "a.ts:10-20"));
+		expect(result.content[0].text).toBe("a.ts:10-20:1");
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
