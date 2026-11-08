@@ -7,9 +7,9 @@ test("grep keeps the Cursor guidance under our names", () => {
 	expect(GREP_DESCRIPTION).not.toContain(".cursorignore");
 	expect(GREP_DESCRIPTION).not.toContain("Use rg");
 	expect(GREP_DESCRIPTION).toContain("escape metacharacters");
+	expect(GREP_DESCRIPTION).toContain("set path (absolute path) to narrow it");
 	expect(GREP_DESCRIPTION).toContain("Context flags (-A, -B, -C) only affect content output");
 	expect(GREP_DESCRIPTION).toContain('If results show "N+ of M matches shown"');
-	expect(GREP_DESCRIPTION).toContain("fall back to the native tool");
 });
 
 test("bash keeps the Cursor guidance under our names", () => {
