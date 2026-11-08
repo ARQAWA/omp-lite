@@ -198,3 +198,11 @@ test("the engine branch reports failures and forwards cancellation", async () =>
 	await executeGrep("call", { pattern: "x" }, controller.signal, undefined, ctx, { engine: seen });
 	expect(seen.calls[0][0].signal).toBe(controller.signal);
 });
+
+test("the native route pages through offset as skip", async () => {
+	const seen = [];
+	const ctx = { cwd: "/work", invokeTool: async params => (seen.push(params), { content: [{ type: "text", text: "Use skip=2 for the next page" }] }) };
+	const result = await executeGrep("call", { pattern: "x", path: "src/a.ts:1-2", offset: 1 }, undefined, undefined, ctx);
+	expect(seen[0].skip).toBe(1);
+	expect(result.content[0].text).toContain("Use offset=2");
+});

@@ -60,6 +60,7 @@ test("registers both tools under omp's names and keeps pty calls exclusive", () 
 	const pi = { zod: chain, registerTool: tool => tools.push(tool), on: () => {} };
 	install(pi);
 	expect(tools.map(tool => tool.name)).toEqual(["grep", "glob", "read", "bash"]);
+	expect(tools.map(tool => tool.approval)).toEqual(["read", "read", "read", "exec"]);
 	for (const tool of tools) {
 		expect(tool.loadMode).toBe("essential");
 		expect(tool.description.length).toBeGreaterThan(100);
