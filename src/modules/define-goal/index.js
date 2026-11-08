@@ -1,6 +1,13 @@
-// Hides the built-in /guided-goal entry so /define-goal is the only goal interview command.
-// Autocomplete items carry the bare name in `value` ("guided-goal"), without the slash.
+// /define-goal: the guided goal interview as a visible command, with the goal tool switched on first.
+// The built-in /guided-goal stays in the binary; only its autocomplete entry is hidden.
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 const HIDDEN = new Set(["guided-goal"]);
+const PROMPT = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "define-goal.md"), "utf8")
+	.replace(/^---[\s\S]*?---\n/, "")
+	.trim();
 
 const name = item => String(item?.value ?? "").replace(/^\/+/, "").split(/\s/, 1)[0];
 
@@ -23,7 +30,19 @@ export function filterProvider(provider) {
 	});
 }
 
+export function goalPrompt(args) {
+	return PROMPT.replaceAll("$ARGUMENTS", String(args ?? "").trim());
+}
+
 export default function defineGoal(pi) {
+	pi.registerCommand("define-goal", {
+		description: "Define the goal in chat, then start goal mode",
+		handler: async (args, _ctx) => {
+			const active = pi.getActiveTools();
+			if (!active.includes("goal")) await pi.setActiveTools([...active, "goal"]);
+			pi.sendUserMessage(goalPrompt(args), { attribution: "agent" });
+		},
+	});
 	const wired = new WeakSet();
 	pi.on("session_start", (_event, ctx) => {
 		const ui = ctx.ui;
