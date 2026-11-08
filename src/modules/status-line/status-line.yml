@@ -2,8 +2,9 @@
 statusLine:
   preset: custom
   separator: powerline-thin
-  leftSegments: [pi, model, mode, path, git, pr]
-  rightSegments: [status, subagents, token_total, token_rate, cache_hit, context_pct, session_name]
+  showHookStatus: false
+  leftSegments: [pi, model, mode, path, git, pr, subagents]
+  rightSegments: [status, token_rate, cache_hit, context_pct]
   segmentOptions:
     model:
       showThinkingLevel: true
