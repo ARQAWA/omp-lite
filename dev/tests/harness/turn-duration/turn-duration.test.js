@@ -65,6 +65,7 @@ test("a second start inside one turn does not restart the clock", () => {
 	const turn = mount();
 	at([0, 60000], () => {
 		turn.handlers.input({ text: "go" }, turn.ctx);
+		turn.handlers.agent_start({}, turn.ctx);
 		turn.handlers.input({ text: "second" }, turn.ctx);
 		turn.end();
 	});
@@ -149,7 +150,20 @@ test("a subagent run neither prints nor resets the main clock", () => {
 test("the renderer draws the stored line as a compact row", () => {
 	const turn = mount();
 	const mark = turn.renderers["omp-lite.turn-duration"]({ content: [{ type: "text", text: "⏱ 2m 4s" }] });
-	expect(mark.render(80)).toEqual(["⏱ 2m 4s"]);
+	const strip = line => line.replace(/\x1b\[[0-9;]*m/g, "");
+	expect(strip(mark.render(80)[0])).toBe("⏱ 2m 4s");
+	expect(mark.render(80)[0].startsWith("\x1b[2m")).toBe(true);
 	expect(mark.isTranscriptBlockCompact()).toBe(true);
-	expect(mark.render(3)).toEqual(["⏱ 2"]);
+	expect(strip(mark.render(3)[0])).toBe("⏱ 2");
+});
+
+test("a command followed by a message measures the message", () => {
+	const turn = mount();
+	at([0, 50000, 95000], () => {
+		turn.handlers.input({ text: "/model" }, turn.ctx);
+		turn.handlers.input({ text: "hello" }, turn.ctx);
+		turn.end();
+	});
+	expect(turn.sent.length).toBe(1);
+	expect(turn.sent[0].content[0].text).toBe("⏱ 45s");
 });
