@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { contentEntries, contentLines, executeGrep, install, paginate, parseGrep, parseHostSelector, plainMessage, routeFor, searchGrep, skipMatches } from "../../../../src/modules/cursor-tools/index.js";
+import { contentEntries, contentLines, executeGrep, hostList, install, paginate, parseGrep, parseHostSelector, plainMessage, routeFor, searchGrep, skipMatches } from "../../../../src/modules/cursor-tools/index.js";
 
 const match = (path, lineNumber, line, extra = {}) => ({ path, lineNumber, line, ...extra });
 
@@ -333,6 +333,45 @@ test("a semicolon list stays a list even when the whole text exists as a file", 
 		expect(seen).toHaveLength(1);
 		expect(seen[0].path).toBe(list);
 		expect(result.content[0].text).toBe("native");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("a pure host list searches each entry with the engine", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-list-"));
+	try {
+		writeFileSync(join(dir, "a.ts"), "x");
+		mkdirSync(join(dir, "sub"));
+		writeFileSync(join(dir, "sub", "b.ts"), "x");
+		expect(hostList("a.ts;sub", dir)).toEqual(["a.ts", "sub"]);
+		expect(hostList("a.ts;ssh://h/x", dir)).toBeUndefined();
+		expect(hostList("a.ts;missing", dir)).toBeUndefined();
+		const engine = {
+			calls: [],
+			grep: async request => {
+				engine.calls.push(request.path);
+				const file = request.path.endsWith("sub") ? join(dir, "sub", "b.ts") : join(dir, "a.ts");
+				return { matches: [match(file, 1, "hit")] };
+			},
+		};
+		const result = await executeGrep("call", { pattern: "x", path: "a.ts;sub" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		expect(engine.calls).toHaveLength(2);
+		expect(result.content[0].text).toBe("a.ts:1:hit\nsub/b.ts:1:hit");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("a host list returns every engine match without the native 200 cap", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-many-"));
+	try {
+		writeFileSync(join(dir, "a.ts"), "x");
+		const matches = Array.from({ length: 250 }, (_, index) => match(join(dir, "a.ts"), index + 1, `line ${index + 1}`));
+		const engine = { calls: [], grep: async request => (engine.calls.push(request.path), { matches }) };
+		const result = await executeGrep("call", { pattern: "x", path: "a.ts;a.ts" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		expect(engine.calls).toHaveLength(1);
+		expect(result.content[0].text).toContain("a.ts:250:line 250");
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}

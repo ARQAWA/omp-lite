@@ -219,12 +219,33 @@ export async function searchGrep(request, ctx, options = {}) {
 	const natives = await (options.engine ?? defaultEngine());
 	const cwd = ctx?.cwd ?? process.cwd();
 	const base = request.path === undefined ? cwd : isAbsolute(request.path) ? request.path : resolve(cwd, request.path);
+	const displayBase = request.paths === undefined ? base : cwd;
 	const display = path => {
-		const absolute = isAbsolute(path) ? path : join(base, path);
+		const absolute = isAbsolute(path) ? path : join(displayBase, path);
 		const shown = relative(cwd, absolute);
 		return shown.startsWith("..") ? absolute : shown;
 	};
-	let outcome = (await natives.grep(engineRequest(request, base, options.signal))) ?? {};
+	const parts = [];
+	let limitReached = false;
+	let skippedOversized = 0;
+	for (const entry of request.paths ?? [request.path]) {
+		const entryBase = entry === undefined ? cwd : isAbsolute(entry) ? entry : resolve(cwd, entry);
+		const part = (await natives.grep(engineRequest(request, entryBase, options.signal))) ?? {};
+		parts.push(...(part.matches ?? []));
+		limitReached = limitReached || part.limitReached === true;
+		skippedOversized += part.skippedOversized ?? 0;
+	}
+	const seen = new Set();
+	let outcome = {
+		matches: parts.filter(match => {
+			const key = `${match.path}\u0000${match.lineNumber}`;
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		}),
+		limitReached,
+		skippedOversized,
+	};
 	if (request.ranges !== undefined) {
 		const inside = number => request.ranges.some(([start, end]) => number >= start && number <= end);
 		outcome = {
@@ -304,6 +325,15 @@ export function parseHostSelector(path, cwd = process.cwd()) {
 	return { base, ranges };
 }
 
+/** A pure host path list can go through the engine, one entry at a time. */
+export function hostList(path, cwd) {
+	if (typeof path !== "string" || !path.includes(";")) return undefined;
+	const entries = path.split(";");
+	if (entries.some(entry => entry === "" || entry.includes("://") || ARCHIVE.test(entry) || SELECTOR.test(entry) || GLOB.test(entry))) return undefined;
+	if (entries.some(entry => !existsSync(resolve(cwd, entry)))) return undefined;
+	return [...new Set(entries)];
+}
+
 /** Full tool body: route, then either delegate or search. */
 export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, options = {}) {
 	const parsed = parseGrep(params);
@@ -319,6 +349,11 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 	if (host !== undefined) {
 		request.path = host.base;
 		request.ranges = host.ranges;
+	}
+	const list = request.literal === true ? undefined : hostList(request.path, cwd);
+	if (list !== undefined) {
+		request.paths = list;
+		request.path = undefined;
 	}
 	if (request.literal !== true && routeFor(request.path) === "native") {
 		const refused = plainMessage(request);
