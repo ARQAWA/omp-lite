@@ -17,7 +17,6 @@ function mount(mode = "tui") {
 		sent,
 		renderers,
 		ctx,
-		start: () => handlers.agent_start({}, ctx),
 		end: (stopReason = "stop", willContinue = false) =>
 			handlers.agent_end({ messages: [{ role: "assistant", stopReason }], willContinue }, ctx),
 	};
