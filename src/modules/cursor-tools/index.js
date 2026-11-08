@@ -310,7 +310,7 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 	if (parsed.error !== undefined) return text(parsed.error, true);
 	const request = parsed.request;
 	const cwd = ctx?.cwd ?? process.cwd();
-	const literal = typeof request.path === "string" && SELECTOR.test(request.path) && !ARCHIVE.test(request.path) ? resolve(cwd, request.path) : undefined;
+	const literal = typeof request.path === "string" && SELECTOR.test(request.path) ? resolve(cwd, request.path) : undefined;
 	if (literal !== undefined && existsSync(literal) && statSync(literal).isFile()) {
 		request.path = literal;
 		request.literal = true;

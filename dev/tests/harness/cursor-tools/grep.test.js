@@ -301,11 +301,22 @@ test("a literal colon filename uses the engine in count mode", async () => {
 	const dir = mkdtempSync(join(tmpdir(), "grep-literal-count-"));
 	try {
 		writeFileSync(join(dir, "a.ts:10-20"), "literal");
-		const engine = fakeEngine({ matches: [match(join(dir, "a.ts:10-20"), 1, "literal")] });
+		writeFileSync(join(dir, "bundle.zip:10-20"), "literal");
+		const engine = {
+			calls: [],
+			grep: async request => {
+				engine.calls.push([request]);
+				const path = request.path.endsWith("bundle.zip:10-20") ? join(dir, "bundle.zip:10-20") : join(dir, "a.ts:10-20");
+				return { matches: [match(path, 1, "literal")] };
+			},
+		};
 		const result = await executeGrep("call", { pattern: "literal", path: "a.ts:10-20", output_mode: "count" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
 		expect(engine.calls).toHaveLength(1);
 		expect(engine.calls[0][0].path).toBe(join(dir, "a.ts:10-20"));
 		expect(result.content[0].text).toBe("a.ts:10-20:1");
+		const archiveName = await executeGrep("call", { pattern: "literal", path: "bundle.zip:10-20", output_mode: "count" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		expect(engine.calls[1][0].path).toBe(join(dir, "bundle.zip:10-20"));
+		expect(archiveName.content[0].text).toBe("bundle.zip:10-20:1");
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
