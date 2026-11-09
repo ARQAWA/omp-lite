@@ -7,4 +7,4 @@ description: "Run a high review of the current work when the user requests high 
 
 Run a high review of the current work by the review rules of the reviewer skill, level high.
 
-Read `skill://reviewer/SKILL.md` and follow it. Level high uses `bossy`.
+Read `skill://reviewer/SKILL.md` and follow it. Call the isolated `review` tool with level `high`; do not launch a task agent.

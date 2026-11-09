@@ -1,0 +1,14 @@
+{
+	"description": "Independent acceptance review. Use only through skill://reviewer/SKILL.md when review is requested or required. Checks only the agreed work, including omissions and unauthorized additions. Receives only the supplied packet and installed review rules: no memory, parent history or tools. A finding does not authorize extra work.",
+	"level": "blind uses Terra high; high uses Terra xhigh. No fallback model.",
+	"packet": "Complete packet from the reviewer skill: verbatim user messages, source-linked requirements, stage, complete review object, applicable project rules and source evidence. Include source contents, not unread paths or your assurances. Never include memory or earlier reviewer verdicts.",
+	"models": {
+		"blind": { "provider": "openai-codex", "id": "gpt-6.1-terra", "reasoning": "high" },
+		"high": { "provider": "openai-codex", "id": "gpt-6.1-terra", "reasoning": "xhigh" }
+	},
+	"errors": {
+		"model": "Review model unavailable. No fallback review was run.",
+		"auth": "Review credentials unavailable. Review did not pass.",
+		"incomplete": "Incomplete review response. Do not treat it as acceptance."
+	}
+}

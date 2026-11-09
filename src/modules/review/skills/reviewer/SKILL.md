@@ -1,41 +1,61 @@
 ---
 name: reviewer
-description: "Review procedure for blind and high reviews through ordinary agents; only when requested or required by the caller, project instructions or an invoked skill."
+description: "Acceptance review for any agreed work, only when requested or required by applicable project instructions or an invoked skill."
 ---
 
 # Reviewer
 
-Blind review by a separate read-only model that works with you as one team for the user's agreement: it checks the requested criterion, including checks beyond the agreement and exclusions, and gets the user's own messages verbatim. Use it when the user asks for a review or a checked result: `/skill:blindreview` and `/skill:highreview` ask for these levels, and a skill he calls may run it as its procedure. Launch a reviewer when the user, the caller's brief, an invoked skill or applicable project instructions require it. Without such a request or requirement, never launch one on your own initiative or as an automatic step of other work. Leave the reviewed files unchanged until the verdict returns; the blocking launch returns it in the same call, so there is no meanwhile. When the task authorizes changes, you fix the admitted findings yourself and start a fresh reviewer, which re-checks the result blindly from scratch.
+Review only what the user ordered: nothing missing and nothing extra. The same procedure covers plans, context collection, analysis, code and finished results. Do not launch review unless the user, applicable project instructions or an invoked skill requires it.
 
-- Level: blind by default; high when the user asks for it. The level picks the agent: blind `spotty` (`gpt-6.1-terra:high`), high `bossy` (`gpt-6.1-terra:xhigh`). Launch a fresh child for the initial review and for each changed-object pass with one `task` call in batch shape: `context` is a one-line shared background; `tasks` is one item `{name: "Spotty"|"Bossy", agent: "spotty"|"bossy", task: <the brief below>, solutionSpace: "review scope fixed by the brief; findings and severity open"}`. `spotty` and `bossy` are blocking, so the verdict returns in the same call. The reviewer reads `skill://reviewer/REVIEWER.md` itself. Use absolute paths in the brief when the work runs outside the reviewer's cwd. In the object template, name the reviewed work's applicable project instructions and process rules under requirements and rules, with sources for compliance at each in-scope step due by the stated stage, or the exact evidence that is unavailable. If the result is a preview, read the full verdict from `agent://<id>` before acting. There is no standalone review tool or fallback; if the agent, its role skill or the `task` tool is unavailable, report that the reviewer cannot run.
-- Brief: the task item is this one template, sections in this order. OMP subagents do not inherit the conversation: copy the user's messages verbatim under `<user_messages>` with their sources, and put the decisions and requirements they establish in `<agreement>` and `<criterion>`. Never summarize the messages or write "as discussed". If a message is unavailable after compaction, mark that gap instead of inventing it. Supply primary requirement and governing-rule sources, not only Main's summary; each reviewer reads them independently, including any required user-facing explanation rules. `<agreement>` holds only decisions the user himself accepted, verbatim, each with its source; Main's or another agent's approval is not agreement. `<criterion>` says what this check confirms and which deliverable must fulfill each obligation; an exclusion cannot silently waive a governing requirement of this pass, and it stays unchanged for the whole loop.
-  ```text
-  <agreement>
-  none
-    or one item per decision:
-  - «the user's words verbatim» - source: <path>:<record>
-    answers: «the question or proposal verbatim» - source: <path>:<record>
-  </agreement>
-  <object>
-  stage: pre-action | pre-completion
-  pass: initial | changed-object
-  paths: <absolute paths>
-  requirements and rules: <absolute paths or anchors>
-  diff: <absolute path> | none   (a file outside git: diff -u against a saved copy)
-  </object>
-  <criterion>
-  <what this check confirms>
-  </criterion>
-  <rejected_earlier>
-  none | <finding>: <reason with quote>
-  </rejected_earlier>
-  ```
-- Do not impose file, search, tool-call or turn quotas on a reviewer. Read-only inspection may take as many calls as the in-scope check needs; large or truncated sources are read in complete parts.
-- The executor fixes format slips itself without a new pass; this does not replace missing material evidence.
-- The verdict comes as the reviewer's returned task output:
-  - `CLEAN` with concise concrete `CHECKED:` evidence and no `UNCHECKED:`: this pass passed. Evidence names what was inspected and the exact files, sections or source anchors that establish it; it is not a long per-obligation checklist. Run no extra pass for confidence, but preserve every independent pass required by the invoking procedure.
-  - `FINDINGS: N` (the first line; N is the count of findings): your teammate's findings. For a review-only task, report the verified findings without changes; the correction loop below applies only when the task authorizes changes. Find each quote by searching for it. Matching quotes are necessary, not sufficient: admit a finding only through the role's severity gate, with a concrete trigger and wrong outcome in the ordered result. Admit P3 only in a pass with an admitted P0-P2 finding, and fix them together; a P3-only pass counts as CLEAN, with its P3 dropped and not mentioned. For an omission, verify the quoted requirement and the complete inspected file/section instead of demanding nonexistent text: fix it exactly to its REQUIRED OUTCOME and no further; do not reject it, argue with it or put it to the user. Reject a finding when it fails the role's severity gate, a quote is not verbatim, the allegedly missing content is present in the cited object, or a NOT AGREED element is covered by a verbatim quote of the agreement or an applicable governing rule, is a check the criterion requires, or is only the agreed element's own implementation, a test or a reference fix the agreed change needs, and give that reason with the quote. Fix all admitted findings in one batch, then launch a fresh reviewer at the same level and criterion with the fixes, changed lines, affected paths and every rejection so far in `<rejected_earlier>`. A changed-object pass checks those fixes, lines and paths, not the whole object again. Stop when no admitted finding remains and the required evidence is complete.
-  - `UNCHECKED:`, missing required `CHECKED:` evidence, a bare `CLEAN`, or malformed evidence: the check is incomplete regardless of its leading verdict. Re-run the same level once with a fresh reviewer, quote the malformed verdict in `<rejected_earlier>` and name the exact missing evidence; a second malformed pass is blocked. Never record an incomplete result as acceptance.
-  - No verdict, a provider error or a reviewer that could not start: the check has not passed, and no self-check replaces it. Retry the unchanged failed review once under this bounded failure rule; if it fails again, tell the user and wait. A fresh reviewer is otherwise for a changed object or admitted findings requiring a new pass, never for confidence.
+## Prepare the packet
 
-When changing this review contract, validate it against known defective, corrected and missing-source examples before claiming improved detection. These checks are not extra rounds in ordinary task reviews.
+Keep the object unchanged during a review. Gather the original messages and approved proposals verbatim. Compile the active requirements with source quotes. Include every applicable obligation for this stage. A caller's criterion may focus the check; it cannot add scope or waive a requirement.
+
+Include actual source contents and the whole in-scope object. Paths alone are not evidence: this reviewer cannot read them. For code, include the full task diff, relevant surrounding code and required check results. Include untracked deliverables. For other work, include the full plan, report or other artifact. Do not replace originals with your assurances.
+
+Supply project rules explicitly, with their sources and applicability. The tool always supplies the same installed WORKFLOW.md principles. Other projects do not need this repository's dev/ directory. Do not import memory, unrelated conversation, previous reviewer verdicts or private summaries into the packet. User-approved changes to the agreement are original requirements, not reviewer opinions.
+
+Use this template:
+
+```text
+<user_messages>
+Verbatim relevant messages, amendments and accepted proposals, with source IDs.
+A short approval includes the exact proposal it approves.
+</user_messages>
+<requirements>
+One ID per active requirement: exact source quote, source ID, current-stage obligation.
+Include scope boundaries and delegated choices. Do not silently drop requirements.
+</requirements>
+<object>
+stage: pre-action | pre-completion
+pass: initial | changed-object
+Complete object contents, with source IDs.
+For changed-object: fixes, changed parts and affected paths.
+</object>
+<rules>
+Applicable project instructions, verbatim, with source IDs and stage applicability.
+</rules>
+<evidence>
+Source contents and required verification results, with source IDs.
+Name unavailable required evidence explicitly.
+</evidence>
+```
+
+## Run
+
+Call the `review` tool once with `level: "blind"` by default, or `level: "high"` when requested, and the complete `packet`. Models remain Terra high and Terra xhigh. Each call has a fresh explicit context, without memory or tools. Do not substitute `task`, `reuse`, a fork, or Main's own review. If the tool or model is unavailable, report the blocker.
+
+## Handle the result
+
+Continue the collaboration until CLEAN: the reviewer reports every supported error in one batch, Main fixes all admitted findings within the agreed scope, then requests the next check. There is no fixed number of ordinary review rounds. Do not stop with valid findings merely because several rounds passed. Missing authority or required evidence blocks progress, not the obligation: resume after the gap is resolved. Never manufacture CLEAN by dropping requirements.
+
+- CLEAN with concrete CHECKED and no missing proof: accept. No extra confidence pass.
+- FINDINGS: verify each source quote and the complete cited object. Admit only actual missing, incorrect or extra work. A finding is not an instruction to expand the task. Reject unsupported findings with exact evidence. An alleged omission already present is not a defect.
+- Review-only request: report verified findings without editing. Otherwise fix valid findings together, only within authorized scope. Do not remove requested behavior to obtain CLEAN.
+- Recheck only after changes or newly supplied required evidence. Keep the original requirements. Pass the changed object and affected scope, not previous opinions. Main keeps the rejection record separately.
+- BLOCKED, unavailable required evidence or ambiguous scope: report the exact blocker. Do not retry unchanged missing evidence. Do not fabricate a defect or acceptance.
+- Provider failure or malformed output: retry once, within any agreed attempt limit. A second failure blocks acceptance. Never call an error CLEAN.
+
+Respect the user's attempt and stop conditions. Do not invent a universal round quota from one task's limit. Stop if satisfying a finding needs new authority, contradicts an agreed decision, or would undo a valid fix. Surface the evidence to the owner. Do not silently waive a requirement.
+
+When changing this contract, verify it with defective, corrected and missing-source examples on the configured reviewer model. A text assertion or mocked response does not prove instruction following. These checks are separate from ordinary task review loops.

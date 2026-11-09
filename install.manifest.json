@@ -43,6 +43,18 @@
 			"to": "extensions/model-picker.json"
 		},
 		{
+			"from": "src/modules/review/index.js",
+			"to": "extensions/review/index.js"
+		},
+		{
+			"from": "src/modules/review/review.json",
+			"to": "extensions/review/review.json"
+		},
+		{
+			"from": "src/modules/review/skills/reviewer/WORKFLOW.md",
+			"to": "extensions/review/skills/reviewer/WORKFLOW.md"
+		},
+		{
 			"from": "src/modules/review/skills/blindreview/SKILL.md",
 			"to": "skills/blindreview/SKILL.md"
 		},
@@ -56,15 +68,7 @@
 		},
 		{
 			"from": "src/modules/review/skills/reviewer/REVIEWER.md",
-			"to": "skills/reviewer/REVIEWER.md"
-		},
-		{
-			"from": "src/modules/review/agents/spotty.md",
-			"to": "agents/spotty.md"
-		},
-		{
-			"from": "src/modules/review/agents/bossy.md",
-			"to": "agents/bossy.md"
+			"to": "extensions/review/skills/reviewer/REVIEWER.md"
 		},
 		{
 			"from": "src/modules/skill-alias/index.js",
