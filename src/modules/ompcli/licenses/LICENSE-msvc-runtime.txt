@@ -1,0 +1,47 @@
+Microsoft Visual C++ Redistributable runtime files
+=================================================
+
+Files shipped unmodified in this package:
+
+  msvcp140.dll        7c26614e1d733892c2deac7e245ce115504b1d80592dd0a01b08e3e5a55f89ca
+  vcruntime140.dll    d1f4225df2cd877dbf130d5668a021dce3f94118455ff5ec952061c30afc9ce7
+  vcruntime140_1.dll  a7146c08f89fe5b04541ab507cdb59ff7b44534d4ba3c668a426c6450a03434e
+
+Source package: Microsoft Visual C++ v14 Redistributable (x64) - 14.51.36247
+  URL:    https://aka.ms/vc14/vc_redist.x64.exe
+  SHA-256: 843068991daaa1f73ad9f6239bce4d0f6a07a51f18c37ea2a867e9beca71295c
+  Size:   18731856 bytes
+
+The files were extracted from the official package without modification.
+
+Terms
+-----
+
+"Visual Studio Redistribution" (https://learn.microsoft.com/en-us/visualstudio/releases/2026/redistribution),
+"Visual C++ Runtime Files" section, verbatim:
+
+  Subject to the License Terms for the software, you may copy and distribute with
+  your program any of the files within the following folder and its subfolders
+  except as noted below. You may not modify these files.
+
+  [VisualStudioFolder]\VC\redist
+
+  The same Visual C++ Runtime Redistributable package is available from Latest
+  supported Visual C++ Redistributable downloads and Download Visual Studio Tools.
+  Distribution of the Visual C++ Runtime Redistributable package, merge modules,
+  and individual binaries obtained from those pages is limited to licensed Visual
+  Studio users and is subject to its license terms.
+
+  Note
+
+  You may not distribute the contents of the following folders (please see List of
+  Utilities and Build Tools for Visual Studio for allowed usage for
+  development/testing purposes):
+
+  [VisualStudioFolder]VC\Redist\MSVC\[version]\debug_nonredist
+  [VisualStudioFolder]\VC\Redist\MSVC\[version]\onecore\debug_nonredist
+
+Deployment method: application-local deployment, as described in
+https://learn.microsoft.com/en-us/cpp/windows/choosing-a-deployment-method
+The redistributable package carries no standalone EULA file; the terms above are
+the redistribution statements published by Microsoft for these files.

@@ -1,0 +1,74 @@
+{
+  "version": "18.18.0",
+  "assets": {
+    "omp": {
+      "url": "https://github.com/can1357/oh-my-pi/releases/download/v18.18.0/omp-windows-x64.exe",
+      "sha256": "20267b4914dca40306c71e824216e0f79061869d9e9d4780fc0c255b7a3e5339",
+      "size": 248622592,
+      "file": "omp.exe"
+    },
+    "bun": {
+      "url": "https://github.com/oven-sh/bun/releases/download/bun-v1.4.4/bun-windows-x64-baseline.zip",
+      "sha256": "0f20ce6674d4f2dbcc8c5d59fdf99f7ba45f8c3b367e0f5781cbfa30a1c78d99",
+      "size": 54731686,
+      "file": "bun.exe",
+      "entry": "bun-windows-x64-baseline/bun.exe",
+      "unpacked": "cb1d8e6564e655e49d30cead359750a1cbbd12f42651caa4b62244d7bd93c244",
+      "unpackedSize": 115281496
+    },
+    "model": {
+      "url": "https://huggingface.co/ggml-org/embeddinggemma-2-GGUF/resolve/6ea3e3a309d12a4779cfda98b8c19800d2d5da71/embeddinggemma-2-Q8_0.gguf",
+      "sha256": "2188ac1deca4b77dffefd603c2776a9d76d9d74ec01841392982ebb840b09135",
+      "size": 309855456,
+      "file": "embeddinggemma-2-Q8_0.gguf"
+    }
+  },
+  "llama": {
+    "url": "https://github.com/ggml-org/llama.cpp/releases/download/b12211/llama-b12211-bin-win-cpu-x64.zip",
+    "sha256": "23729000408c6968faf5e322afc99319d3b8c576ba872ef7663d9b89810090f3",
+    "size": 24886431,
+    "files": {
+      "ggml-base.dll": "f2dae864981842df3d15032ef3cbebe1c05f9a4fb0887b0345730306d4934fb2",
+      "ggml-cpu-alderlake.dll": "bb3cfd681f0e8a5f706dd1b0e8e685ab674556c7a2bc5a606ca09e14202aaa23",
+      "ggml-cpu-cannonlake.dll": "7ea02ec0ee2c074f3669b7a198baa9401ec3a316ba0da436d1034351d21d33c8",
+      "ggml-cpu-cascadelake.dll": "25bc16758f8923ffa963954f2fe83c278c29a9546bcac25c075fa1d5856fdbbc",
+      "ggml-cpu-cooperlake.dll": "fc71fd98409f14180f8ffe749ad4de715d1e832174d0bbb3ebd3e5269d723374",
+      "ggml-cpu-haswell.dll": "db85e44b3e7cb3f65c16f21e40417101172f77e80de98257571e066f14c3baa0",
+      "ggml-cpu-icelake.dll": "7e57541cf982ed5c17a029a2ad2d64d7c543913139b36e914d8cdc5ba122f645",
+      "ggml-cpu-ivybridge.dll": "a4a7940b979175abad4d3ecc60c82a28628af0644fe9136ba09c2099c7178c00",
+      "ggml-cpu-piledriver.dll": "89d0c486137fbfd228d27963414e54fda65505c8b3df6108afbf00ac0151d665",
+      "ggml-cpu-sandybridge.dll": "8fae2378fa9f5eb73ae3c12b91e2a3ab2f6108697581667d25cd9bbff3bc0ba4",
+      "ggml-cpu-sapphirerapids.dll": "cca075ea797b51db81e58029997665eef83f797280124150cb352a56cd98529f",
+      "ggml-cpu-skylakex.dll": "d9657d4429d37a4bd463441b42a9a2b70473b1e356aeffcdca6886da15d640b2",
+      "ggml-cpu-sse42.dll": "4ab5352bb8b37fe2ae69b5ebeb7575937e988424a60ecc9f0c1d141b483574eb",
+      "ggml-cpu-x64.dll": "12e51e926bb931a8cd76985540a31b359de583e8ef6136e269b4607871ffdf20",
+      "ggml-cpu-zen4.dll": "016d959fde1723b0bd8f45b83aa28a6a891b06de81aa2cb5afbd88bd554a0372",
+      "ggml-rpc.dll": "c1ea5c27c2c9377bf8ba90591b54c660f1737520c0bfe2bfd86dc774dd51b37f",
+      "ggml.dll": "510e10f0c398c6a2cc7aa68bd3f6c1b3df23810d22cb7f52d75ef502e95b1bf6",
+      "libomp.dll": "a12116ba72d1d6820407cf30be23da04ce79d6bb8a71a5ee71759c5a1faa6f1c",
+      "llama-batched-bench-impl.dll": "4bb1f27bc4d1acbfb95d47e8f1fed976bb25f89fe6965d9fff85b69a8e90fa80",
+      "llama-bench-impl.dll": "09762970835b58708e5e07f047cfa92771a6d574e76d43a6287eec9a5681109b",
+      "llama-cli-impl.dll": "86c982caf13389861b3d98bef3f8776c355841aecfc975fa7d98043cf7f33cd6",
+      "llama-common.dll": "71f734b0b5f591f7e737310d3095331b0b3260d92ca98b75a80e63db3f70027c",
+      "llama-completion-impl.dll": "f358b52fd61a37dac60839b01025b423aec6147f4b3f7c4a69dafce914a5ed63",
+      "llama-fit-params-impl.dll": "bce35aa635601f0b182cc94f2b553fc134aa92f731522a06f68a34ce14b3dec0",
+      "llama-perplexity-impl.dll": "60ce9b9613534494a1b4eea22a0184684b191ecc9f90ec7289763da2191689f4",
+      "llama-quantize-impl.dll": "d10bf650cd02cabd4ed08b8393d605aac0fe1f5d0a692ff59c990c772b83cc3e",
+      "llama-server-impl.dll": "0c1bddd982b8d4da87889a0b314f76550ae3cca064124c3f936e21e716980a25",
+      "llama-server.exe": "75e1099fec4b0e2c0ddd90813653a6a70638b79c6f6d38bf3103c85d7312e89e",
+      "llama.dll": "723f1962402bada0970c9b7df53f157d3267d5f09b3a1a56e0d6087af3225ddc",
+      "mtmd.dll": "cd5acb7df4e4cfa0260922b8bcfa80f112c8751995ae15fc7b2078457bcdcb01"
+    }
+  },
+  "vc": {
+    "url": "https://aka.ms/vc14/vc_redist.x64.exe",
+    "sha256": "843068991daaa1f73ad9f6239bce4d0f6a07a51f18c37ea2a867e9beca71295c",
+    "size": 18731856,
+    "version": "14.51.36247",
+    "files": {
+      "msvcp140.dll": "7c26614e1d733892c2deac7e245ce115504b1d80592dd0a01b08e3e5a55f89ca",
+      "vcruntime140.dll": "d1f4225df2cd877dbf130d5668a021dce3f94118455ff5ec952061c30afc9ce7",
+      "vcruntime140_1.dll": "a7146c08f89fe5b04541ab507cdb59ff7b44534d4ba3c668a426c6450a03434e"
+    }
+  }
+}
