@@ -1,0 +1,30 @@
+{
+	"name": "ompcli",
+	"displayName": "ARQAWA OMPCLI",
+	"publisher": "arqawa",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.86.0"
+	},
+	"main": "./index.js",
+	"activationEvents": [],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ARQAWA/omp-lite.git"
+	},
+	"contributes": {
+		"commands": [
+			{ "command": "ompcli.newTab", "title": "New Tab", "category": "OMP CLI" },
+			{ "command": "ompcli.shellTab", "title": "New Terminal Tab", "category": "OMP CLI" },
+			{ "command": "ompcli.update", "title": "Update", "category": "OMP CLI" }
+		],
+		"keybindings": [
+			{
+				"key": "ctrl+enter",
+				"command": "workbench.action.terminal.sendSequence",
+				"when": "terminalFocus && ompcli.terminalActive",
+				"args": { "text": "\u001b[13;5u" }
+			}
+		]
+	}
+}

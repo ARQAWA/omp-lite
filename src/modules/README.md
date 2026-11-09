@@ -34,6 +34,7 @@
 - `turn-duration` — строка `⏱ 2m 4s` после долгого хода. Тест: `dev/tests/harness/turn-duration/`.
 - `cursor-tools` — аргументы сбора контекста курсора над родными тулами: `grep` с контекстом, режимами и типом, `bash` с `block_until_ms: 0`, `glob` и `read` со своими полями, режим правок `apply_patch`. Описания тулов и их параметров перенесены из курсора под наши имена и лежат в `descriptions.json`. Тест: `dev/tests/harness/cursor-tools/`.
 - `task-delegation` — правило Codex для `task`, Bun по умолчанию и фильтр прямого спавна в `eval`. Тест: `dev/tests/harness/task-delegation/`.
+- `ompcli` — расширение VS Code `arqawa.ompcli` для Windows VDI: вкладки OMP, комплектный runtime, локальная память, Update и установка харнеса по манифесту. Тест: `dev/tests/harness/ompcli/`.
 
 Настройки без кода:
 

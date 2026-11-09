@@ -127,6 +127,51 @@
 			"to": "extensions/codex-web-run/web-run.schema.json"
 		}
 	],
+	"vscode": {
+		"target": "win32-x64",
+		"files": [
+			{
+				"from": "src/modules/ompcli/index.js",
+				"to": "index.js"
+			},
+			{
+				"from": "src/modules/ompcli/package.json",
+				"to": "package.json"
+			},
+			{
+				"from": "src/modules/ompcli/runtime.json",
+				"to": "runtime.json"
+			},
+			{
+				"from": "src/modules/ompcli/messages.json",
+				"to": "messages.json"
+			},
+			{
+				"from": "src/modules/ompcli/licenses/LICENSE-omp.txt",
+				"to": "licenses/LICENSE-omp.txt"
+			},
+			{
+				"from": "src/modules/ompcli/licenses/LICENSE-llama.cpp.txt",
+				"to": "licenses/LICENSE-llama.cpp.txt"
+			},
+			{
+				"from": "src/modules/ompcli/licenses/LICENSE-LLVM-OpenMP.txt",
+				"to": "licenses/LICENSE-LLVM-OpenMP.txt"
+			},
+			{
+				"from": "src/modules/ompcli/licenses/LICENSE-apache-2.0.txt",
+				"to": "licenses/LICENSE-apache-2.0.txt"
+			},
+			{
+				"from": "src/modules/ompcli/licenses/LICENSE-bun.md",
+				"to": "licenses/LICENSE-bun.md"
+			},
+			{
+				"from": "src/modules/ompcli/licenses/LICENSE-msvc-runtime.txt",
+				"to": "licenses/LICENSE-msvc-runtime.txt"
+			}
+		]
+	},
 	"config": [
 		{
 			"from": "src/modules/runtime-config/config.yml",

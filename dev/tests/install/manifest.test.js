@@ -8,12 +8,12 @@ const rootTargets = new Set(["SYSTEM.md"]);
 
 test("the manifest covers every product module", () => {
 	const modules = readdirSync(join(root, "src/modules")).filter(name => statSync(join(root, "src/modules", name)).isDirectory()).sort();
-	const listed = [...manifest.files, ...manifest.config].map(entry => entry.from.split("/")[2]);
+	const listed = [...manifest.files, ...manifest.config, ...manifest.vscode.files].map(entry => entry.from.split("/")[2]);
 	expect([...new Set(listed)].sort()).toEqual(modules);
 });
 
 test("every source exists and no development file is installed", () => {
-	for (const entry of [...manifest.files, ...manifest.config]) {
+	for (const entry of [...manifest.files, ...manifest.config, ...manifest.vscode.files]) {
 		expect(statSync(join(root, entry.from)).isFile()).toBe(true);
 		expect(entry.from.startsWith("dev/")).toBe(false);
 		expect(entry.from.endsWith("README.md")).toBe(false);
@@ -48,4 +48,16 @@ test("mnemopi settings and the local embedding model are part of the contract", 
 	expect(manifest.mnemopi.install).toContain("ollama pull embeddinggemma-2:270m");
 	expect(manifest.config.some(entry => entry.from === "src/modules/runtime-config/mnemopi.yml" && entry.mode === "merge")).toBe(true);
 	expect(manifest.configFallback).toBe("config.yaml");
+});
+
+test("the VS Code section ships the extension files and their licenses", () => {
+	expect(manifest.vscode.target).toBe("win32-x64");
+	const targets = new Set();
+	for (const entry of manifest.vscode.files) {
+		expect(entry.to.includes("..")).toBe(false);
+		expect(targets.has(entry.to)).toBe(false);
+		targets.add(entry.to);
+	}
+	for (const name of ["index.js", "package.json", "runtime.json", "messages.json"]) expect(targets.has(name)).toBe(true);
+	expect([...targets].filter(name => name.startsWith("licenses/")).length).toBeGreaterThanOrEqual(6);
 });
