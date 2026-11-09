@@ -334,3 +334,15 @@
 
 **Носители правила:** [runtime-config](../src/modules/runtime-config/config.yml), [compaction-400k](../src/modules/compaction-400k/thresholds.yml), README обоих модулей, этот документ.
 
+## D-030 — живой счётчик tok/s включён
+
+**Решение:** [status-line](../src/modules/status-line/status-line.yml) ставит `composer.tokenRate: true`. Счётчик живёт в строке работы, рядом с названием сессии.
+
+**Основание:** жалоба владельца от 2026-11-09: пропал живой TPS в интерфейсе.
+
+**Причина:** модуль выключал счётчик как второй, рядом с сегментом `token_rate`. Сегмент статуслайна убран раньше решением D-020, поэтому счётчик остался единственным и был выключен без замены. Настройка OMP зовётся `Generation Rate`.
+
+**Границы:** счётчик появляется в TUI после перезапуска. Правка только в `composer.tokenRate`; остальные ключи `composer` не тронуты.
+
+**Носители правила:** [status-line](../src/modules/status-line/status-line.yml), README модуля, этот документ.
+

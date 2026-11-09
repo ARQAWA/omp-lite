@@ -1,6 +1,6 @@
 # Статуслайн OMP для omp-lite. Слить в ~/.omp/agent/config.yml.
 composer:
-  tokenRate: false
+  tokenRate: true
 statusLine:
   preset: custom
   separator: powerline-thin
