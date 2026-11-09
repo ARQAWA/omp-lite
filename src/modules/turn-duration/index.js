@@ -1,4 +1,6 @@
 // One dim line after every turn: the whole run, tool work included.
+// The line is for the owner's screen only: it never starts a model turn (see agent_end)
+// and the `context` hook drops it from every model request.
 // Ported from pi-response-duration 1.0.1 (MIT, copyright 2026 tech-msc); see LICENSE.
 const TYPE = "omp-lite.turn-duration";
 const DIM = "\x1b[2m";
@@ -35,6 +37,10 @@ export default function turnDuration(pi) {
 	let started;
 	let running = false;
 	pi.registerMessageRenderer(TYPE, message => new Mark(String(message.content?.[0]?.text ?? "")));
+	pi.on("context", event => {
+		const messages = event.messages.filter(message => message.customType !== TYPE);
+		return messages.length === event.messages.length ? undefined : { messages };
+	});
 	// The clock starts with the submission, the way the owner asked, and the unit is the turn:
 	// a queued message does not restart it, a continuation keeps it, any end of the main agent
 	// clears it, so a cancelled preparation cannot inflate the next turn.
@@ -54,6 +60,9 @@ export default function turnDuration(pi) {
 		for (const message of event.messages ?? []) if (message?.role === "assistant") last = message;
 		if (!last || runFailed(last.stopReason)) return;
 		const label = durationLabel(performance.now() - start);
-		pi.sendMessage({ customType: TYPE, content: [{ type: "text", text: `⏱ ${label}` }], display: true });
+		const mark = { customType: TYPE, content: [{ type: "text", text: `⏱ ${label}` }], display: true };
+		// agent_end fires before the agent settles: a message sent now steers the run and the model answers it.
+		// One tick later the agent is idle and the message is only appended and drawn.
+		ctx.setTimeout(() => pi.sendMessage(mark, ctx.isIdle() ? { triggerTurn: false } : { deliverAs: "nextTurn" }), 0);
 	});
 }
