@@ -71,7 +71,7 @@ find:
   enabled: "off"
 display:
   showTokenUsage: false
-  hideToolActivity: true
+  hideToolActivity: false
   subagentLivePreview: false
   smoothStreaming: true
   showTurnTime: true
@@ -107,7 +107,5 @@ startup:
 edit:
   autoRepair:
     enabled: true
-bashInterceptor:
-  enabled: true
 lsp:
   diagnosticsOnEdit: true
