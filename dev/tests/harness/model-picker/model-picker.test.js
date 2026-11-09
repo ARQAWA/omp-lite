@@ -209,7 +209,10 @@ function session({ models, custom }) {
 			custom,
 			onTerminalInput: handler => {
 				inputs.push(handler);
-				return () => inputs.splice(inputs.indexOf(handler), 1);
+				return () => {
+					const index = inputs.indexOf(handler);
+					if (index >= 0) inputs.splice(index, 1);
+				};
 			},
 		},
 	};
@@ -241,6 +244,57 @@ test("Shift+arrow opens one picker at a time", async () => {
 	expect(env.inputs[0]("\x1b[1;2C")).toEqual({ consume: true });
 	expect(mounted).toBe(2);
 	expect(notes).toEqual([]);
+});
+
+test("session switch and branch restore the input listener", async () => {
+	let mounted = 0;
+	let close;
+	const custom = factory => {
+		mounted += 1;
+		return new Promise(resolve => {
+			const component = factory({}, theme, {}, resolve);
+			close = input => component.handleInput(input);
+		});
+	};
+	const env = session({ models: [opus, flash], custom });
+	env.handlers.session_start({}, env.ctx);
+	expect(env.inputs.length).toBe(1);
+
+	env.inputs.length = 0;
+	env.handlers.session_switch({ reason: "new" }, env.ctx);
+	expect(env.inputs.length).toBe(1);
+	expect(env.inputs[0]("\x1b[1;2A")).toEqual({ consume: true });
+	expect(mounted).toBe(1);
+	close("\x1b[27u");
+	await Bun.sleep(0);
+
+	env.inputs.length = 0;
+	env.handlers.session_branch({ reason: "branch" }, env.ctx);
+	expect(env.inputs.length).toBe(1);
+	expect(env.inputs[0]("\x1b[1;2B")).toEqual({ consume: true });
+	expect(mounted).toBe(2);
+	close("\x1b[27u");
+	await Bun.sleep(0);
+});
+
+test("a subagent session start keeps the main listener", async () => {
+	let close;
+	const custom = factory =>
+		new Promise(resolve => {
+			const component = factory({}, theme, {}, resolve);
+			close = input => component.handleInput(input);
+		});
+	const env = session({ models: [opus], custom });
+	env.handlers.session_start({}, env.ctx);
+	expect(env.inputs.length).toBe(1);
+
+	const subagent = { ...env.ctx, agent: { kind: "sub" } };
+	env.handlers.session_start({}, subagent);
+	env.handlers.session_switch({}, subagent);
+	expect(env.inputs.length).toBe(1);
+	expect(env.inputs[0]("\x1b[1;2A")).toEqual({ consume: true });
+	close("\x1b[27u");
+	await Bun.sleep(0);
 });
 
 test("an empty model list warns and reopens", async () => {
