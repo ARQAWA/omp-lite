@@ -26,9 +26,8 @@
 - `skill-alias` — короткий `/имя` вместо `/skill:имя`. Тест: `dev/tests/harness/skill-alias/`.
 - `memory-tool-prompts` — точная подмена описаний тулов памяти в рантайме. Тест: `dev/tests/harness/memory-tool-prompts/`.
 - `model-picker` — компактный пикер модели и усилия, Shift+стрелки, фильтр. Тест: `dev/tests/harness/model-picker/`.
-- `tool-summary` — одна строка со счётчиками тулов вместо карточек. Тест: `dev/tests/harness/tool-summary/`.
+- `tool-summary` — одна строка со счётчиками тулов рядом с карточками. Тест: `dev/tests/harness/tool-summary/`.
 - `review` — навыки `blindreview`, `highreview`, `reviewer` и агенты `spotty`, `bossy`. Тестов нет: только ресурсы, проверка реальным запуском.
-- `define-goal` — `/define-goal` вместо встроенной `/guided-goal` и скрытие старой из автокомплита. Тест: `dev/tests/harness/define-goal/`.
 - `subagent-reuse` — инструмент `reuse`: та же сессия сабагента, история с нуля через `newSession()`. Тест: `dev/tests/harness/subagent-reuse/`.
 - `subscriptions` — метки `CC`, `CX`, `Go` с лимитами подписок. Тест: `dev/tests/harness/subscriptions/`.
 - `background-jobs` — счётчик фоновых процессов в статуслайне. Тест: `dev/tests/harness/background-jobs/`.

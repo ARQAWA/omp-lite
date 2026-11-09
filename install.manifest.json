@@ -27,14 +27,6 @@
 			"to": "extensions/cursor-tools/descriptions.json"
 		},
 		{
-			"from": "src/modules/define-goal/index.js",
-			"to": "extensions/define-goal.js"
-		},
-		{
-			"from": "src/modules/define-goal/define-goal.md",
-			"to": "extensions/define-goal.md"
-		},
-		{
 			"from": "src/modules/dyslexia/index.js",
 			"to": "extensions/dyslexia.js"
 		},
