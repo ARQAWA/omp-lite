@@ -7,10 +7,10 @@
 
 Лимиты подписок даёт модуль [subscriptions](../subscriptions/README.md), фоновые процессы — [background-jobs](../background-jobs/README.md). Оба печатают в родной сегмент `status`.
 
-`composer.tokenRate: false` убирает второй счётчик tok/s: он живёт в композере, а не в статуслайне.
+`composer.tokenRate: true` показывает живые `tok/s`. Место — строка работы рядом с названием сессии или строка ввода. Отдельного сегмента статуслайна нет: он убран решением D-020.
 
 **Вход:** блоки `statusLine` и `composer.tokenRate` в `~/.omp/agent/config.yml`. Фрагмент и режим слияния перечислены в [манифесте](../../../install.manifest.json).
 
-**Выключить:** удалить блок `statusLine` и строку `composer.tokenRate: false`. Остальные ключи `composer` не трогать.
+**Выключить:** удалить блок `statusLine` и строку `composer.tokenRate`. Остальные ключи `composer` не трогать.
 
 **Тесты:** кода нет. Проверка — `omp gallery --surface=segment` и живой запуск.
