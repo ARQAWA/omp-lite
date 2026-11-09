@@ -30,7 +30,6 @@
 - `review` — навыки `blindreview`, `highreview`, `reviewer` и агенты `spotty`, `bossy`. Тестов нет: только ресурсы, проверка реальным запуском.
 - `subagent-reuse` — инструмент `reuse`: та же сессия сабагента, история с нуля через `newSession()`. Тест: `dev/tests/harness/subagent-reuse/`.
 - `subscriptions` — метки `CC`, `CX`, `Go` с лимитами подписок. Тест: `dev/tests/harness/subscriptions/`.
-- `background-jobs` — счётчик фоновых процессов в статуслайне. Тест: `dev/tests/harness/background-jobs/`.
 - `compactions` — счётчик компакшенов сессии в статуслайне. Тест: `dev/tests/harness/compactions/`.
 - `turn-duration` — строка `⏱ 2m 4s` после долгого хода. Тест: `dev/tests/harness/turn-duration/`.
 - `cursor-tools` — аргументы сбора контекста курсора над родными тулами: `grep` с контекстом, режимами и типом, `bash` с `block_until_ms: 0`, `glob` и `read` со своими полями, режим правок `apply_patch`. Описания тулов и их параметров перенесены из курсора под наши имена и лежат в `descriptions.json`. Тест: `dev/tests/harness/cursor-tools/`.

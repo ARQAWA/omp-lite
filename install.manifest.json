@@ -3,10 +3,6 @@
 	"target": "~/.omp/agent",
 	"files": [
 		{
-			"from": "src/modules/background-jobs/index.js",
-			"to": "extensions/background-jobs.js"
-		},
-		{
 			"from": "src/modules/codex-luna-search/codex-luna-search.js",
 			"to": "extensions/codex-luna-search.js"
 		},

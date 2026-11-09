@@ -20,6 +20,10 @@ test("every source exists and no development file is installed", () => {
 	}
 });
 
+test("the removed background counter is not installed", () => {
+	expect(manifest.files.some(entry => entry.to === "extensions/background-jobs.js")).toBe(false);
+});
+
 test("targets stay inside the agent root and are unique", () => {
 	const targets = new Set();
 	for (const entry of manifest.files) {
