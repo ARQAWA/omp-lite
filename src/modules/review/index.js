@@ -5,8 +5,11 @@ const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
 const config = JSON.parse(read("./review.json"));
 const systemPrompt = [read("./skills/reviewer/REVIEWER.md"), read("./skills/reviewer/WORKFLOW.md")];
 
-export default function review(pi, complete) {
+export default function review(pi, complete, load = () => import("@oh-my-pi/pi-ai")) {
 	const z = pi.zod;
+	const run = complete ?? load()
+		.then(module => module.completeSimple)
+		.catch(error => () => { throw error; });
 	pi.registerTool({
 		name: "review",
 		label: "review",
@@ -26,8 +29,7 @@ export default function review(pi, complete) {
 				const sessionId = randomUUID();
 				const apiKey = await ctx.modelRegistry.getApiKey(model, sessionId);
 				if (!apiKey) throw new Error(config.errors.auth);
-				const run = complete ?? (await import("@oh-my-pi/pi-ai")).completeSimple;
-				const result = await run(model, {
+				const result = await (await run)(model, {
 					systemPrompt: [...systemPrompt],
 					messages: [{ role: "user", content: packet }],
 					tools: [],
@@ -36,7 +38,13 @@ export default function review(pi, complete) {
 					throw new Error(result.errorMessage || config.errors.incomplete);
 				}
 				const text = result.content.filter(block => block.type === "text").map(block => block.text).join("\n").trim();
-				if (!text) throw new Error(config.errors.incomplete);
+				const label = /^ {0,3}(?:(?:#{1,6}|[-*+]|\d+[.)])\s+)?(?:\*\*)?(CHECKED:|UNCHECKED\b)/;
+				const labels = text.split("\n")
+					.filter(line => !/^\s*>/.test(line))
+					.map(line => label.exec(line)?.[1]);
+				if (!text || (/^CLEAN\b/.test(text) && (!labels.includes("CHECKED:") || labels.includes("UNCHECKED")))) {
+					throw new Error(config.errors.incomplete);
+				}
 				return { content: [{ type: "text", text }] };
 			} catch (error) {
 				return { content: [{ type: "text", text: String(error) }], isError: true };

@@ -10,8 +10,10 @@ Review only what the user ordered: nothing missing and nothing extra. The same p
 ## Prepare the packet
 
 Keep the object unchanged during a review. Gather the original messages and approved proposals verbatim. Compile the active requirements with source quotes. Include every applicable obligation for this stage. A caller's criterion may focus the check; it cannot add scope or waive a requirement.
+For every active user instruction, include a requirement or its later overriding quote. A compiled list cannot prove that no instruction was omitted.
 
 Include actual source contents and the whole in-scope object. Paths alone are not evidence: this reviewer cannot read them. For code, include the full task diff, relevant surrounding code and required check results. Include untracked deliverables. For other work, include the full plan, report or other artifact. Do not replace originals with your assurances.
+For proposed changes, include the exact diff and relevant unchanged text. When reviewing before the final answer, the review verdict and a report quoting it are due afterward, not missing evidence.
 
 Supply project rules explicitly, with their sources and applicability. The tool always supplies the same installed WORKFLOW.md principles. Other projects do not need this repository's dev/ directory. Do not import memory, unrelated conversation, previous reviewer verdicts or private summaries into the packet. User-approved changes to the agreement are original requirements, not reviewer opinions.
 
@@ -49,8 +51,9 @@ Call the `review` tool once with `level: "blind"` by default, or `level: "high"`
 
 Continue the collaboration until CLEAN: the reviewer reports every supported error in one batch, Main fixes all admitted findings within the agreed scope, then requests the next check. There is no fixed number of ordinary review rounds. Do not stop with valid findings merely because several rounds passed. Missing authority or required evidence blocks progress, not the obligation: resume after the gap is resolved. Never manufacture CLEAN by dropping requirements.
 
-- CLEAN with concrete CHECKED and no missing proof: accept. No extra confidence pass.
+- CLEAN with concrete CHECKED, no UNCHECKED and no missing proof: accept. No extra confidence pass.
 - FINDINGS: verify each source quote and the complete cited object. Admit only actual missing, incorrect or extra work. A finding is not an instruction to expand the task. Reject unsupported findings with exact evidence. An alleged omission already present is not a defect.
+  If the cited mechanism is unauthorized, remove it instead of hardening it.
 - Review-only request: report verified findings without editing. Otherwise fix valid findings together, only within authorized scope. Do not remove requested behavior to obtain CLEAN.
 - Recheck only after changes or newly supplied required evidence. Keep the original requirements. Pass the changed object and affected scope, not previous opinions. Main keeps the rejection record separately.
 - BLOCKED, unavailable required evidence or ambiguous scope: report the exact blocker. Do not retry unchanged missing evidence. Do not fabricate a defect or acceptance.

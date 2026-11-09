@@ -5,7 +5,7 @@ import review from "../../../../src/modules/review/index.js";
 const model = { provider: "openai-codex", id: "gpt-6.1-terra" };
 const reply = { stopReason: "stop", content: [{ type: "text", text: "CLEAN\nCHECKED: packet" }] };
 
-function fixture(response = reply) {
+function fixture(response = reply, load) {
 	let tool;
 	const calls = [];
 	const scalar = { min() { return this; }, describe() { return this; } };
@@ -19,7 +19,7 @@ function fixture(response = reply) {
 		get sessionManager() { throw new Error("parent history accessed"); },
 		get getSystemPrompt() { throw new Error("parent prompt accessed"); },
 	};
-	review(pi, async (...args) => { calls.push(args); return response; });
+	review(pi, load ? undefined : async (...args) => { calls.push(args); return response; }, load);
 	return { calls, ctx, run: (packet, level = "blind", signal) => tool.execute("call", { level, packet }, signal, undefined, ctx) };
 }
 
@@ -49,6 +49,50 @@ test("the next call has no previous task or verdict", async () => {
 	await f.run("second task");
 	expect(f.calls[1][1].messages).toEqual([{ role: "user", content: "second task" }]);
 	expect(f.calls[1][1].systemPrompt).toHaveLength(2);
+});
+
+test("native completion starts loading during registration", async () => {
+	let loads = 0;
+	const f = fixture(reply, () => {
+		loads++;
+		return Promise.resolve({ completeSimple: async () => reply });
+	});
+	expect(loads).toBe(1);
+	expect((await f.run("task")).isError).toBeUndefined();
+});
+
+test("failed native load reports an error", async () => {
+	const f = fixture(reply, () => Promise.reject(new Error("native load failed")));
+	const result = await f.run("task");
+	expect(result.isError).toBe(true);
+	expect(result.content[0].text).toContain("native load failed");
+});
+
+test("quoted UNCHECKED is not an unchecked section", async () => {
+	for (const text of [
+		"CLEAN\nCHECKED: quoted UNCHECKED example",
+		"CLEAN\nCHECKED: quote\n> UNCHECKED: logs",
+	]) {
+		const f = fixture({ stopReason: "stop", content: [{ type: "text", text }] });
+		expect((await f.run("task")).isError).toBeUndefined();
+	}
+});
+
+test("CLEAN with missing proof cannot pass", async () => {
+	for (const text of [
+		"CLEAN",
+		"CLEAN\nUNCHECKED: logs",
+		"CLEAN\nCHECKED: code\nUNCHECKED: tests",
+		"CLEAN\nCHECKED: code\n**UNCHECKED:** tests",
+		"CLEAN\nCHECKED: code\n## UNCHECKED: tests",
+		"CLEAN\nCHECKED: code\n  ## UNCHECKED: tests",
+		"CLEAN\nCHECKED: code\n## UNCHECKED\ntests",
+		"CLEAN\nCHECKED: code\n- UNCHECKED: tests",
+		"CLEAN\nCHECKED: code\n## UNCHECKED \u2014 test logs",
+	]) {
+		const f = fixture({ stopReason: "stop", content: [{ type: "text", text }] });
+		expect((await f.run("task")).isError).toBe(true);
+	}
 });
 
 for (const stopReason of ["length", "toolUse", "error", "aborted"]) {
