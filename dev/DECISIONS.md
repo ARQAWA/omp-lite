@@ -322,3 +322,15 @@
 
 **Носители правила:** [INSTALL.md](../INSTALL.md), этот документ.
 
+## D-029 — провайдер DeepSeek убран
+
+**Решение:** остаются три провайдера: `anthropic`, `openai-codex` и `opencode-go`. Шаблон [runtime-config](../src/modules/runtime-config/config.yml) теряет `deepseek/*` из `enabledModels`, получает `deepseek` и `llama.cpp` в `disabledProviders`, а роли `default` и `memory` переводятся на `opencode-go/deepseek-v4.1-flash:max`. Из порогов сжатия убрана запись `deepseek/deepseek-flash` в обоих фрагментах.
+
+**Основание:** поручение владельца от 2026-11-09: оставить только OpenGo, Claude Code и ChatGPT.
+
+**Причина:** `enabledModels` без явного запрета оставлял провайдера в списке моделей. Запись в `disabledProviders` выключает провайдера целиком. Роль по умолчанию должна указывать на оставшегося провайдера, иначе старт сессии идёт в отключённый. `llama.cpp` OMP добавляет сам, если не запретить: без запрета список расширяется до четырёх.
+
+**Границы:** модель `opencode-go/deepseek-v4.1-flash` остаётся: это OpenGo, не провайдер DeepSeek. Слияние настроек не удаляет старые ключи, поэтому живой конфиг правится руками. Ключи доступа к DeepSeek в системе не удаляются. Второй скрытый провайдер, `lm-studio`, не запрещён: сейчас он не появляется.
+
+**Носители правила:** [runtime-config](../src/modules/runtime-config/config.yml), [compaction-400k](../src/modules/compaction-400k/thresholds.yml), README обоих модулей, этот документ.
+
