@@ -284,12 +284,13 @@ export default function modelPicker(pi) {
 	let dialogOpen = false;
 	let unsubscribe;
 
-	pi.on("session_start", (_event, ctx) => {
+	const start = (_event, ctx) => {
+		if (ctx?.agent?.kind === "sub") return;
 		generation += 1;
 		dialogOpen = false;
 		unsubscribe?.();
 		unsubscribe = undefined;
-		if (ctx?.agent?.kind === "sub" || ctx?.mode !== "tui" || !ctx?.hasUI) return;
+		if (ctx?.mode !== "tui" || !ctx?.hasUI) return;
 		if (typeof ctx.ui?.onTerminalInput !== "function") return;
 		unsubscribe = ctx.ui.onTerminalInput(input => {
 			if (dialogOpen || !shiftArrow(input)) return;
@@ -300,7 +301,11 @@ export default function modelPicker(pi) {
 			});
 			return { consume: true };
 		});
-	});
+	};
+
+	pi.on("session_start", start);
+	pi.on("session_switch", start);
+	pi.on("session_branch", start);
 
 	pi.on("session_shutdown", () => {
 		generation += 1;

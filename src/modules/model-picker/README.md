@@ -2,9 +2,11 @@
 
 Расширение OMP. Компактный пикер модели и усилия в стиле MyP. Занимает место редактора, без оверлея.
 
-**Вход OMP:** `omp://extensions.md` (события `session_start`, `session_shutdown`, `ctx.ui.custom`, `ctx.ui.onTerminalInput`), `omp://tui.md` (контракт компонента и порядок ввода), `omp://theme.md` (роли `thinking*`, `accent`, `text`, `muted`, `dim`, `error`).
+**Вход OMP:** `omp://extensions.md` (события `session_start`, `session_switch`, `session_branch`, `session_shutdown`, `ctx.ui.custom`, `ctx.ui.onTerminalInput`), `omp://tui.md` (контракт компонента и порядок ввода), `omp://theme.md` (роли `thinking*`, `accent`, `text`, `muted`, `dim`, `error`).
 
 **Активация:** Shift+любая стрелка открывает меню. Модель не меняется до подтверждения.
+
+**Подписка:** создаётся на `session_start`, `session_switch` и `session_branch`. `/new` снимает слушатели, поэтому без `session_switch` Shift+стрелки перестают открывать пикер.
 
 **Клавиши:**
 - ↑ и ↓ меняют модель;
