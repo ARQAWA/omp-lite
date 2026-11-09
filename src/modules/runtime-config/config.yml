@@ -1,12 +1,11 @@
 modelRoles:
-  default: deepseek/deepseek-flash:max
+  default: opencode-go/deepseek-v4.1-flash:max
   web: openai-codex/gpt-6-luna
-  memory: deepseek/deepseek-flash:max
+  memory: opencode-go/deepseek-v4.1-flash:max
 enabledModels:
   - anthropic/*
   - openai-codex/*
   - opencode-go/*
-  - deepseek/*
 disabledProviders:
   - google
   - openrouter
@@ -14,6 +13,8 @@ disabledProviders:
   - web
   - cursor
   - ollama
+  - deepseek
+  - llama.cpp
 retry:
   fallbackChains:
     web: []
@@ -24,7 +25,6 @@ compaction:
     opencode-go/deepseek-v4.1-flash: f400000
     openai-codex/gpt-6.1-sol: f400000
     openai-codex/gpt-6.1-terra: f400000
-    deepseek/deepseek-flash: f400000
     anthropic/claude-fable-5: f400000
     anthropic/claude-fable-5-1: f400000
     anthropic/claude-mythos-5: f400000
