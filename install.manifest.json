@@ -87,6 +87,10 @@
 			"to": "extensions/task-delegation.js"
 		},
 		{
+			"from": "src/modules/task-delegation/task-delegation.json",
+			"to": "extensions/task-delegation.json"
+		},
+		{
 			"from": "src/modules/tool-summary/index.js",
 			"to": "extensions/tool-summary.js"
 		},

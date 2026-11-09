@@ -1,0 +1,17 @@
+{
+	"rule": "Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.",
+	"taskRemove": [
+		"Read-only research MUST use `scout` only when files unknown. ",
+		"MUST be used for exploratory codebase research, rapid code analysis, and broad pattern searches. "
+	],
+	"evalRemove": [
+		" Subagents have separate kernels.",
+		"For 2+ independent items, use a named `workpool()`; results auto-deliver. If blocked, leave `eval` and call `wait`.\n",
+		"- `agent`, `workpool`: background subagents, DAG waves \u2192 `xd://eval/agents`\n"
+	],
+	"evalDefault": "Use JavaScript (Bun) by default. Use Python only for rare tasks requiring Python-specific libraries, such as pandas, NumPy or Matplotlib.",
+	"evalFiles": "For project file reading and searching, use the read, grep and glob tools. Use eval for computation, not as a substitute for those tools.",
+	"exampleOld": "eval(language=\"py\", code=\"%load \\\"scripts/my setup.py\\\"\")",
+	"exampleNew": "eval(language=\"js\", code=\"%load \\\"scripts/my setup.js\\\"\")",
+	"blocked": "Direct agent() and workpool() calls are blocked in eval. Use the task tool for explicitly requested delegation."
+}

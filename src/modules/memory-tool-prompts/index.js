@@ -47,6 +47,7 @@ export default function memoryPrompts(pi) {
 	};
 
 	const rewriteTool = (record, name, source, ctx) => {
+		name = name.replace(/^_/, "");
 		const oldText = OLD[name];
 		const newText = NEW[name];
 		if (oldText === undefined || newText === undefined) return false;
@@ -140,6 +141,7 @@ export default function memoryPrompts(pi) {
 		if (event.toolName !== "read" || event.isError === true) return;
 		const input = event.input;
 		if (typeof input !== "object" || input === null || Array.isArray(input)) return;
+		if (input.offset !== undefined || input.limit !== undefined) return;
 		const path = input.path;
 		if (typeof path !== "string" || !path.startsWith("xd://")) return;
 		const name = path.slice("xd://".length);

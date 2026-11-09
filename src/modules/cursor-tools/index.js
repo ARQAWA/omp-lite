@@ -488,6 +488,8 @@ export function readRequest(params) {
 	if (offset !== undefined && (!Number.isInteger(offset) || offset === 0)) return { error: "offset must be a non-zero integer" };
 	if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) return { error: "limit must be a positive integer" };
 	const start = offset ?? 1;
+	// xd topics do not parse path selectors; slice their returned document instead.
+	if (path.startsWith("xd://")) return { params: { path }, document: { offset: start, limit } };
 	if (start < 0) {
 		if (limit === undefined) return { params: { path: `${path}:-${Math.abs(start)}:raw` } };
 		return { params: { path: `${path}:1-1:raw` }, tail: { path, offset, limit } };
@@ -500,6 +502,22 @@ export async function executeRead(toolCallId, params, signal, onUpdate, ctx) {
 	const mapped = readRequest(params);
 	if (mapped.error) return text(mapped.error, true);
 	if (typeof ctx?.invokeTool !== "function") return text("native read is unavailable in this runtime", true);
+	if (mapped.document) {
+		const result = await ctx.invokeTool(mapped.params, { signal, onUpdate });
+		if (result.isError) return result;
+		const content = result.content ?? [];
+		const lines = content.filter(part => part.type === "text").map(part => part.text).join("\n").split("\n");
+		const { offset, limit } = mapped.document;
+		const start = offset < 0 ? lines.length + offset : offset - 1;
+		if (start < 0) return text("offset is past the start of the file", true);
+		return {
+			...result,
+			content: [
+				{ type: "text", text: lines.slice(start, limit === undefined ? undefined : start + limit).join("\n") },
+				...content.filter(part => part.type !== "text"),
+			],
+		};
+	}
 	if (mapped.tail === undefined) return ctx.invokeTool(mapped.params, { signal, onUpdate });
 	const head = await ctx.invokeTool(mapped.params, { signal, onUpdate });
 	if (head?.isError) return head;

@@ -43,6 +43,22 @@ test("rewrites the learn payload description", () => {
 	expect(payload.tools[0].function.description).toBe(NEW.learn);
 });
 
+test("rewrites OAuth-prefixed memory tools in both provider shapes", () => {
+	for (const name of Object.keys(OLD)) {
+		for (const wrapped of [false, true]) {
+			const { handlers, notifications, ui } = harness();
+			const record = { name: `_${name}`, description: OLD[name], input_schema: {} };
+			const tool = wrapped ? { type: "function", function: record } : record;
+			const payload = { tools: [tool] };
+			handlers.get("before_provider_request")({ payload }, { ui });
+			handlers.get("before_provider_request")({ payload }, { ui });
+			expect(record.name).toBe(`_${name}`);
+			expect(record.description).toBe(NEW[name]);
+			expect(notifications).toEqual([]);
+		}
+	}
+});
+
 test("rewrites the recall xd document and keeps the schema", () => {
 	const { handlers, ui } = harness();
 	const result = handlers.get("tool_result")(
@@ -65,6 +81,20 @@ test("skips a changed upstream text and warns once", () => {
 	expect(payload.tools[0].function.description).toBe("changed upstream");
 	expect(notifications.filter(item => item.type === "warning")).toHaveLength(1);
 	expect(statuses.some(item => item.text?.includes("stale"))).toBe(true);
+});
+
+test("does not mistake a partial xd document for a changed upstream description", () => {
+	const { handlers, notifications, ui } = harness();
+	const result = handlers.get("tool_result")(
+		{
+			toolName: "read",
+			input: { path: "xd://recall", limit: 1 },
+			content: [{ type: "text", text: OLD.recall.split("\n")[0] }],
+		},
+		{ ui },
+	);
+	expect(result).toBeUndefined();
+	expect(notifications).toEqual([]);
 });
 
 test("accepts an already patched description without warning", () => {

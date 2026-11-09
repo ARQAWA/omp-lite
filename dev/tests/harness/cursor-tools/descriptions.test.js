@@ -24,8 +24,9 @@ IMPORTANT: Use this tool for terminal operations like git, npm, docker, etc. DO 
 - Run independent commands as parallel bash calls. Chain dependent commands with \`&&\`.
 - Use the \`gh\` command via the bash tool for all GitHub-related tasks, including issues, pull requests, checks, and releases.`;
 
-test("bash carries the captured Cursor text under our names", () => {
-	expect(BASH_DESCRIPTION).toBe(EXPECTED_BASH);
+test("bash puts dedicated file tools first while keeping the captured Cursor text", () => {
+	const priority = "Use read, grep and glob for project files and directory listings. Do not attempt cat, head, tail, sed -n, grep, rg, find, ls or tree through bash.";
+	expect(BASH_DESCRIPTION).toBe(`${priority}\n\n${EXPECTED_BASH}`);
 });
 
 test("grep parameters carry their Cursor description on their own field", () => {

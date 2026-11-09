@@ -12,9 +12,9 @@
 - подключение и отключение;
 - соответствующие тесты в `dev/tests/harness/<module-name>/` согласно [правилам тестов](../../dev/tests/harness/README.md).
 
-Сырые снимки рантайма от 2026-11-08, без правок:
+Ресурсы на основе снимков рантайма от 2026-11-08:
 
-- `runtime-config` — `config.yml`, 109 строк;
+- `runtime-config` — `config.yml` и штатная маршрутизация bash;
 - `compaction-400k` — 16 порогов `f400000`;
 - `web-search` — Codex-поиск, 5 файлов;
 - `codex-transport` — правка тела запроса, 16 строк;
@@ -33,7 +33,7 @@
 - `compactions` — счётчик компакшенов сессии в статуслайне. Тест: `dev/tests/harness/compactions/`.
 - `turn-duration` — строка `⏱ 2m 4s` после долгого хода. Тест: `dev/tests/harness/turn-duration/`.
 - `cursor-tools` — аргументы сбора контекста курсора над родными тулами: `grep` с контекстом, режимами и типом, `bash` с `block_until_ms: 0`, `glob` и `read` со своими полями, режим правок `apply_patch`. Описания тулов и их параметров перенесены из курсора под наши имена и лежат в `descriptions.json`. Тест: `dev/tests/harness/cursor-tools/`.
-- `task-delegation` — строка Codex про саб-агентов в описании тула `task`. Тест: `dev/tests/harness/task-delegation/`.
+- `task-delegation` — правило Codex для `task`, Bun по умолчанию и фильтр прямого спавна в `eval`. Тест: `dev/tests/harness/task-delegation/`.
 
 Настройки без кода:
 

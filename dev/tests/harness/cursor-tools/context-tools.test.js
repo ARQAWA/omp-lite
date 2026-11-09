@@ -48,6 +48,43 @@ test("a negative offset with a limit counts lines first, then slices", async () 
 	expect(result.content[0].text).toBe("lines");
 });
 
+test("xd documents support exact line windows without changing the topic", async () => {
+	const tools = [];
+	install({ zod: fakeZod(), registerTool: tool => tools.push(tool), on: () => {} });
+	const read = tools.find(tool => tool.name === "read");
+	const source = { content: [{ type: "text", text: "one\ntwo\nthree\nfour\nfive" }], details: { source: "xd" } };
+	const cases = [
+		[{ limit: 2 }, "one\ntwo"],
+		[{ offset: 2, limit: 2 }, "two\nthree"],
+		[{ offset: 4 }, "four\nfive"],
+		[{ offset: -2, limit: 1 }, "four"],
+		[{ offset: -2 }, "four\nfive"],
+	];
+	for (const [window, expected] of cases) {
+		const ctx = {
+			invokeTool: async params => {
+				if (params.path !== "xd://eval/helpers") return { isError: true, content: [{ type: "text", text: "Unknown topic" }] };
+				return source;
+			},
+		};
+		const result = await read.execute("call", { path: "xd://eval/helpers", ...window }, undefined, undefined, ctx);
+		expect(result.isError).not.toBe(true);
+		expect(result.content[0].text).toBe(expected);
+		expect(result.details).toEqual(source.details);
+	}
+	expect(source.content[0].text).toBe("one\ntwo\nthree\nfour\nfive");
+});
+
+test("xd reads keep native errors and validate windows", async () => {
+	const error = { isError: true, content: [{ type: "text", text: "Unknown topic" }] };
+	const result = await executeRead("call", { path: "xd://eval/missing", limit: 2 }, undefined, undefined, {
+		invokeTool: async () => error,
+	});
+	expect(result).toBe(error);
+	expect(readRequest({ path: "xd://eval/helpers", offset: 0 }).error).toBe("offset must be a non-zero integer");
+	expect(readRequest({ path: "xd://eval/helpers", limit: -1 }).error).toBe("limit must be a positive integer");
+});
+
 test("the registered glob and read entries forward the mapped native call", async () => {
 	const seen = [];
 	const tools = [];
