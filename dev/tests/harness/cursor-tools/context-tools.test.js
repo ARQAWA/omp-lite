@@ -98,9 +98,13 @@ test("the registered glob and read entries forward the mapped native call", asyn
 test("glob and read carry the captured Cursor texts under our names", () => {
 	expect(GLOB_DESCRIPTION.startsWith("Tool to search for files matching a glob pattern")).toBe(true);
 	expect(GLOB_DESCRIPTION).toContain("sorted by modification time");
+	expect(GLOB_DESCRIPTION).toContain("Minimize agent turns. Batch all necessary, independent searches per response. Never search unrelated paths to fill batches.");
+	expect(GLOB_DESCRIPTION.includes("speculatively")).toBe(false);
 	expect(READ_DESCRIPTION.startsWith("Reads a file from the local filesystem.")).toBe(true);
 	expect(READ_DESCRIPTION).toContain("PDF files are converted into text content automatically");
 	expect(READ_DESCRIPTION).toContain("Supported image formats: jpeg/jpg, png, gif, webp.");
+	expect(READ_DESCRIPTION).toContain("Minimize agent turns. Batch all necessary, independent reads per response. Reuse available, unchanged content instead of rereading.");
+	expect(READ_DESCRIPTION.includes("speculatively")).toBe(false);
 });
 
 function fakeZod() {
