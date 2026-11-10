@@ -202,19 +202,22 @@ async function defaultEngine() {
 const ENGINE_MODES = { content: "content", count: "count", files_with_matches: "filesWithMatches" };
 
 /** The native binding takes exactly one options object; a second argument is its onMatch callback. */
-function engineRequest(request, base, signal, maxColumns) {
+function engineRequest(request, base, { signal, maxColumns, mask, flat, whole }) {
 	const options = {
 		pattern: request.pattern,
 		path: base,
-		glob: request.glob,
+		// A mask from the path is the engine's own file filter: it prunes the walk and decides about node_modules.
+		glob: mask ?? request.glob,
+		// A mask after a directory names the entries of that directory, so the engine must not make it recursive.
+		recursive: flat ? false : undefined,
 		type: request.type,
 		ignoreCase: !request.caseSensitive,
 		multiline: request.multiline,
 		hidden: true,
 		gitignore: request.gitignore,
 		mode: request.ranges !== undefined ? ENGINE_MODES.content : ENGINE_MODES[request.mode],
-		// A line selector filters after the search, so its one file is collected whole.
-		maxCount: request.ranges !== undefined ? undefined : COLLECTED,
+		// What is filtered after the search is collected whole, so no match is lost behind the limit.
+		maxCount: request.ranges !== undefined || whole ? undefined : COLLECTED,
 		timeoutMs: TIMEOUT_MS,
 		// The line cap is the `tools.outputMaxColumns` setting; 0 means no cap.
 		maxColumns: maxColumns > 0 ? maxColumns : undefined,
@@ -264,13 +267,13 @@ export async function searchGrep(request, ctx, options = {}) {
 	let limitReached = false;
 	let skippedOversized = 0;
 	for (const entry of request.paths ?? [request.path]) {
-		const { path: target, mask } = typeof entry === "object" ? entry : { path: entry };
+		const { path: target, mask, flat } = typeof entry === "object" ? entry : { path: entry };
 		const entryBase = target === undefined ? cwd : isAbsolute(target) ? target : resolve(cwd, target);
-		const fits = mask === undefined ? undefined : new Bun.Glob(mask);
-		const part = (await natives.grep(engineRequest(request, entryBase, options.signal, options.maxColumns))) ?? {};
+		// The engine takes one file filter. With a mask in the path the `glob` argument narrows the files here.
+		const narrow = mask !== undefined && request.glob !== undefined ? new Bun.Glob(request.glob.includes("/") ? request.glob : `**/${request.glob}`) : undefined;
+		const part = (await natives.grep(engineRequest(request, entryBase, { signal: options.signal, maxColumns: options.maxColumns, mask, flat, whole: narrow !== undefined }))) ?? {};
 		for (const match of part.matches ?? []) {
-			// A mask names files from its directory, the way the engine names them in a walk.
-			if (fits !== undefined && !fits.match(match.path)) continue;
+			if (narrow !== undefined && !narrow.match(match.path)) continue;
 			// The engine names a file of a directory walk by a relative path; it reads such a file only up to its window.
 			if (!isAbsolute(match.path)) walked.add(join(entryBase, match.path));
 			parts.push({ ...match, path: isAbsolute(match.path) ? match.path : join(entryBase, match.path) });
@@ -373,12 +376,14 @@ export function parseHostSelector(path, cwd = process.cwd()) {
 function hostEntry(entry, cwd) {
 	if (entry === "" || entry.includes("://") || ARCHIVE.test(entry) || SELECTOR.test(entry)) return undefined;
 	if (existsSync(resolve(cwd, entry))) return entry;
-	const segments = entry.split("/");
+	const segments = entry.replace(/^\.\//, "").split("/");
 	const at = segments.findIndex(segment => GLOB.test(segment));
 	if (at < 0) return undefined;
 	const base = resolve(cwd, segments.slice(0, at).join("/") || (entry.startsWith("/") ? "/" : "."));
 	const mask = segments.slice(at).join("/");
-	return !SEPARATOR.test(mask) && statSync(base, { throwIfNoEntry: false })?.isDirectory() ? { path: base, mask } : undefined;
+	if (SEPARATOR.test(mask) || !statSync(base, { throwIfNoEntry: false })?.isDirectory()) return undefined;
+	// As in the native tool: `dir/*.ts` means the direct entries of `dir`, a bare `*.ts` matches at any depth.
+	return { path: base, mask, flat: at > 0 };
 }
 
 /** Host paths and masks go through the engine, one entry at a time. */
