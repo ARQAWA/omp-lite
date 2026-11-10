@@ -57,14 +57,22 @@ test("a list over the budget folds deep directories and the counts add up", () =
 	expect(Number(match[2])).toBeGreaterThan(0);
 });
 
-test("thousands of one-file directories still stay under the budget", () => {
+test("a map that cannot fit is a clear error, not a dead-end line", () => {
 	const files = [];
 	for (let dir = 0; dir < 4000; dir++) files.push(`d${dir}/file.ts`);
 	const budget = 45 * 1024;
+	expect(() => renderMap(files, budget)).toThrow("does not fit the answer budget");
+});
+
+test("the last resort folds whole top-level directories, which path can expand", () => {
+	const files = [];
+	for (let top = 0; top < 10; top++) for (let dir = 0; dir < 100; dir++) files.push(`g${top}/d${dir}/file.ts`);
+	const budget = 10 * 1024;
 	const text = renderMap(files, budget);
 	expect(Buffer.byteLength(text)).toBeLessThanOrEqual(budget);
-	expect(text.split("\n")[0]).toBe("total 4000 files");
-	expect(text.split("\n").at(-1)).toBe("[4000 files: 0 listed, the rest folded into 1 directories]");
+	expect(text).toContain("g0/ (100 files)");
+	expect(text).not.toContain("g0/d0/");
+	expect(text.split("\n").at(-1)).toBe("[1000 files: 0 listed, the rest folded into 10 directories]");
 });
 
 test("the engine receives the mask, hidden and gitignore settings", async () => {
