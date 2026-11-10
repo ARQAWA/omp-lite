@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { contentEntries, contentLines, executeGrep, hostList, install, paginate, parseGrep, parseHostSelector, plainMessage, routeFor, searchGrep, skipMatches } from "../../../../src/modules/cursor-tools/index.js";
+import { contentEntries, contentKeys, contentLines, executeGrep, hostList, install, paginate, parseGrep, parseHostSelector, plainMessage, routeFor, searchGrep, skipMatches } from "../../../../src/modules/cursor-tools/index.js";
 
 const match = (path, lineNumber, line, extra = {}) => ({ path, lineNumber, line, ...extra });
 
@@ -95,15 +95,19 @@ const neighbours = [
 	match("a.ts", 12, "second", { contextAfter: [{ lineNumber: 13, line: "thirteen" }] }),
 ];
 
-test("every match keeps its window up to its neighbours and a page prints a shared line once", () => {
+test("every match keeps its whole window and a page prints a shared line once", () => {
 	const entries = contentEntries(neighbours, undefined, 1, 1);
 	expect(contentLines(entries[0])).toEqual(["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven"]);
 	expect(contentLines(entries[1])).toEqual(["a.ts:11-eleven", "a.ts:12:second", "a.ts:13-thirteen"]);
-	expect(paginate(entries, contentLines, {}).text.split("\n")).toEqual(["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven", "a.ts:12:second", "a.ts:13-thirteen"]);
+	const whole = ["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven", "a.ts:12:second", "a.ts:13-thirteen"];
+	const page = list => paginate(list, contentLines, { anchor: entry => entry.at, keys: contentKeys }).text.split("\n");
+	expect(page(entries)).toEqual(whole);
+	// Inside another window a match is context; on a page with its own entry it is a match again.
 	const wide = contentEntries(neighbours, undefined, 2, 2);
-	expect(contentLines(wide[0])).toEqual(["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven"]);
-	expect(contentLines(wide[1])).toEqual(["a.ts:11-eleven", "a.ts:12:second", "a.ts:13-thirteen"]);
-	expect(wide[1].at).toBe(1);
+	expect(contentLines(wide[0])).toEqual(["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven", "a.ts:12-second"]);
+	expect(contentLines(wide[1])).toEqual(["a.ts:10-first", "a.ts:11-eleven", "a.ts:12:second", "a.ts:13-thirteen"]);
+	expect(wide[1].at).toBe(2);
+	expect(page(wide)).toEqual(whole);
 });
 
 test("a page break keeps the context on both sides", async () => {
@@ -112,8 +116,26 @@ test("a page break keeps the context on both sides", async () => {
 	expect(first.content[0].text).toBe("a.ts:9-nine\na.ts:10:first\na.ts:11-eleven\n[1+ of 2 matches shown. Use offset=1 for the next page.]");
 	const second = await searchGrep(request({ "-C": 1, head_limit: 1, offset: 1 }), ctx, { engine });
 	expect(second.content[0].text).toBe("a.ts:11-eleven\na.ts:12:second\na.ts:13-thirteen");
-	const wide = await searchGrep(request({ "-C": 2, head_limit: 1 }), ctx, { engine });
-	expect(wide.content[0].text.split("\n").filter(line => /^a\.ts:\d+:/.test(line))).toEqual(["a.ts:10:first"]);
+	// One match per page, and the lines past the neighbour match stay in the window.
+	const wide = await searchGrep(request({ "-A": 3, head_limit: 1 }), ctx, { engine });
+	expect(wide.content[0].text).toBe("a.ts:10:first\na.ts:11-eleven\na.ts:12-second\na.ts:13-thirteen\n[1+ of 2 matches shown. Use offset=1 for the next page.]");
+});
+
+test("an existing path with mask characters is searched by the engine", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-mask-"));
+	try {
+		mkdirSync(join(dir, "app", "[id]"), { recursive: true });
+		writeFileSync(join(dir, "a[b].txt"), "x\n");
+		const engine = fakeEngine({ matches: [match(join(dir, "a[b].txt"), 1, "x")] });
+		const counts = await executeGrep("call", { pattern: "x", path: "a[b].txt", output_mode: "count" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		expect(counts.content[0].text).toBe("a[b].txt:1");
+		await executeGrep("call", { pattern: "x", path: "app/[id]", type: "ts" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		expect(engine.calls[1][0].path).toBe(join(dir, "app", "[id]"));
+		const mask = await executeGrep("call", { pattern: "x", path: "c[d].txt", output_mode: "count" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		expect(mask.isError).toBe(true);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
 });
 
 test("a file over the engine window found in a directory walk is named in a note", async () => {

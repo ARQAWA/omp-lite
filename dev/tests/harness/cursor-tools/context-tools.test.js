@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -14,10 +14,12 @@ import {
 } from "../../../../src/modules/cursor-tools/index.js";
 
 test("glob maps the Cursor pattern and directory, keeping native fields", () => {
-	expect(globRequest({ glob_pattern: "*.ts" })).toEqual({ params: { path: "**/*.ts" } });
-	expect(globRequest({ glob_pattern: "src/*.js" })).toEqual({ params: { path: "**/src/*.js" } });
-	for (const kept of ["**/a.ts", "/work/*.ts", "./src/*.ts", "../x/*.ts", "~/x/*.ts", "omp://tools/*.md", "a/*.ts; b/*.ts", "src", "src/a.ts"]) {
-		expect(globRequest({ glob_pattern: kept })).toEqual({ params: { path: kept } });
+	const cwd = "/nowhere";
+	for (const [pattern, path] of [["*.ts", "**/*.ts"], ["src/*.js", "**/src/*.js"], ["./src/*.js", "**/src/*.js"], ["package.json", "**/package.json"], ["src/a.ts", "**/src/a.ts"]]) {
+		expect(globRequest({ glob_pattern: pattern }, cwd)).toEqual({ params: { path } });
+	}
+	for (const kept of ["**/a.ts", "/work/*.ts", "../x/*.ts", "~/x/*.ts", "omp://tools/*.md", "a/*.ts; b/*.ts", "./"]) {
+		expect(globRequest({ glob_pattern: kept }, cwd)).toEqual({ params: { path: kept } });
 	}
 	expect(globRequest({ glob_pattern: "*.ts", target_directory: "/work/src/", hidden: false, limit: 5 })).toEqual({
 		params: { path: "/work/src/**/*.ts", hidden: false, gitignore: undefined, limit: 5 },
@@ -25,14 +27,20 @@ test("glob maps the Cursor pattern and directory, keeping native fields", () => 
 	expect(globRequest({ glob_pattern: "" }).error).toBe("glob_pattern must not be empty");
 });
 
-test("an existing name with mask characters stays a file for glob", () => {
+test("an existing directory or name with mask characters stays a path for glob", () => {
 	const dir = mkdtempSync(join(tmpdir(), "glob-literal-"));
 	try {
 		writeFileSync(join(dir, "a[b].txt"), "x");
+		writeFileSync(join(dir, "plain.txt"), "x");
+		mkdirSync(join(dir, "src"));
 		expect(globRequest({ glob_pattern: "a[b].txt" }, dir).params.path).toBe("a[b].txt");
 		expect(globRequest({ glob_pattern: "a[b].txt", target_directory: dir }).params.path).toBe(`${dir}/a[b].txt`);
 		expect(globRequest({ glob_pattern: "c[d].txt" }, dir).params.path).toBe("**/c[d].txt");
 		expect(globRequest({ glob_pattern: "c[d].txt", target_directory: dir }).params.path).toBe(`${dir}/**/c[d].txt`);
+		expect(globRequest({ glob_pattern: "src" }, dir).params.path).toBe("src");
+		expect(globRequest({ glob_pattern: "./src" }, dir).params.path).toBe("src");
+		expect(globRequest({ glob_pattern: "src", target_directory: dir }).params.path).toBe(`${dir}/src`);
+		expect(globRequest({ glob_pattern: "plain.txt" }, dir).params.path).toBe("**/plain.txt");
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
