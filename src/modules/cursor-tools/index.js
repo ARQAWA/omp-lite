@@ -122,11 +122,13 @@ const ARCHIVE = /\.(?:tar\.(?:gz|bz2|xz|zst|z)|tar|tbz2|tbz|tgz|txz|tzst|zip|jar
 const SELECTOR = /:(?:L?\d+\.\.L?\d*|L?\d+-L?\d*|-L?\d+|L?\d+\+L?\d+|raw|conflicts|img|L?\d+(?:-L?\d+)?)(?:,-?L?\d+(?:(?:-|\.\.)L?\d*)?)*$/;
 const GLOB = /[*?[\]{}]/;
 const SEPARATOR = /[,\s]+(?![^{]*\})/; // a comma or a space outside braces splits a path list
+// An address of the native tool: `scheme://`, its collapsed `scheme:/` spelling, or `www.`. One letter before the colon is a Windows drive.
+const ADDRESS = /^(?:[a-z][a-z0-9+.-]+:\/\/?|www\.)/i;
 
 /** Anything the native tool does better than we can is handed back to it. */
 export function routeFor(path) {
 	if (typeof path !== "string" || path === "") return "engine";
-	if (path.includes("://") || path.includes(";")) return "native";
+	if (path.includes("://") || path.includes(";") || ADDRESS.test(path)) return "native";
 	if (ARCHIVE.test(path) || SELECTOR.test(path) || GLOB.test(path)) return "native";
 	return "engine";
 }
@@ -496,21 +498,44 @@ export async function executeBash(toolCallId, params, signal, onUpdate, ctx) {
 
 // -------------------------------------------------------------------- glob
 
+/** The native list rule: `;` always splits, a comma when one part resolves, a space when every part does. */
+function globEntries(pattern, root) {
+	if (pattern.includes(";")) return pattern.split(";").map(part => part.trim()).filter(Boolean);
+	if (existsSync(resolve(root, pattern))) return [pattern];
+	const resolves = part => {
+		const segments = part.split("/");
+		const at = segments.findIndex(segment => GLOB.test(segment));
+		return existsSync(resolve(root, segments.slice(0, at < 0 ? undefined : at).join("/")));
+	};
+	for (const [separator, enough] of [[/,(?![^{]*\})/, "some"], [/\s+(?![^{]*\})/, "every"]]) {
+		const parts = pattern.split(separator).map(part => part.trim()).filter(Boolean);
+		if (parts.length > 1 && parts[enough](resolves)) return parts;
+	}
+	return [pattern];
+}
+
 /** Cursor sends a pattern plus an optional directory; the rest of the arguments are native. */
 export function globRequest(params, cwd = process.cwd()) {
 	const input = params ?? {};
 	if (typeof input.glob_pattern !== "string" || input.glob_pattern === "") return { error: "glob_pattern must not be empty" };
-	const pattern = input.glob_pattern.replace(/^(?:\.\/)+(?=.)/, "");
+	const bare = entry => entry.replace(/^(?:\.\/)+(?=.)/, "");
+	const pattern = bare(input.glob_pattern);
 	const directory = input.target_directory;
 	const targeted = typeof directory === "string" && directory !== "";
 	const base = targeted ? directory.replace(/\/+$/, "") : "";
-	// Cursor's rule: a pattern without a leading "**/" gets it. A rooted pattern, a URL and a list cannot take it.
-	const rooted = !targeted && /^(?:\.{0,2}\/|~|[A-Za-z]:)|:\/\/|;/.test(pattern);
-	// An existing directory, or an existing name with mask characters, is a path and stays as written, as in the native tool.
-	const path = resolve(cwd, base, pattern);
-	const literal = existsSync(path) && (GLOB.test(pattern) || statSync(path).isDirectory());
-	const recursive = pattern.startsWith("**/") || rooted || literal ? pattern : `**/${pattern}`;
-	return { params: { path: targeted ? `${base}/${recursive}` : recursive, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
+	const root = resolve(cwd, base);
+	const entries = globEntries(pattern, root);
+	// Cursor's rule: a pattern without a leading "**/" gets it. A rooted pattern, an address and a list stay as written.
+	if (!targeted && (entries.length > 1 || /^(?:\.{0,2}\/|~|[A-Za-z]:)|;/.test(pattern) || ADDRESS.test(pattern) || pattern.includes("://"))) return { params: { path: pattern, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
+	const placed = entries.map(bare).map(entry => {
+		// An existing directory, or an existing name with mask characters, is a path and stays as written, as in the native tool.
+		const path = resolve(root, entry);
+		const literal = existsSync(path) && (GLOB.test(entry) || statSync(path).isDirectory());
+		const recursive = entry.startsWith("**/") || literal ? entry : `**/${entry}`;
+		// With a directory every mask of a list is searched inside it.
+		return targeted ? `${base}/${recursive}` : recursive;
+	});
+	return { params: { path: placed.join(";"), hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
 }
 
 /** Newest first, as Cursor promises; only host paths can be ordered this way. */
@@ -564,7 +589,8 @@ function hasSelector(path) {
 	if (!match) return false;
 	const before = path.slice(0, match.index);
 	if (before.endsWith("//")) return false;
-	return !/^[a-z][a-z0-9+.-]*:\/\/[^/]*$/i.test(before);
+	// `host:8080` of an address is a port, not a selector.
+	return !(ADDRESS.test(before) && !before.replace(ADDRESS, "").includes("/"));
 }
 
 /** Cursor sends a 1-indexed offset and a line count; the native tool takes a path selector. */

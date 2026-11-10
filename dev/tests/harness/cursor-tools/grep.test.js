@@ -32,6 +32,28 @@ test("routes rare paths and masks to the native tool", () => {
 	expect(routeFor("src/a.ts:raw")).toBe("native");
 	expect(routeFor("src/*.ts")).toBe("native");
 	expect(routeFor("src; tests")).toBe("native");
+	// The collapsed and the `www.` spelling of an address are the native tool's; a Windows drive is a path.
+	expect(routeFor("https:/example.com")).toBe("native");
+	expect(routeFor("www.example.com")).toBe("native");
+	expect(routeFor("skill:/name")).toBe("native");
+	expect(routeFor("C:/work/src")).toBe("engine");
+});
+
+test("an address without `://` reaches the native tool, an existing path of that name wins", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-address-"));
+	try {
+		const seen = [];
+		const nativeCtx = { cwd: dir, invokeTool: async params => (seen.push(params.path), { content: [{ type: "text", text: "native" }] }) };
+		const engine = fakeEngine({ matches: [] });
+		for (const path of ["www.example.com", "https:/example.com/page"]) await executeGrep("call", { pattern: "x", path }, undefined, undefined, nativeCtx, { engine });
+		expect(seen).toEqual(["www.example.com", "https:/example.com/page"]);
+		expect(engine.calls).toEqual([]);
+		mkdirSync(join(dir, "www.example.com"));
+		await executeGrep("call", { pattern: "x", path: "www.example.com" }, undefined, undefined, nativeCtx, { engine });
+		expect(engine.calls[0][0].path).toBe(join(dir, "www.example.com"));
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
 });
 
 test("parses Cursor arguments and rejects bad ones", () => {
