@@ -47,6 +47,16 @@ test("slice starts at the given reply", () => {
 	expect(text).not.toContain("tool output");
 });
 
+test("slice ends at the given reply", () => {
+	const dir = mkdtempSync(join(tmpdir(), "review-"));
+	writeFileSync(join(dir, "s.jsonl"), session);
+	slice(dir, [[join(dir, "s.jsonl"), 1, 2]]);
+	const text = readFileSync(join(dir, "slice.md"), "utf8");
+	expect(text).toContain("## 1 user t-user\n\nстарая задача");
+	expect(text).toContain("## 2 user t-user\n\nсохрани защиту");
+	expect(text).not.toContain("готово");
+});
+
 test("a frozen fact file with real quotes passes", () => {
 	expect(check(review("R1. guard\n> сохрани защиту\n> от повторного   выставления\n"))).toEqual([]);
 });
