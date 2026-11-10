@@ -138,6 +138,58 @@ test("two updates at once: the second is refused as busy and the first one finis
 	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
 });
 
+test("an update that lost the race leaves the finished revision alone", async () => {
+	const env = environment();
+	const request = env.deps.request;
+	let reached;
+	let release;
+	const atGate = new Promise(resolve => (reached = resolve));
+	const gate = new Promise(resolve => (release = resolve));
+	let extracted = 0;
+	const late = createUpdater({
+		...env.deps,
+		request: async url => {
+			if (url.endsWith("/commits/main")) return request(url);
+			reached();
+			await gate;
+			return request(url);
+		},
+		extract: async args => (extracted++, env.deps.extract(args)),
+	});
+	const second = late.run();
+	await atGate;
+	expect((await createUpdater(env.deps).run()).changed).toBe(true);
+	release();
+	expect(await second).toEqual({ revision: newSha, changed: false });
+	expect(extracted).toBe(0);
+	expect(readFileSync(join(env.storageDir, "payload", version, newSha, "src/modules/a/index.js"), "utf8")).toBe("new");
+});
+
+test("an update after a crashed one undoes the crash first and then updates", async () => {
+	const env = environment();
+	const id = "0".repeat(8) + "-0000-0000-0000-" + "0".repeat(12);
+	const backups = join(env.agentDir, ".ompcli-backups");
+	// The crashed run wrote half of the harness and the pointer, and left its journal.
+	write(join(backups, id, "0"), "old");
+	write(join(env.agentDir, "extensions/a.js"), "half");
+	write(env.pointer, JSON.stringify(newSha));
+	write(
+		join(backups, "journal.json"),
+		JSON.stringify({
+			id,
+			entries: [
+				{ path: join(env.agentDir, "extensions/a.js"), existed: true, backup: join(backups, id, "0"), pointer: false },
+				{ path: env.pointer, existed: false, backup: null, pointer: true },
+			],
+		}),
+	);
+	const result = await createUpdater(env.deps).run();
+	expect(result).toEqual({ revision: newSha, changed: true, applied: true });
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
+	expect(readFileSync(env.pointer, "utf8")).toBe(JSON.stringify(newSha));
+	expect(existsSync(join(backups, "journal.json"))).toBe(false);
+});
+
 afterEach(() => {
 	for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
