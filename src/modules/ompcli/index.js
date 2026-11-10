@@ -1010,8 +1010,11 @@ function createUpdater(deps) {
 			return value;
 		};
 		// A crashed run is undone first: its pointer must not pass for a finished update.
-		await lease(deps.agentDir, () => (deps.recover ?? recover)(deps.agentDir, path.dirname(base)));
-		if ((await pointed()) === sha) return { revision: sha, changed: false };
+		const settled = async () => {
+			await (deps.recover ?? recover)(deps.agentDir, path.dirname(base));
+			return (await pointed()) === sha;
+		};
+		if (await lease(deps.agentDir, settled)) return { revision: sha, changed: false };
 		// A name of its own per attempt: a broken download never blocks the next one.
 		const file = path.join(storageDir, "omp-lite-" + sha + "." + randomUUID() + ".tar.gz");
 		const stage = path.join(base, sha);
@@ -1019,8 +1022,8 @@ function createUpdater(deps) {
 			await downloadAsset("https://codeload.github.com/ARQAWA/omp-lite/tar.gz/" + sha, file, { request, curl: deps.curl });
 			// One lease from the revision directory to the pointer: two updates never share that directory.
 			return await lease(deps.agentDir, async () => {
-				// Another update may have finished this revision meanwhile: its directory stays as it is.
-				if ((await pointed()) === sha) return { revision: sha, changed: false };
+				// Another update may have finished or crashed during the download: a finished revision stays as it is.
+				if (await settled()) return { revision: sha, changed: false };
 				await fsp.rm(stage, { recursive: true, force: true });
 				await fsp.mkdir(stage, { recursive: true });
 				await extract({ archive: file, stage, revision: sha });
