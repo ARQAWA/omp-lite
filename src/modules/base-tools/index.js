@@ -11,6 +11,7 @@ export const SPILL_RESERVE_KB = 5;
 export const FILES_DESCRIPTION = `Project file map. One call covers the whole directory, nothing is dropped.
 - No \`pattern\`: all files under \`path\` that match \`glob\`. First line: \`total N files\`.
 Every file is either listed or counted in a folded line of its directory: \`src/vendor/ (812 files)\`. Expand a folded directory with \`path\`.
+A map too large for one answer comes as \`artifact://N\`: \`read\` it in ranges, all in one response.
 Left out, as in \`glob\`: files excluded by \`.gitignore\` (unless \`gitignore: false\`), \`node_modules\`, \`.git\`.
 Local directories only.
 Last line is always \`[all N files listed]\` or \`[N files: K listed, the rest folded into M directories]\`.
@@ -89,23 +90,8 @@ export function renderMap(files, budget = Infinity) {
 	}
 
 	const body = groups.flatMap(group => lines.get(group));
-	const text = [`${header}`, ...body, footer()].join("\n");
-	if (Buffer.byteLength(text) <= budget) return text;
-	// Folding left too many lines: fold whole top-level directories, which `path` can expand.
-	const tops = new Map();
-	for (const file of files) {
-		const at = file.indexOf("/");
-		const top = at < 0 ? "" : file.slice(0, at);
-		tops.set(top, (tops.get(top) ?? 0) + 1);
-	}
-	const rootNames = groups.find(group => group.dir === "")?.names ?? [];
-	const topLines = [...tops]
-		.filter(([top]) => top !== "")
-		.sort((a, b) => a[0].localeCompare(b[0]))
-		.map(([top, count]) => `${top}/ (${count} files)`);
-	const topText = [header, ...rootNames, ...topLines, `[${files.length} files: ${rootNames.length} listed, the rest folded into ${topLines.length} directories]`].join("\n");
-	if (Buffer.byteLength(topText) <= budget) return topText;
-	throw new Error("file map does not fit the answer budget; narrow path");
+	// A folded map still over budget goes out whole: OMP spills it to artifact://N.
+	return [`${header}`, ...body, footer()].join("\n");
 }
 
 async function defaultEngine() {

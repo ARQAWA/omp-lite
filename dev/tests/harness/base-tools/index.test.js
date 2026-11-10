@@ -57,22 +57,31 @@ test("a list over the budget folds deep directories and the counts add up", () =
 	expect(Number(match[2])).toBeGreaterThan(0);
 });
 
-test("a map that cannot fit is a clear error, not a dead-end line", () => {
+test("4000 top-level directories are returned whole for the artifact", () => {
 	const files = [];
 	for (let dir = 0; dir < 4000; dir++) files.push(`d${dir}/file.ts`);
 	const budget = 45 * 1024;
-	expect(() => renderMap(files, budget)).toThrow("does not fit the answer budget");
+	const text = renderMap(files, budget);
+	expect(Buffer.byteLength(text)).toBeGreaterThan(budget);
+	expect(text.split("\n")[0]).toBe("total 4000 files");
+	expect(text).toContain("d0/ (1 files)");
+	expect(text).toContain("d3999/ (1 files)");
+	expect(text.split("\n").at(-1)).toBe("[4000 files: 0 listed, the rest folded into 4000 directories]");
 });
 
-test("the last resort folds whole top-level directories, which path can expand", () => {
+test("a flat folder over the budget is returned whole", () => {
 	const files = [];
-	for (let top = 0; top < 10; top++) for (let dir = 0; dir < 100; dir++) files.push(`g${top}/d${dir}/file.ts`);
-	const budget = 10 * 1024;
-	const text = renderMap(files, budget);
-	expect(Buffer.byteLength(text)).toBeLessThanOrEqual(budget);
-	expect(text).toContain("g0/ (100 files)");
-	expect(text).not.toContain("g0/d0/");
-	expect(text.split("\n").at(-1)).toBe("[1000 files: 0 listed, the rest folded into 10 directories]");
+	for (let file = 0; file < 6000; file++) files.push(`file${file}.ts`);
+	const text = renderMap(files, 45 * 1024);
+	expect(Buffer.byteLength(text)).toBeGreaterThan(45 * 1024);
+	expect(text.split("\n")[0]).toBe("total 6000 files");
+	expect(text).toContain("file0.ts");
+	expect(text).toContain("file5999.ts");
+	expect(text.split("\n").at(-1)).toBe("[all 6000 files listed]");
+});
+
+test("the description names the artifact for a map too large", () => {
+	expect(FILES_DESCRIPTION).toContain("artifact://N");
 });
 
 test("root files are named, never folded into an unexpandable ./ line", () => {
