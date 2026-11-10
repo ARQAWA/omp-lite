@@ -38,9 +38,9 @@ export function shrink(lines, at, budget = PAGE_BUDGET) {
 }
 
 /**
- * One entry per match line, with the context lines of its window: `before` lines above, `after` below.
+ * One entry per match line, with every known line of its window: `before` lines above, `after` below.
  * The engine hands a context line to one match only, so a window also takes its neighbours' lines.
- * It stops at the neighbour matches: they are entries of their own, maybe on another page.
+ * Another match inside the window is context here: it is an entry of its own, maybe on another page.
  */
 export function contentEntries(matches, display = path => path, before = 0, after = 0) {
 	const byFile = new Map();
@@ -58,14 +58,14 @@ export function contentEntries(matches, display = path => path, before = 0, afte
 	const entries = [];
 	for (const [file, lines] of byFile) {
 		const sorted = [...lines.values()].sort((a, b) => a.lineNumber - b.lineNumber);
-		const own = sorted.flatMap((line, at) => (line.isContext ? [] : [at]));
-		own.forEach((at, order) => {
-			const number = sorted[at].lineNumber;
-			let low = at;
-			while (low - 1 > (own[order - 1] ?? -1) && sorted[low - 1].lineNumber >= number - before) low--;
+		let low = 0;
+		sorted.forEach((own, at) => {
+			if (own.isContext) return;
+			while (sorted[low].lineNumber < own.lineNumber - before) low++;
 			let high = at;
-			while (high + 1 < (own[order + 1] ?? sorted.length) && sorted[high + 1].lineNumber <= number + after) high++;
-			entries.push({ file, lines: sorted.slice(low, high + 1), at: at - low });
+			while (high + 1 < sorted.length && sorted[high + 1].lineNumber <= own.lineNumber + after) high++;
+			const window = sorted.slice(low, high + 1).map(line => (line === own || line.isContext ? line : { ...line, isContext: true }));
+			entries.push({ file, lines: window, at: at - low });
 		});
 	}
 	return entries;
@@ -76,30 +76,40 @@ export function contentLines(entry) {
 	return entry.lines.map(line => `${entry.file}:${line.lineNumber}${line.isContext ? "-" : ":"}${line.line}`);
 }
 
-/** Takes whole entries until the page budget, then names the next index. */
+/** One key per line of an entry, the same for a match line and for its copy inside another window. */
+export const contentKeys = entry => entry.lines.map(line => `${entry.file}\u0000${line.lineNumber}`);
+
+/** Takes whole entries until the page budget, then names the next index. A page prints a line once. */
 export function paginate(entries, render, options = {}) {
 	const offset = options.offset ?? 0;
 	const limit = options.limit;
 	const budget = options.budget ?? PAGE_BUDGET;
 	const lines = [];
-	const printed = new Set();
+	const printed = new Map();
 	let used = 0;
 	let taken = 0;
 	let index = offset;
 	for (; index < entries.length; index++) {
 		if (limit !== undefined && taken >= limit) break;
-		// Windows of neighbouring matches overlap; a page prints each line once.
-		const chunk = render(entries[index]).filter(line => !printed.has(line));
-		const size = chunk.reduce((sum, line) => sum + line.length + 1, 0);
+		const chunk = render(entries[index]);
+		const keys = options.keys?.(entries[index]) ?? chunk;
+		const own = options.anchor?.(entries[index]) ?? 0;
+		// Windows of neighbouring matches overlap: a line the page already holds is not printed again.
+		const fresh = chunk.flatMap((line, at) => (printed.has(keys[at]) ? [] : [at]));
+		const size = fresh.reduce((sum, at) => sum + chunk[at].length + 1, 0);
 		if (taken > 0 && used + size > budget) break;
 		if (taken === 0 && size > budget) {
-			lines.push(cut(shrink(chunk, options.anchor?.(entries[index]) ?? 0, budget).join("\n")));
+			lines.push(cut(shrink(chunk, own, budget).join("\n")));
 			taken++;
 			index++;
 			break;
 		}
-		lines.push(...chunk);
-		for (const line of chunk) printed.add(line);
+		// The match line of this entry replaces the copy that an earlier window printed as context.
+		if (printed.has(keys[own])) lines[printed.get(keys[own])] = chunk[own];
+		for (const at of fresh) {
+			printed.set(keys[at], lines.length);
+			lines.push(chunk[at]);
+		}
 		used += size;
 		taken++;
 	}
@@ -297,7 +307,7 @@ export async function searchGrep(request, ctx, options = {}) {
 	const fileContinuation = next => `Use offset=${next} for the next page.`;
 	if (request.mode === "content") {
 		const entries = contentEntries(outcome.matches ?? [], display, request.contextBefore ?? 0, request.contextAfter ?? 0);
-		const page = paginate(entries, contentLines, { offset: request.offset ?? 0, limit: request.headLimit, anchor: entry => entry.at });
+		const page = paginate(entries, contentLines, { offset: request.offset ?? 0, limit: request.headLimit, anchor: entry => entry.at, keys: contentKeys });
 		const shown = page.next === undefined ? entries.length : `${Math.min(page.next, entries.length)}+`;
 		const footer = page.next === undefined ? tail : `\n[${shown} of ${entries.length} matches shown. Use offset=${page.next} for the next page.]${tail}`;
 		return text(`${page.text || "No matches found"}${footer}`);
@@ -374,8 +384,9 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 	if (parsed.error !== undefined) return text(parsed.error, true);
 	const request = parsed.request;
 	const cwd = ctx?.cwd ?? process.cwd();
-	const literal = typeof request.path === "string" && !request.path.includes(";") && SELECTOR.test(request.path) ? resolve(cwd, request.path) : undefined;
-	if (literal !== undefined && existsSync(literal) && statSync(literal).isFile()) {
+	// An existing path wins over selector, mask and archive syntax, as in the native tool.
+	const literal = typeof request.path === "string" && !/;|:\/\//.test(request.path) && routeFor(request.path) === "native" ? resolve(cwd, request.path) : undefined;
+	if (literal !== undefined && existsSync(literal)) {
 		request.path = literal;
 		request.literal = true;
 	}
@@ -449,19 +460,18 @@ export async function executeBash(toolCallId, params, signal, onUpdate, ctx) {
 /** Cursor sends a pattern plus an optional directory; the rest of the arguments are native. */
 export function globRequest(params, cwd = process.cwd()) {
 	const input = params ?? {};
-	const pattern = input.glob_pattern;
-	if (typeof pattern !== "string" || pattern === "") return { error: "glob_pattern must not be empty" };
+	if (typeof input.glob_pattern !== "string" || input.glob_pattern === "") return { error: "glob_pattern must not be empty" };
+	const pattern = input.glob_pattern.replace(/^(?:\.\/)+(?=.)/, "");
 	const directory = input.target_directory;
-	const native = { hidden: input.hidden, gitignore: input.gitignore, limit: input.limit };
-	if (typeof directory !== "string" || directory === "") {
-		// Cursor's rule for a relative glob; rooted paths, URLs, lists, plain paths and existing names stay native.
-		const rooted = /^(?:\*\*\/|\.{0,2}\/|~|[A-Za-z]:)|:\/\/|;/.test(pattern) || !GLOB.test(pattern) || existsSync(resolve(cwd, pattern));
-		return { params: { path: rooted ? pattern : `**/${pattern}`, ...native } };
-	}
-	const base = directory.replace(/\/+$/, "");
-	// An existing name with mask characters is a file, not a mask, as in the native tool.
-	const recursive = pattern.startsWith("**/") || existsSync(resolve(cwd, base, pattern)) ? pattern : `**/${pattern}`;
-	return { params: { path: `${base}/${recursive}`, ...native } };
+	const targeted = typeof directory === "string" && directory !== "";
+	const base = targeted ? directory.replace(/\/+$/, "") : "";
+	// Cursor's rule: a pattern without a leading "**/" gets it. A rooted pattern, a URL and a list cannot take it.
+	const rooted = !targeted && /^(?:\.{0,2}\/|~|[A-Za-z]:)|:\/\/|;/.test(pattern);
+	// An existing directory, or an existing name with mask characters, is a path and stays as written, as in the native tool.
+	const path = resolve(cwd, base, pattern);
+	const literal = existsSync(path) && (GLOB.test(pattern) || statSync(path).isDirectory());
+	const recursive = pattern.startsWith("**/") || rooted || literal ? pattern : `**/${pattern}`;
+	return { params: { path: targeted ? `${base}/${recursive}` : recursive, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
 }
 
 /** Newest first, as Cursor promises; only host paths can be ordered this way. */
