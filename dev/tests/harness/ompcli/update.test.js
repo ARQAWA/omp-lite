@@ -58,6 +58,7 @@ function environment({ bootstrap = "bootstrap", pointer = null, tarball } = {}) 
 	write(join(extensionPath, "index.js"), bootstrap);
 	write(join(extensionPath, "payload/install.manifest.json"), JSON.stringify(manifest(bootstrap)));
 	write(join(extensionPath, "payload/src/modules/a/index.js"), "old");
+	write(join(extensionPath, "payload/src/modules/a/memory.yml"), "{}\n");
 	write(join(extensionPath, "payload/.revision"), oldSha + "\n");
 	write(join(agentDir, "extensions/a.js"), "old");
 	write(join(agentDir, "config.yml"), "theme:\n  dark: keep\n");
@@ -214,11 +215,36 @@ afterEach(() => {
 	for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-test("an unchanged upstream revision does nothing", async () => {
+test("an unchanged upstream revision changes nothing once its harness is installed", async () => {
 	const env = environment();
 	env.deps.request = async () => Response.json({ sha: oldSha });
+	await createUpdater(env.deps).run();
 	expect(await createUpdater(env.deps).run()).toEqual({ revision: oldSha, changed: false });
 	expect(existsSync(env.pointer)).toBe(false);
+});
+
+test("the first update installs the harness the extension carries", async () => {
+	const env = environment();
+	env.deps.request = async () => Response.json({ sha: oldSha });
+	rmSync(join(env.agentDir, "extensions/a.js"));
+	expect(await createUpdater(env.deps).run()).toEqual({ revision: oldSha, changed: true });
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("old");
+	expect(env.calls.apply[0].sourceDir).toBe(join(env.extensionPath, "payload"));
+	expect(existsSync(env.pointer)).toBe(false);
+	// A tab of another revision still blocks the write.
+	rmSync(join(env.agentDir, "extensions/a.js"));
+	env.deps.tabs = async () => [{ pid: process.pid, revision: newSha }];
+	await expect(createUpdater(env.deps).run()).rejects.toThrow("Close OMP CLI tabs before updating.");
+});
+
+test("a pointer to another revision is replaced when upstream returns to the built-in one", async () => {
+	const env = environment({ pointer: "3".repeat(40) });
+	const request = env.deps.request;
+	env.deps.request = async url => (url.endsWith("/commits/main") ? Response.json({ sha: oldSha }) : request(url));
+	const result = await createUpdater(env.deps).run();
+	expect(result).toEqual({ revision: oldSha, changed: true, applied: true });
+	expect(JSON.parse(readFileSync(env.pointer, "utf8"))).toBe(oldSha);
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
 });
 
 test("a new revision installs the harness and keeps personal state", async () => {
