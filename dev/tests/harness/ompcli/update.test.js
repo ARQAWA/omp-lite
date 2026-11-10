@@ -118,6 +118,26 @@ test("an interrupted download leaves no archive and does not block the next upda
 	expect(archives()).toEqual([]);
 });
 
+test("two updates at once: the second is refused as busy and the first one finishes", async () => {
+	const env = environment();
+	const extract = env.deps.extract;
+	let entered;
+	let release;
+	const inside = new Promise(resolve => (entered = resolve));
+	const gate = new Promise(resolve => (release = resolve));
+	env.deps.extract = async args => {
+		entered();
+		await gate;
+		return extract(args);
+	};
+	const first = createUpdater(env.deps).run();
+	await inside;
+	await expect(createUpdater({ ...env.deps, extract }).run()).rejects.toThrow("OMP CLI installation is busy.");
+	release();
+	expect((await first).changed).toBe(true);
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
+});
+
 afterEach(() => {
 	for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });

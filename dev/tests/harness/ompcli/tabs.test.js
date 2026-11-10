@@ -244,6 +244,18 @@ test("the shell receives OMP, Bun, the overlay and the embedding size", async ()
 	expect(pty.spawned[0].args.join(" ")).toContain("C:\\Program Files\\Git\\bin\\bash.exe");
 });
 
+test("a memory server restarted on the same port gives the next tab a fresh overlay", async () => {
+	let starts = 0;
+	const restarted = cli({ memory: () => ({ ensure: async () => ({ port: 5014, key: "key-" + ++starts }), stop: () => {} }) });
+	await restarted.instance.shellTab();
+	await until(() => restarted.pty.spawned.length === 1);
+	await restarted.instance.shellTab();
+	await until(() => restarted.pty.spawned.length === 2 || restarted.api.state.messages.length > 0);
+	expect(restarted.api.state.messages).toEqual([]);
+	const keys = restarted.pty.spawned.map(proc => readFileSync(proc.options.env.PI_CONFIG_FILES.split(";").at(-1), "utf8").match(/embeddingApiKey: (.+)/)[1]);
+	expect(keys).toEqual(["key-1", "key-2"]);
+});
+
 test("closing the last tab stops the local memory", async () => {
 	const spy = { count: 0, stopped: 0 };
 	const { api, instance } = cli({ memory: memory(spy) });

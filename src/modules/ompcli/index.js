@@ -892,7 +892,7 @@ async function writeOverlay({ storageDir, pid = process.pid, id = randomUUID(), 
 	await fsp.mkdir(dir, { recursive: true });
 	const file = path.join(dir, "memory.yml");
 	await writeFileAtomic(file, overlayYaml({ port, key }));
-	return { dir, file, port };
+	return { dir, file, key };
 }
 
 // Child environment: proxy, bundled tools, overlay, embedding dimensions.
@@ -1013,29 +1013,30 @@ function createUpdater(deps) {
 		const stage = path.join(base, sha);
 		try {
 			await downloadAsset("https://codeload.github.com/ARQAWA/omp-lite/tar.gz/" + sha, file, { request, curl: deps.curl });
-			await fsp.rm(stage, { recursive: true, force: true });
-			await fsp.mkdir(stage, { recursive: true });
-			await extract({ archive: file, stage, revision: sha });
-			const manifest = JSON.parse(await fsp.readFile(path.join(stage, "install.manifest.json"), "utf8"));
-			await compareBootstrap(stage, deps.extensionPath, manifest);
-			await fsp.rm(path.join(stage, ".bootstrap"), { recursive: true, force: true });
+			// One lease from the revision directory to the pointer: two updates never share that directory.
+			return await lease(deps.agentDir, async () => {
+				await fsp.rm(stage, { recursive: true, force: true });
+				await fsp.mkdir(stage, { recursive: true });
+				await extract({ archive: file, stage, revision: sha });
+				const manifest = JSON.parse(await fsp.readFile(path.join(stage, "install.manifest.json"), "utf8"));
+				await compareBootstrap(stage, deps.extensionPath, manifest);
+				await fsp.rm(path.join(stage, ".bootstrap"), { recursive: true, force: true });
+				const revision = await payloadRevision(stage);
+				if ((await tabs(storageDir)).length) throw new Error(messages.closeTabs);
+				const result = await apply({
+					bun: deps.bun,
+					sourceDir: stage,
+					agentDir: deps.agentDir,
+					revision,
+					lease: false,
+					pointer: { file: path.join(base, "current.json"), text: JSON.stringify(revision) },
+					payloadRoot: path.dirname(base),
+				});
+				return { revision, changed: true, applied: result?.changed === true };
+			});
 		} finally {
 			await fsp.rm(file, { force: true });
 		}
-		const revision = await payloadRevision(stage);
-		const result = await lease(deps.agentDir, async () => {
-			if ((await tabs(storageDir)).length) throw new Error(messages.closeTabs);
-			return apply({
-				bun: deps.bun,
-				sourceDir: stage,
-				agentDir: deps.agentDir,
-				revision,
-				lease: false,
-				pointer: { file: path.join(base, "current.json"), text: JSON.stringify(revision) },
-				payloadRoot: path.dirname(base),
-			});
-		});
-		return { revision, changed: true, applied: result?.changed === true };
 	}
 
 	return {
@@ -1190,7 +1191,8 @@ function createCli(host) {
 			},
 		});
 		const started = await memory.ensure();
-		if (!overlay || overlay.port !== started.port) {
+		// A restarted server has a new key, even on the same port.
+		if (!overlay || overlay.key !== started.key) {
 			overlay = await writeOverlay({ storageDir: host.storageDir, port: started.port, key: started.key });
 		}
 		return { paths, overlay };
