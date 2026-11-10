@@ -93,8 +93,21 @@ export function renderMap(files, budget = Infinity) {
 	const body = groups.flatMap(group => lines.get(group));
 	const text = [`${header}`, ...body, footer()].join("\n");
 	if (Buffer.byteLength(text) <= budget) return text;
-	// Thousands of one-file directories still overflow after folding: one last line keeps the budget.
-	return `${header}\n./ (${files.length} files)\n[${files.length} files: 0 listed, the rest folded into 1 directories]`;
+	// Folding left too many lines: fold whole top-level directories, which `path` can expand.
+	const tops = new Map();
+	for (const file of files) {
+		const at = file.indexOf("/");
+		const top = at < 0 ? "" : file.slice(0, at);
+		tops.set(top, (tops.get(top) ?? 0) + 1);
+	}
+	const rootNames = groups.find(group => group.dir === "")?.names ?? [];
+	const topLines = [...tops]
+		.filter(([top]) => top !== "")
+		.sort((a, b) => a[0].localeCompare(b[0]))
+		.map(([top, count]) => `${top}/ (${count} files)`);
+	const topText = [header, ...rootNames, ...topLines, `[${files.length} files: ${rootNames.length} listed, the rest folded into ${topLines.length} directories]`].join("\n");
+	if (Buffer.byteLength(topText) <= budget) return topText;
+	throw new Error("file map does not fit the answer budget; narrow path");
 }
 
 async function defaultEngine() {
