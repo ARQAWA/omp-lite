@@ -20,6 +20,11 @@ test("adds the exact rule to every user message", () => {
 	expect(result).toEqual({ messages: [user(`привет\n\n${BLOCK}`)] });
 });
 
+test("the compressed rule keeps short steps and numbered lists", () => {
+	expect(BLOCK).toContain("Short steps, clear words.");
+	expect(BLOCK).toContain("Numbered lists for many items, one line each.");
+});
+
 test("keeps image messages and appends a text block", () => {
 	const messages = [user([{ type: "image", data: "x", mimeType: "image/png" }])];
 	const result = handler()({ messages }, main);
