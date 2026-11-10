@@ -132,9 +132,10 @@ test("an existing path with mask characters is searched by the engine", async ()
 		await executeGrep("call", { pattern: "x", path: "app/[id]", type: "ts" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
 		expect(engine.calls[1][0].path).toBe(join(dir, "app", "[id]"));
 		// A name that does not exist is a mask: the engine walks its directory and the mask filters the files.
-		const walk = fakeEngine({ matches: [match("cd.txt", 1, "x", { matchCount: 2 }), match("ce.txt", 1, "x")] });
+		const walk = fakeEngine({ matches: [match("cd.txt", 1, "x", { matchCount: 2 })] });
 		const mask = await executeGrep("call", { pattern: "x", path: "c[d].txt", output_mode: "count" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine: walk });
 		expect(walk.calls[0][0].path).toBe(dir);
+		expect(walk.calls[0][0].glob).toBe("c[d].txt");
 		expect(mask.content[0].text).toBe("cd.txt:2");
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
@@ -289,21 +290,29 @@ test("the line cap comes from the output setting and a cut line shows its column
 	expect("maxColumns" in engine.calls[1][0]).toBe(false);
 });
 
-test("a mask in the path is searched by the engine and keeps every Cursor argument", async () => {
+test("a mask in the path goes to the engine as its file filter and keeps every Cursor argument", async () => {
 	const dir = mkdtempSync(join(tmpdir(), "grep-mask-"));
 	try {
 		mkdirSync(join(dir, "src"));
 		mkdirSync(join(dir, "tests"));
-		const engine = fakeEngine({ matches: [match("a.js", 1, "x"), match("sub/b.js", 2, "x"), match("c.ts", 3, "x")] });
+		const engine = fakeEngine({ matches: [match("a.js", 1, "x"), match("a.test.js", 2, "x")] });
 		const seen = [];
 		const nativeCtx = { cwd: dir, invokeTool: async params => (seen.push(params.path), { content: [{ type: "text", text: "native" }] }) };
 		const one = await executeGrep("call", { pattern: "x", path: "src/*.js", head_limit: 5, "-C": 1, type: "js", multiline: true }, undefined, undefined, nativeCtx, { engine });
-		expect(engine.calls[0][0].path).toBe(join(dir, "src"));
-		expect(one.content[0].text).toBe("src/a.js:1:x");
-		const deep = await executeGrep("call", { pattern: "x", path: "src/**/*.{js,ts}", output_mode: "files_with_matches" }, undefined, undefined, nativeCtx, { engine });
-		expect(deep.content[0].text).toBe("src/a.js\nsrc/sub/b.js\nsrc/c.ts");
-		await executeGrep("call", { pattern: "x", path: "src/*.js, tests/*.{js,ts}", head_limit: 5 }, undefined, undefined, nativeCtx, { engine });
-		expect(engine.calls.slice(2).map(call => call[0].path)).toEqual([join(dir, "src"), join(dir, "tests")]);
+		// The mask after a directory names the entries of that directory: the engine must not make it recursive.
+		expect(engine.calls[0][0]).toMatchObject({ path: join(dir, "src"), glob: "*.js", recursive: false, type: "js", maxCount: 100000 });
+		expect(one.content[0].text).toBe("src/a.js:1:x\nsrc/a.test.js:2:x");
+		// A bare mask matches at any depth, as in the native tool.
+		await executeGrep("call", { pattern: "x", path: "*.js" }, undefined, undefined, nativeCtx, { engine });
+		expect(engine.calls[1][0]).toMatchObject({ path: dir, glob: "*.js" });
+		expect("recursive" in engine.calls[1][0]).toBe(false);
+		await executeGrep("call", { pattern: "x", path: "src/*.js, tests/**/*.{js,ts}", head_limit: 5 }, undefined, undefined, nativeCtx, { engine });
+		expect(engine.calls.slice(2).map(call => [call[0].path, call[0].glob])).toEqual([[join(dir, "src"), "*.js"], [join(dir, "tests"), "**/*.{js,ts}"]]);
+		// The `glob` argument narrows the files of a mask here, and such a search is collected whole.
+		const narrowed = await executeGrep("call", { pattern: "x", path: "src/*.js", glob: "*.test.js", output_mode: "files_with_matches" }, undefined, undefined, nativeCtx, { engine });
+		expect(engine.calls.at(-1)[0].glob).toBe("*.js");
+		expect("maxCount" in engine.calls.at(-1)[0]).toBe(false);
+		expect(narrowed.content[0].text).toBe("src/a.test.js");
 		expect(seen).toEqual([]);
 		await executeGrep("call", { pattern: "x", path: "gone/*.js" }, undefined, undefined, nativeCtx, { engine });
 		expect(seen).toEqual(["gone/*.js"]);
