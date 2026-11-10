@@ -81,18 +81,20 @@ export function renderMap(files, budget = Infinity) {
 	};
 	const total = () => size + bytes(footer());
 
-	while (total() > budget) {
-		const next = groups
-			.filter(group => !folded.has(group) && group.dir !== "")
-			.sort((a, b) => b.depth - a.depth || b.dir.localeCompare(a.dir))[0];
-		if (next === undefined) break;
-		fold(next);
+	// Deepest first, one pass: no repeated filtering on big directory sets.
+	const order = groups.filter(group => group.dir !== "").sort((a, b) => b.depth - a.depth || b.dir.localeCompare(a.dir));
+	for (const group of order) {
+		if (total() <= budget) break;
+		fold(group);
 	}
 	const root = groups.find(group => group.dir === "");
 	if (total() > budget && root !== undefined && !folded.has(root)) fold(root);
 
 	const body = groups.flatMap(group => lines.get(group));
-	return [`${header}`, ...body, footer()].join("\n");
+	const text = [`${header}`, ...body, footer()].join("\n");
+	if (Buffer.byteLength(text) <= budget) return text;
+	// Thousands of one-file directories still overflow after folding: one last line keeps the budget.
+	return `${header}\n./ (${files.length} files)\n[${files.length} files: 0 listed, the rest folded into 1 directories]`;
 }
 
 async function defaultEngine() {

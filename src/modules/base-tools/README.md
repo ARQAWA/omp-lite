@@ -10,6 +10,7 @@
 - пути сгруппированы по папкам: строка `src/`, ниже имена с отступом;
 - последняя строка: `[all N files listed]` или `[N files: K listed, the rest folded into M directories]`;
 - список больше бюджета: глубокие папки сворачиваются в `dir/ (N files)`, счёт в последней строке сходится с `N`;
+- даже свёрнутые строки не влезают: ответ сжимается до `./ (N files)`;
 - бюджет ответа: `tools.artifactSpillThreshold` минус 5 КБ;
 - `hidden` по умолчанию `true`, `gitignore` по умолчанию `true`;
 - `node_modules` и `.git` не показываются;

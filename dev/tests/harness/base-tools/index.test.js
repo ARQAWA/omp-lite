@@ -57,6 +57,16 @@ test("a list over the budget folds deep directories and the counts add up", () =
 	expect(Number(match[2])).toBeGreaterThan(0);
 });
 
+test("thousands of one-file directories still stay under the budget", () => {
+	const files = [];
+	for (let dir = 0; dir < 4000; dir++) files.push(`d${dir}/file.ts`);
+	const budget = 45 * 1024;
+	const text = renderMap(files, budget);
+	expect(Buffer.byteLength(text)).toBeLessThanOrEqual(budget);
+	expect(text.split("\n")[0]).toBe("total 4000 files");
+	expect(text.split("\n").at(-1)).toBe("[4000 files: 0 listed, the rest folded into 1 directories]");
+});
+
 test("the engine receives the mask, hidden and gitignore settings", async () => {
 	const capture = [];
 	await run({ glob: "**/*.ts", hidden: false, gitignore: false }, ["src/a.ts"], { capture });
