@@ -1070,11 +1070,9 @@ function makePty({ vscode, nodePty, prepare, build, processes, onCancel }) {
 	let closed = false;
 
 	async function start(dimensions) {
-		const prepared = await prepare(line => writeEmitter.fire(line + "\r\n"));
-		if (closed) {
-			onCancel?.();
-			return;
-		}
+		// A tab closed while it was loading holds no lease, whether the loading ended well or not.
+		const prepared = await prepare(line => writeEmitter.fire(line + "\r\n")).finally(() => closed && onCancel?.());
+		if (closed) return;
 		const spec = build(prepared);
 		const child = nodePty.spawn("powershell.exe", ["-NoLogo", "-NoProfile", "-Command", spec.command], {
 			name: "xterm-256color",
