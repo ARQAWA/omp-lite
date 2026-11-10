@@ -994,19 +994,20 @@ function createUpdater(deps) {
 		if (!lookup.ok) throw new Error(format(messages.updateLookup, { status: lookup.status }));
 		const { sha } = await lookup.json();
 		if (typeof sha !== "string" || !REVISION.test(sha)) throw new Error(format(messages.revision, {}));
+		const current = (await readText(path.join(builtIn, ".revision"))) ?? "";
+		if (current.trim() === sha) return { revision: sha, changed: false };
 		const base = payloadBase(storageDir, version);
 		const pointer = await readText(path.join(base, "current.json"));
-		// The pointer names the installed payload; without it the built-in one is installed.
-		let current = ((await readText(path.join(builtIn, ".revision"))) ?? "").trim();
 		if (pointer !== null) {
+			let value;
 			try {
-				current = JSON.parse(pointer);
+				value = JSON.parse(pointer);
 			} catch {
 				throw new Error(format(messages.pointer, { path: path.join(base, "current.json") }));
 			}
-			if (typeof current !== "string" || !REVISION.test(current)) throw new Error(format(messages.pointer, { path: path.join(base, "current.json") }));
+			if (typeof value !== "string" || !REVISION.test(value)) throw new Error(format(messages.pointer, { path: path.join(base, "current.json") }));
+			if (value === sha) return { revision: sha, changed: false };
 		}
-		if (current === sha) return { revision: sha, changed: false };
 		const file = path.join(storageDir, "omp-lite-" + sha + ".tar.gz");
 		await downloadAsset("https://codeload.github.com/ARQAWA/omp-lite/tar.gz/" + sha, file, { request, curl: deps.curl });
 		const stage = path.join(base, sha);
