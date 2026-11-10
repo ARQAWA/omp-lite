@@ -21,10 +21,10 @@ export const replies = file => readFileSync(file, "utf8").split("\n").flatMap(li
 	}
 });
 
-// Writes dir/slice.md from [file, first reply number] parts, oldest session first.
+// Writes dir/slice.md from [file, first reply number, last reply number] parts, oldest session first.
 export function slice(dir, parts) {
-	const body = parts.map(([file, from = 1]) => `# ${file}\n\n` + replies(file)
-		.map((reply, i) => i + 1 < from ? "" : `## ${i + 1} ${reply.role} ${reply.time}\n\n${reply.text}\n\n`).join(""));
+	const body = parts.map(([file, from = 1, to = Infinity]) => `# ${file}\n\n` + replies(file)
+		.map((reply, i) => i + 1 < from || i + 1 > to ? "" : `## ${i + 1} ${reply.role} ${reply.time}\n\n${reply.text}\n\n`).join(""));
 	writeFileSync(join(dir, "slice.md"), body.join(""));
 }
 
