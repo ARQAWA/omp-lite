@@ -44,3 +44,13 @@ test("a new agent step clears the line", () => {
 	handlers.agent_start();
 	expect(painted.at(-1)).toEqual(["tool-summary", undefined, { placement: "belowEditor" }]);
 });
+
+test("a queued request clears the line inside a live run", () => {
+	const { handlers, painted } = mount();
+	handlers.agent_start();
+	handlers.tool_execution_start(start("a", "bash"));
+	handlers.before_agent_start({ reason: "prompt" });
+	expect(painted.at(-1)).toEqual(["tool-summary", undefined, { placement: "belowEditor" }]);
+	handlers.tool_execution_start(start("b", "read"));
+	expect(painted.at(-1)).toEqual(["tool-summary", ["read 1"], { placement: "belowEditor" }]);
+});
