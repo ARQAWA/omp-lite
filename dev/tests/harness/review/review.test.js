@@ -40,6 +40,24 @@ test("replies keep only owner and agent text", () => {
 	]);
 });
 
+test("replies follow the active branch and skip abandoned ones", () => {
+	const entry = (id, parentId, role, content) => JSON.stringify({ type: "message", id, parentId, timestamp: `t-${id}`, message: { role, content } });
+	const dir = mkdtempSync(join(tmpdir(), "review-"));
+	const lines = [
+		JSON.stringify({ type: "session", id: "s1" }),
+		entry("a", null, "user", "задача"),
+		entry("b", "a", "assistant", "ответ"),
+		entry("c", "b", "user", "черновик"),
+		entry("d", "c", "assistant", "брошенный ответ"),
+		entry("e", "b", "user", "уточнение"),
+		entry("f", "e", "assistant", "готово"),
+		JSON.stringify({ type: "custom", id: "g", parentId: "f" }),
+		"",
+	];
+	writeFileSync(join(dir, "s.jsonl"), lines.join("\n"));
+	expect(replies(join(dir, "s.jsonl")).map(reply => reply.text)).toEqual(["задача", "ответ", "уточнение", "готово"]);
+});
+
 test("slice starts at the given reply", () => {
 	const text = readFileSync(join(review("# Facts\n"), "slice.md"), "utf8");
 	expect(text).toContain("## 2 user t-user\n\nсохрани защиту");
