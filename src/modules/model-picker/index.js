@@ -173,9 +173,7 @@ export class ModelPicker {
 		const theme = this.theme;
 		const index = this.visible.indexOf(this.current.model);
 		if (index >= 0) {
-			const model = this.visible[index];
-			const nameWidth = Math.max(size(modelLabel(model)), data.minName);
-			const needed = 2 + nameWidth + 1 + size(levelsFor(model).join(" "));
+			const needed = 3 + data.minName + size(levelsFor(this.visible[index]).join(" "));
 			if (needed > width) {
 				return wrap(data.effortNeeds.replace("{n}", String(needed)), width).map(row => theme.fg("error", row));
 			}
@@ -240,11 +238,13 @@ export class ModelPicker {
 
 	#row(model, selected, width) {
 		const theme = this.theme;
-		const label = cut(modelLabel(model), Math.max(0, width - 2));
-		if (!selected) return `  ${theme.fg("muted", label)}`;
-		const efforts = levelsFor(model)
-			.map(level => paintEffort(theme, level, level === this.current.effort))
-			.join(" ");
+		const name = modelLabel(model);
+		if (!selected) return `  ${theme.fg("muted", cut(name, Math.max(0, width - 2)))}`;
+		const levels = levelsFor(model);
+		// The name gives way to the efforts, down to minName columns.
+		const room = width - 3 - size(levels.join(" "));
+		const label = size(name) > room ? `${cut(name, room - 1)}…` : name;
+		const efforts = levels.map(level => paintEffort(theme, level, level === this.current.effort)).join(" ");
 		return `${theme.fg("accent", "› ")}${theme.fg("text", theme.bold(label))} ${efforts}`;
 	}
 

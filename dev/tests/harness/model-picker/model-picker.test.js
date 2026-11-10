@@ -128,6 +128,14 @@ test("render marks the selection and paints every effort", () => {
 	expect(instance.render(120).join("\n")).toContain("\x1b[38;5;252m");
 });
 
+test("a narrow width shortens the selected name and keeps the efforts", () => {
+	const { instance } = picker([opus, flash], { model: opus, effort: "auto" });
+	const rows = instance.render(40).join("\n");
+	expect(rows).toContain("{text|**Opus…**}");
+	expect(rows).toContain("{dim|high}");
+	expect(instance.render(38).join("\n")).toContain("{error|Effort needs 39 columns}");
+});
+
 test("an empty list renders No models", () => {
 	const { instance } = picker([]);
 	const rows = instance.render(80);
