@@ -111,6 +111,20 @@ test("a server exit stops the wait and reports the code", async () => {
 	await expect(memory.ensure()).rejects.toThrow("exited: 3");
 });
 
+test("a server that dies right after the probes does not count as started", async () => {
+	const fake = server([200]);
+	let probes = 0;
+	const request = async url => {
+		const response = await fake.request(url);
+		// Every start dies as soon as its second probe is answered.
+		if (url.endsWith("/v1/embeddings") && ++probes % 2 === 0) fake.calls.spawn.at(-1).process.emit("exit", 9);
+		return response;
+	};
+	const memory = createMemory({ runtimeDir: "/runtime", request, spawnProcess: fake.spawnProcess, allocate: async () => 5006, sleep: async () => {} });
+	await expect(memory.ensure()).rejects.toThrow("exited: 9");
+	expect(fake.calls.spawn.length).toBe(3);
+});
+
 test("a process error stops the wait", async () => {
 	const fake = server([200]);
 	fake.spawnProcess = () => {
