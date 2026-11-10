@@ -70,7 +70,9 @@ export function contentEntries(matches, display = path => path) {
 			owned.get(list[owner].lineNumber).push(context.get(number));
 		}
 		for (const match of list) {
-			const lines = [...owned.get(match.lineNumber), { lineNumber: match.lineNumber, line: match.line, isContext: false }];
+			// The engine cuts an over-long match line around its match and reports the column, as the native tool prints it.
+			const line = match.truncated === true ? `${match.line} [col ${match.column}]` : match.line;
+			const lines = [...owned.get(match.lineNumber), { lineNumber: match.lineNumber, line, isContext: false }];
 			entries.push({ file, lines: lines.sort((a, b) => a.lineNumber - b.lineNumber) });
 		}
 	}
@@ -115,6 +117,7 @@ export const MODES = ["content", "files_with_matches", "count"];
 const FILE_PAGE = 20;
 const COLLECTED = 100000;
 const TIMEOUT_MS = 20000;
+const MAX_LINE = 12000; // bytes: a longer line is cut by the engine around its match, so a match line always fits a page
 
 const ARCHIVE = /\.(?:tar\.(?:gz|bz2|xz|zst|z)|tar|tbz2|tbz|tgz|txz|tzst|zip|jar|war|ear|apk|whl|ipa|xpi|vsix|nupkg|cbz|rar|cbr|7z|iso|cab|cpio|rpm|deb|ar|a|lib|lzh|lha|arj|asar|gz|bz2|xz|zst|z|lzma):/i;
 const SELECTOR = /:(?:L?\d+\.\.L?\d*|L?\d+-L?\d*|-L?\d+|L?\d+\+L?\d+|raw|conflicts|img|L?\d+(?:-L?\d+)?)(?:,-?L?\d+(?:(?:-|\.\.)L?\d*)?)*$/;
@@ -212,6 +215,7 @@ function engineRequest(request, base, signal) {
 		mode: request.ranges !== undefined ? ENGINE_MODES.content : ENGINE_MODES[request.mode],
 		maxCount: COLLECTED,
 		timeoutMs: TIMEOUT_MS,
+		maxColumns: MAX_LINE,
 		contextBefore: request.contextBefore,
 		contextAfter: request.contextAfter,
 		signal,
@@ -375,7 +379,9 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 		request.paths = list;
 		request.path = undefined;
 	}
-	if (request.literal !== true && routeFor(request.path) === "native") {
+	// A comma or space joined list of paths is the native tool's to expand.
+	const joined = typeof request.path === "string" && /[,\s]/.test(request.path) && !existsSync(resolve(cwd, request.path));
+	if (request.literal !== true && (joined || routeFor(request.path) === "native")) {
 		const refused = plainMessage(request);
 		if (refused !== undefined) return text(refused, true);
 		if (typeof ctx?.invokeTool !== "function") return text("native grep is unavailable in this runtime", true);
@@ -436,7 +442,11 @@ export function globRequest(params) {
 	const pattern = input.glob_pattern;
 	if (typeof pattern !== "string" || pattern === "") return { error: "glob_pattern must not be empty" };
 	const directory = input.target_directory;
-	if (typeof directory !== "string" || directory === "") return { params: { path: pattern, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
+	if (typeof directory !== "string" || directory === "") {
+		// Cursor's rule for a relative glob; rooted paths, URLs, lists and plain paths stay native.
+		const rooted = /^(?:\*\*\/|\.{0,2}\/|~|[A-Za-z]:)|:\/\/|;/.test(pattern) || !GLOB.test(pattern);
+		return { params: { path: rooted ? pattern : `**/${pattern}`, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
+	}
 	const recursive = pattern.startsWith("**/") ? pattern : `**/${pattern}`;
 	return { params: { path: `${directory.replace(/\/+$/, "")}/${recursive}`, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
 }

@@ -14,7 +14,11 @@ import {
 } from "../../../../src/modules/cursor-tools/index.js";
 
 test("glob maps the Cursor pattern and directory, keeping native fields", () => {
-	expect(globRequest({ glob_pattern: "*.ts" })).toEqual({ params: { path: "*.ts" } });
+	expect(globRequest({ glob_pattern: "*.ts" })).toEqual({ params: { path: "**/*.ts" } });
+	expect(globRequest({ glob_pattern: "src/*.js" })).toEqual({ params: { path: "**/src/*.js" } });
+	for (const kept of ["**/a.ts", "/work/*.ts", "./src/*.ts", "../x/*.ts", "~/x/*.ts", "omp://tools/*.md", "a/*.ts; b/*.ts", "src", "src/a.ts"]) {
+		expect(globRequest({ glob_pattern: kept })).toEqual({ params: { path: kept } });
+	}
 	expect(globRequest({ glob_pattern: "*.ts", target_directory: "/work/src/", hidden: false, limit: 5 })).toEqual({
 		params: { path: "/work/src/**/*.ts", hidden: false, gitignore: undefined, limit: 5 },
 	});
