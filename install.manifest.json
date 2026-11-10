@@ -27,6 +27,10 @@
 			"to": "extensions/base-tools.js"
 		},
 		{
+			"from": "src/modules/base-tools/base-tools.descriptions.json",
+			"to": "extensions/base-tools.descriptions.json"
+		},
+		{
 			"from": "src/modules/dyslexia/index.js",
 			"to": "extensions/dyslexia.js"
 		},

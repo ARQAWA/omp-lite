@@ -1,4 +1,7 @@
 import { expect, test } from "bun:test";
+import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
 	FILES_DESCRIPTION,
 	groupByDirectory,
@@ -28,14 +31,25 @@ const searchEngine = (scanned, counts, content, capture) => async () => ({
 		capture?.push({ kind: "glob", ...options });
 		return {
 			matches: scanned.map(entry => {
-				const [path, size] = typeof entry === "string" ? [entry, 1] : [entry.path, entry.size];
-				return { path, fileType: 1, size };
+				const path = typeof entry === "string" ? entry : entry.path;
+				return { path, fileType: 1 };
 			}),
 		};
 	},
 	async grep(options) {
 		capture?.push({ kind: "grep", ...options });
-		return options.mode === "count" ? counts : content;
+		const result = options.mode === "count" ? counts : content;
+		return {
+			...result,
+			totalMatches: result.totalMatches ?? (result.matches ?? []).reduce((sum, match) => sum + (match.matchCount ?? 1), 0),
+			filesWithMatches: result.filesWithMatches ?? (result.matches ?? []).length,
+			filesSearched: result.filesSearched ?? (result.matches ?? []).length,
+			matches: (result.matches ?? []).map(match => ({
+				lineNumber: options.mode === "count" ? 0 : 1,
+				line: "",
+				...match,
+			})),
+		};
 	},
 });
 
@@ -137,17 +151,17 @@ test("a 20-word pattern lists every matched file with its count and first line",
 	const capture = [];
 	const result = await search({ pattern }, ["src/a.ts", "src/b.ts", "src/c.ts", "src/d.ts"], {
 		matches: [
-			{ path: "src/a.ts", matchCount: 2 },
-			{ path: "src/b.ts", matchCount: 1 },
-			{ path: "src/c.ts", matchCount: 1 },
+			{ path: "src/a.ts", matchCount: 2, lineNumber: 0, line: "" },
+			{ path: "src/b.ts", matchCount: 1, lineNumber: 0, line: "" },
+			{ path: "src/c.ts", matchCount: 1, lineNumber: 0, line: "" },
 		],
 		totalMatches: 4,
 		filesSearched: 4,
 	}, {
 		matches: [
-			{ path: "src/a.ts", line: "const alpha = 1;" },
-			{ path: "src/b.ts", line: "beta();" },
-			{ path: "src/c.ts", line: "gamma();" },
+			{ path: "src/a.ts", line: "const alpha = 1;", lineNumber: 1 },
+			{ path: "src/b.ts", line: "beta();", lineNumber: 1 },
+			{ path: "src/c.ts", line: "gamma();", lineNumber: 1 },
 		],
 	}, { capture });
 	const text = result.content[0].text;
@@ -165,13 +179,13 @@ test("a 20-word pattern lists every matched file with its count and first line",
 test("files are ordered by match count", async () => {
 	const result = await search({ pattern: "x" }, ["a.ts", "b.ts", "c.ts"], {
 		matches: [
-			{ path: "b.ts", matchCount: 1 },
-			{ path: "a.ts", matchCount: 5 },
-			{ path: "c.ts", matchCount: 3 },
+			{ path: "b.ts", matchCount: 1, lineNumber: 0, line: "" },
+			{ path: "a.ts", matchCount: 5, lineNumber: 0, line: "" },
+			{ path: "c.ts", matchCount: 3, lineNumber: 0, line: "" },
 		],
 		totalMatches: 9,
 		filesSearched: 3,
-	}, { matches: [{ path: "a.ts", line: "a" }, { path: "b.ts", line: "b" }, { path: "c.ts", line: "c" }] });
+	}, { matches: [{ path: "a.ts", line: "a", lineNumber: 1 }, { path: "b.ts", line: "b", lineNumber: 1 }, { path: "c.ts", line: "c", lineNumber: 1 }] });
 	const lines = result.content[0].text.split("\n");
 	const at = path => lines.findIndex(line => line.startsWith(`${path} (`));
 	expect(at("a.ts")).toBeLessThan(at("c.ts"));
@@ -180,8 +194,8 @@ test("files are ordered by match count", async () => {
 
 test("case defaults to sensitive and case false ignores it", async () => {
 	const capture = [];
-	const counts = { matches: [{ path: "a.ts", matchCount: 1 }], totalMatches: 1, filesSearched: 1 };
-	const content = { matches: [{ path: "a.ts", line: "x" }] };
+	const counts = { matches: [{ path: "a.ts", matchCount: 1, lineNumber: 0, line: "" }], totalMatches: 1, filesSearched: 1 };
+	const content = { matches: [{ path: "a.ts", line: "x", lineNumber: 1 }] };
 	await search({ pattern: "X" }, ["a.ts"], counts, content, { capture });
 	expect(capture.filter(call => call.kind === "grep").every(call => call.ignoreCase === false)).toBe(true);
 	capture.length = 0;
@@ -193,13 +207,13 @@ test("case false finds the other case and case true does not", async () => {
 	const engine = async () => ({
 		FileType: { File: 1 },
 		async glob() {
-			return { matches: [{ path: "a.ts", fileType: 1, size: 1 }] };
+			return { matches: [{ path: "a.ts", fileType: 1 }] };
 		},
 		async grep(options) {
 			const hit = options.ignoreCase;
 			return options.mode === "count"
-				? { matches: hit ? [{ path: "a.ts", matchCount: 1 }] : [], totalMatches: hit ? 1 : 0, filesSearched: 1 }
-				: { matches: hit ? [{ path: "a.ts", line: "x" }] : [] };
+				? { matches: hit ? [{ path: "a.ts", matchCount: 1, lineNumber: 0, line: "" }] : [], totalMatches: hit ? 1 : 0, filesWithMatches: hit ? 1 : 0, filesSearched: 1 }
+				: { matches: hit ? [{ path: "a.ts", line: "x", lineNumber: 1 }] : [], totalMatches: hit ? 1 : 0, filesWithMatches: hit ? 1 : 0, filesSearched: 1 };
 		},
 	});
 	const sensitive = await runSearch({ pattern: "X" }, { cwd: "/repo" }, { engine, threshold: 45 });
@@ -216,14 +230,14 @@ test("a matched directory glob counts its files like grep", async () => {
 			patterns.push(options.pattern);
 			if (options.pattern === "src" || options.pattern === "src*") return { matches: [{ path: "src", fileType: 2 }] };
 			if (options.pattern === "src/**") {
-				return { matches: [{ path: "src/a.ts", fileType: 1, size: 1 }, { path: "src/sub", fileType: 2 }] };
+				return { matches: [{ path: "src/a.ts", fileType: 1 }, { path: "src/sub", fileType: 2 }] };
 			}
 			return { matches: [] };
 		},
 		async grep(options) {
 			return options.mode === "count"
-				? { matches: [{ path: "src/a.ts", matchCount: 1 }], totalMatches: 1, filesSearched: 1 }
-				: { matches: [{ path: "src/a.ts", line: "needle" }] };
+				? { matches: [{ path: "src/a.ts", matchCount: 1, lineNumber: 0, line: "" }], totalMatches: 1, filesWithMatches: 1, filesSearched: 1 }
+				: { matches: [{ path: "src/a.ts", line: "needle", lineNumber: 1 }], totalMatches: 1, filesWithMatches: 1, filesSearched: 1 };
 		},
 	});
 	for (const glob of ["src", "src*"]) {
@@ -239,13 +253,13 @@ test("a recursive mask that matches a directory expands it", async () => {
 		FileType: { File: 1, Dir: 2 },
 		async glob(options) {
 			if (options.pattern === "**/src") return { matches: [{ path: "deep/src", fileType: 2 }] };
-			if (options.pattern === "deep/src/**") return { matches: [{ path: "deep/src/a.ts", fileType: 1, size: 1 }] };
+			if (options.pattern === "deep/src/**") return { matches: [{ path: "deep/src/a.ts", fileType: 1 }] };
 			return { matches: [] };
 		},
 		async grep(options) {
 			return options.mode === "count"
-				? { matches: [{ path: "deep/src/a.ts", matchCount: 1 }], totalMatches: 1, filesSearched: 1 }
-				: { matches: [{ path: "deep/src/a.ts", line: "needle" }] };
+				? { matches: [{ path: "deep/src/a.ts", matchCount: 1, lineNumber: 0, line: "" }], totalMatches: 1, filesWithMatches: 1, filesSearched: 1 }
+				: { matches: [{ path: "deep/src/a.ts", line: "needle", lineNumber: 1 }], totalMatches: 1, filesWithMatches: 1, filesSearched: 1 };
 		},
 	});
 	const result = await runSearch({ pattern: "needle", glob: "**/src" }, { cwd: "/repo" }, { engine, threshold: 45 });
@@ -255,73 +269,151 @@ test("a recursive mask that matches a directory expands it", async () => {
 test("a newline escape enables multiline, as in the native grep tool", async () => {
 	const capture = [];
 	const result = await search({ pattern: "a\\nb" }, ["a.ts"], {
-		matches: [{ path: "a.ts", matchCount: 1 }],
+		matches: [{ path: "a.ts", matchCount: 1, lineNumber: 0, line: "" }],
 		totalMatches: 1,
 		filesSearched: 1,
-	}, { matches: [{ path: "a.ts", line: "alpha\nbeta" }] }, { capture });
+	}, { matches: [{ path: "a.ts", line: "alpha\nbeta", lineNumber: 1 }] }, { capture });
 	expect(capture.filter(call => call.kind === "grep").every(call => call.multiline === true)).toBe(true);
 	expect(result.content[0].text).toContain("a.ts (1 match): alpha\\nbeta");
 	expect(result.content[0].text).not.toContain("alpha\nbeta");
 });
 
-test("node_modules stays hidden even when the mask mentions it", async () => {
-	const capture = [];
-	const result = await search({ pattern: "x", glob: "**/node_modules/**" }, [
-		"node_modules/pkg/a.ts",
-		"src/a.ts",
-	], {
-		matches: [
-			{ path: "node_modules/pkg/a.ts", matchCount: 2 },
-			{ path: "src/a.ts", matchCount: 1 },
-		],
-		totalMatches: 3,
-		filesSearched: 2,
-	}, {
-		matches: [
-			{ path: "node_modules/pkg/a.ts", line: "x" },
-			{ path: "src/a.ts", line: "x" },
-		],
-	}, { capture });
-	const text = result.content[0].text;
-	expect(text).not.toContain("node_modules");
-	expect(text.split("\n")[0]).toBe("1 files, 1 matches, searched 1 of 1 files");
-	expect(capture.filter(call => call.kind === "grep").every(call => call.glob === "**/node_modules/**")).toBe(true);
-});
-
-test("a brace mask drops node_modules and keeps the other branch", async () => {
+test("a node_modules branch is dropped from a brace mask", async () => {
 	const capture = [];
 	const result = await search({ pattern: "x", glob: "{src,node_modules}/**" }, ["src/a.ts"], {
-		matches: [{ path: "src/a.ts", matchCount: 1 }],
+		matches: [{ path: "src/a.ts", matchCount: 1, lineNumber: 0, line: "" }],
 		totalMatches: 1,
 		filesSearched: 1,
-	}, { matches: [{ path: "src/a.ts", line: "x" }] }, { capture });
+	}, { matches: [{ path: "src/a.ts", line: "x", lineNumber: 1 }] }, { capture });
 	expect(result.content[0].text.split("\n")[0]).toBe("1 files, 1 matches, searched 1 of 1 files");
-	const grep = capture.find(call => call.kind === "grep" && call.mode === "count");
-	expect(grep.glob).toBe("{src,node_modules}/**");
+	expect(capture.find(call => call.kind === "grep" && call.mode === "count").glob).toBe("{src,node_modules}/**");
 });
 
-test("a node_modules* mask still shows node_modules_backup", async () => {
+test("a node_modules* mask keeps node_modules_backup", async () => {
 	const capture = [];
 	const result = await search({ pattern: "x", glob: "node_modules*" }, [
 		"node_modules/a.ts",
 		"node_modules_backup/b.ts",
 	], {
+		matches: [{ path: "node_modules_backup/b.ts", matchCount: 1, lineNumber: 0, line: "" }],
+		totalMatches: 1,
+		filesSearched: 1,
+	}, { matches: [{ path: "node_modules_backup/b.ts", line: "x", lineNumber: 1 }] }, { capture });
+	const text = result.content[0].text;
+	expect(text).toContain("node_modules_backup/b.ts");
+	expect(text).not.toContain("node_modules/a.ts");
+	expect(capture.find(call => call.kind === "grep" && call.mode === "count").glob).toBe("node_modules*");
+});
+
+test("a mask that only names node_modules gives an empty answer", async () => {
+	const capture = [];
+	const result = await search({ pattern: "x", glob: "**/node_modules/**" }, ["node_modules/a.ts"], {
+		matches: [],
+		totalMatches: 0,
+		filesSearched: 0,
+	}, { matches: [] }, { capture });
+	expect(result.isError).toBeUndefined();
+	expect(result.content[0].text.split("\n")[0]).toBe("0 files, 0 matches, searched 0 of 0 files");
+	expect(capture.length).toBe(3);
+});
+
+test("node_modules_backup is not hidden", async () => {
+	const capture = [];
+	const result = await search({ pattern: "x", glob: "node_modules_backup/**" }, ["node_modules_backup/b.ts"], {
+		matches: [{ path: "node_modules_backup/b.ts", matchCount: 1, lineNumber: 0, line: "" }],
+		totalMatches: 1,
+		filesSearched: 1,
+	}, { matches: [{ path: "node_modules_backup/b.ts", line: "x", lineNumber: 1 }] }, { capture });
+	expect(result.content[0].text).toContain("node_modules_backup/b.ts");
+	expect(capture.find(call => call.kind === "grep" && call.mode === "count").glob).toBe("node_modules_backup/**");
+});
+
+test("a file named node_modules is not a hidden folder", async () => {
+	const result = await search({ pattern: "x" }, ["node_modules", "src/node_modules/a.ts"], {
 		matches: [
-			{ path: "node_modules/a.ts", matchCount: 1 },
-			{ path: "node_modules_backup/b.ts", matchCount: 1 },
+			{ path: "node_modules", matchCount: 1, lineNumber: 0, line: "" },
+			{ path: "src/node_modules/a.ts", matchCount: 1, lineNumber: 0, line: "" },
 		],
 		totalMatches: 2,
 		filesSearched: 2,
 	}, {
 		matches: [
-			{ path: "node_modules/a.ts", line: "x" },
-			{ path: "node_modules_backup/b.ts", line: "x" },
+			{ path: "node_modules", line: "x", lineNumber: 1 },
+			{ path: "src/node_modules/a.ts", line: "x", lineNumber: 1 },
 		],
-	}, { capture });
+	});
 	const text = result.content[0].text;
-	expect(text).toContain("node_modules_backup/b.ts");
+	expect(text).toContain("node_modules (1 match)");
+	expect(text).not.toContain("src/node_modules/a.ts");
+});
+
+test("a mask can name a file called node_modules", async () => {
+	const result = await search({ pattern: "x", glob: "node_modules" }, ["node_modules"], {
+		matches: [{ path: "node_modules", matchCount: 1, lineNumber: 0, line: "" }],
+		totalMatches: 1,
+		filesSearched: 1,
+	}, { matches: [{ path: "node_modules", line: "x", lineNumber: 1 }] });
+	expect(result.content[0].text.split("\n")[0]).toBe("1 files, 1 matches, searched 1 of 1 files");
+	expect(result.content[0].text).toContain("node_modules (1 match)");
+});
+
+test("node_modules*? still finds node_modulesX", async () => {
+	const capture = [];
+	const result = await search({ pattern: "x", glob: "node_modules*?" }, ["node_modulesX/d.ts"], {
+		matches: [{ path: "node_modulesX/d.ts", matchCount: 1, lineNumber: 0, line: "" }],
+		totalMatches: 1,
+		filesSearched: 1,
+	}, { matches: [{ path: "node_modulesX/d.ts", line: "x", lineNumber: 1 }] }, { capture });
+	expect(result.content[0].text).toContain("node_modulesX/d.ts");
+	expect(capture.find(call => call.kind === "grep" && call.mode === "count").glob).toBe("node_modules*?");
+});
+
+test("a *node_modules* mask keeps foo_node_modules", async () => {
+	const capture = [];
+	const result = await search({ pattern: "x", glob: "*node_modules*" }, [
+		"node_modules/a.ts",
+		"foo_node_modules/b.ts",
+	], {
+		matches: [{ path: "foo_node_modules/b.ts", matchCount: 1, lineNumber: 0, line: "" }],
+		totalMatches: 1,
+		filesSearched: 1,
+	}, { matches: [{ path: "foo_node_modules/b.ts", line: "x", lineNumber: 1 }] }, { capture });
+	const text = result.content[0].text;
+	expect(text).toContain("foo_node_modules/b.ts");
 	expect(text).not.toContain("node_modules/a.ts");
-	expect(capture.find(call => call.kind === "grep" && call.mode === "count").glob).toBe("node_modules*");
+	expect(capture.find(call => call.kind === "grep" && call.mode === "count").glob).toBe("*node_modules*");
+});
+
+test("a hidden folder is removed from filesSearched", async () => {
+	const root = await mkdtemp(join(tmpdir(), "files-hidden-"));
+	try {
+		await mkdir(join(root, "node_modules"), { recursive: true });
+		await writeFile(join(root, "node_modules/a.ts"), "x");
+		await symlink("a.ts", join(root, "node_modules/link.ts"));
+		const engine = async () => ({
+			FileType: { File: 1, Dir: 2 },
+			async glob(options) {
+				if (options.pattern === "node_modules*") return { matches: [{ path: "node_modules", fileType: 2 }] };
+				if (options.pattern === "node_modules/**") return {
+					matches: [
+						{ path: "node_modules/a.ts", fileType: 1 },
+						{ path: "node_modules/link.ts", fileType: 1 },
+					],
+				};
+				return { matches: [] };
+			},
+			async grep(options) {
+				return options.mode === "count"
+					? { matches: [{ path: "src/a.ts", matchCount: 1, lineNumber: 0, line: "" }], totalMatches: 1, filesWithMatches: 1, filesSearched: 2 }
+					: { matches: [{ path: "src/a.ts", line: "x", lineNumber: 1 }], totalMatches: 1, filesWithMatches: 1, filesSearched: 2 };
+			},
+		});
+		const result = await runSearch({ pattern: "x", glob: "node_modules*" }, { cwd: root }, { engine, threshold: 45 });
+		expect(result.content[0].text.split("\n")[0]).toBe("1 files, 1 matches, searched 1 of 1 files");
+		expect(result.content[0].text).toContain("src/a.ts");
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
 });
 
 test("a node_modules root stays hidden without loading the engine", async () => {
@@ -335,15 +427,14 @@ test("a node_modules root stays hidden without loading the engine", async () => 
 });
 
 test("a skipped file still shows in searched K of T", async () => {
-	const result = await search({ pattern: "x", glob: "{src,node_modules}/**" }, [
-		"node_modules/pkg/a.ts",
+	const result = await search({ pattern: "x", glob: "src/**" }, [
 		"src/a.ts",
 		"src/b.bin",
 	], {
-		matches: [{ path: "src/a.ts", matchCount: 1 }],
+		matches: [{ path: "src/a.ts", matchCount: 1, lineNumber: 0, line: "" }],
 		totalMatches: 1,
-		filesSearched: 2,
-	}, { matches: [{ path: "src/a.ts", line: "x" }] });
+		filesSearched: 1,
+	}, { matches: [{ path: "src/a.ts", line: "x", lineNumber: 1 }] });
 	expect(result.content[0].text.split("\n")[0]).toBe("1 files, 1 matches, searched 1 of 2 files");
 });
 
@@ -358,13 +449,13 @@ test("all engine passes share one 30-second deadline", async () => {
 			async glob(options) {
 				timeouts.push(options.timeoutMs);
 				now += 20000;
-				return { matches: [{ path: "a.ts", fileType: 1, size: 1 }] };
+				return { matches: [{ path: "a.ts", fileType: 1 }] };
 			},
 			async grep(options) {
 				timeouts.push(options.timeoutMs);
 				return options.mode === "count"
-					? { matches: [{ path: "a.ts", matchCount: 1 }], totalMatches: 1, filesSearched: 1 }
-					: { matches: [{ path: "a.ts", line: "x" }] };
+					? { matches: [{ path: "a.ts", matchCount: 1, lineNumber: 0, line: "" }], totalMatches: 1, filesWithMatches: 1, filesSearched: 1 }
+					: { matches: [{ path: "a.ts", line: "x", lineNumber: 1 }], totalMatches: 1, filesWithMatches: 1, filesSearched: 1 };
 			},
 		});
 		await runSearch({ pattern: "x" }, { cwd: "/repo" }, { engine, threshold: 45 });
@@ -397,13 +488,49 @@ test("a pass after the deadline is a timeout error", async () => {
 	}
 });
 
-test("a matched file over 4 MiB is named in the searched-in-part line", async () => {
-	const result = await search({ pattern: "x" }, [{ path: "big.ts", size: 5 * 1024 * 1024 }, "small.ts"], {
-		matches: [{ path: "big.ts", matchCount: 1 }, { path: "small.ts", matchCount: 1 }],
-		totalMatches: 2,
-		filesSearched: 2,
-	}, { matches: [{ path: "big.ts", line: "x" }, { path: "small.ts", line: "x" }] });
-	expect(result.content[0].text).toContain("searched in part (first 4 MiB): big.ts");
+test("a real file over 4 MiB is named in the searched-in-part line", async () => {
+	const dir = await mkdtemp(join(tmpdir(), "base-tools-"));
+	try {
+		await writeFile(join(dir, "big.ts"), Buffer.alloc(5 * 1024 * 1024, "a"));
+		await writeFile(join(dir, "small.ts"), "a");
+		const engine = async () => ({
+			FileType: { File: 1 },
+			async glob() {
+				return { matches: [{ path: "big.ts", fileType: 1 }, { path: "small.ts", fileType: 1 }] };
+			},
+			async grep(options) {
+				return options.mode === "count"
+					? { matches: [{ path: "big.ts", matchCount: 1, lineNumber: 0, line: "" }], totalMatches: 1, filesWithMatches: 1, filesSearched: 2 }
+					: { matches: [{ path: "big.ts", line: "a", lineNumber: 1 }], totalMatches: 1, filesWithMatches: 1, filesSearched: 2 };
+			},
+		});
+		const result = await runSearch({ pattern: "a" }, { cwd: dir }, { engine, threshold: 45 });
+		expect(result.content[0].text).toContain("searched in part (first 4 MiB): big.ts");
+	} finally {
+		await rm(dir, { recursive: true, force: true });
+	}
+});
+
+test("an unreadable file over 4 MiB is not named in the searched-in-part line", async () => {
+	const dir = await mkdtemp(join(tmpdir(), "base-tools-"));
+	try {
+		const big = join(dir, "big.ts");
+		await writeFile(big, Buffer.alloc(5 * 1024 * 1024, "a"));
+		await chmod(big, 0);
+		const engine = async () => ({
+			FileType: { File: 1 },
+			async glob() {
+				return { matches: [{ path: "big.ts", fileType: 1 }] };
+			},
+			async grep() {
+				return { matches: [], totalMatches: 0, filesWithMatches: 0, filesSearched: 0 };
+			},
+		});
+		const result = await runSearch({ pattern: "a" }, { cwd: dir }, { engine, threshold: 45 });
+		expect(result.content[0].text).not.toContain("searched in part");
+	} finally {
+		await rm(dir, { recursive: true, force: true });
+	}
 });
 
 test("a long tail is folded by directory and the counts add up", () => {
@@ -421,10 +548,10 @@ test("a long tail is folded by directory and the counts add up", () => {
 test("an invalid regex is passed through literally, without a tool error", async () => {
 	const capture = [];
 	const result = await search({ pattern: "(" }, ["a.ts"], {
-		matches: [{ path: "a.ts", matchCount: 1 }],
+		matches: [{ path: "a.ts", matchCount: 1, lineNumber: 0, line: "" }],
 		totalMatches: 1,
 		filesSearched: 1,
-	}, { matches: [{ path: "a.ts", line: "(" }] }, { capture });
+	}, { matches: [{ path: "a.ts", line: "(", lineNumber: 1 }] }, { capture });
 	expect(result.isError).toBeUndefined();
 	expect(result.content[0].text).toContain("a.ts (1 match): (");
 	expect(capture.filter(call => call.kind === "grep").every(call => call.pattern === "(")).toBe(true);
@@ -456,7 +583,7 @@ test("zero matches gives a clear answer with K of T", async () => {
 
 test("a long match line is clipped to the column budget", async () => {
 	const result = await search({ pattern: "x" }, ["a.ts"], {
-		matches: [{ path: "a.ts", matchCount: 1 }],
+		matches: [{ path: "a.ts", matchCount: 1, lineNumber: 0, line: "" }],
 		totalMatches: 1,
 		filesSearched: 1,
 	}, { matches: [{ path: "a.ts", line: "x".repeat(600) }] });
@@ -467,15 +594,22 @@ test("a long match line is clipped to the column budget", async () => {
 });
 
 test("a timeout is an error, not a partial list", async () => {
+	let called = false;
 	const result = await runMap({}, { cwd: "/repo" }, {
 		engine: async () => {
-			throw new Error("glob timed out after 30s");
+			return {
+				async glob() {
+					called = true;
+					throw new Error("glob timed out after 30s");
+				},
+			};
 		},
 		threshold: 45,
 	});
 	expect(result.isError).toBe(true);
 	expect(result.content[0].text).toContain("timed out");
 	expect(result.content[0].text).not.toContain("total");
+	expect(called).toBe(true);
 });
 
 test("a missing engine or a missing glob function is a clear error", async () => {
