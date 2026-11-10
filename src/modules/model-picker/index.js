@@ -10,6 +10,7 @@ const CONTROL_ANY = /[\u0000-\u001f\u007f-\u009f]/;
 const DIRECTIONS = { A: "up", B: "down", C: "right", D: "left" };
 const size = text => [...text].length;
 const cut = (text, width) => [...text].slice(0, Math.max(0, width)).join("");
+const short = (text, room) => (size(text) <= room ? text : room < 1 ? "" : `${cut(text, room - 1)}…`);
 const wrap = (text, width) => {
 	const chars = [...text];
 	const rows = [];
@@ -227,34 +228,32 @@ export class ModelPicker {
 	#body(width, index) {
 		const theme = this.theme;
 		if (this.visible.length === 0) return [theme.fg("muted", cut(data.noModels, width)), "", "", "", ""];
-		const start = Math.max(0, Math.min(index - 2, this.visible.length - 5));
-		const rows = [];
-		for (let offset = 0; offset < 5; offset += 1) {
-			const model = this.visible[start + offset];
-			rows.push(model ? this.#row(model, start + offset === index, width) : "");
-		}
-		return rows;
+		// The selected model stays on the middle row, as in MyP; rows past the ends of the list are empty.
+		return [-2, -1, 0, 1, 2].map(offset => {
+			const model = this.visible[index + offset];
+			return model ? this.#row(model, offset === 0, width) : "";
+		});
 	}
 
 	#row(model, selected, width) {
 		const theme = this.theme;
 		const name = modelLabel(model);
-		if (!selected) return `  ${theme.fg("muted", cut(name, Math.max(0, width - 2)))}`;
+		if (!selected) return `  ${theme.fg("muted", short(name, width - 2))}`;
 		const levels = levelsFor(model);
 		// The name gives way to the efforts, down to minName columns.
-		const room = width - 3 - size(levels.join(" "));
-		const label = size(name) > room ? `${cut(name, room - 1)}…` : name;
+		const label = short(name, width - 3 - size(levels.join(" ")));
 		const efforts = levels.map(level => paintEffort(theme, level, level === this.current.effort)).join(" ");
 		return `${theme.fg("accent", "› ")}${theme.fg("text", theme.bold(label))} ${efforts}`;
 	}
 
 	#hint(width) {
 		const theme = this.theme;
+		const dim = text => theme.fg("dim", text);
 		const actions = `${data.hintEnter}${data.hintOk}${data.hintEsc}${data.hintCancel}`;
-		const styled = `${theme.bold(data.hintEnter)}${data.hintOk}${theme.bold(data.hintEsc)}${data.hintCancel}`;
-		if (width >= size(data.hintWide + actions)) return data.hintWide + styled;
-		if (width >= size(data.hintMedium + actions)) return data.hintMedium + styled;
-		return cut(data.hintShort, width);
+		const styled = `${theme.bold(data.hintEnter)}${dim(data.hintOk)}${theme.bold(data.hintEsc)}${dim(data.hintCancel)}`;
+		if (width >= size(data.hintWide + actions)) return dim(data.hintWide) + styled;
+		if (width >= size(data.hintMedium + actions)) return dim(data.hintMedium) + styled;
+		return dim(cut(data.hintShort, width));
 	}
 }
 
