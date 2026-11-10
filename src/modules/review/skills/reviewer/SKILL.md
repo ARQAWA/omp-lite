@@ -11,7 +11,7 @@ Model: `openai-codex/gpt-6.1-terra` only. Level blind runs the reviewer with `hi
 
 ## 1. Collect once
 1. In bash, `realpath skill://reviewer` gives `R`. Create a new directory `local://review-<n>`; `realpath` of it gives `D`.
-2. In bash from the work directory, timeout 3600:
+2. In bash from the directory where the work lives (the task's worktree when it still exists, not the session's start directory), timeout 3600:
    `omp -p --model openai-codex/gpt-6.1-terra --thinking xhigh --config "R/collector.yml" @"R/collector.md" "script: R/index.js; dir: D; session: $PI_SESSION_FILE; repo: $PWD"`
 3. The answer must be `READY D`. Otherwise report it and stop.
 
