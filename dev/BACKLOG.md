@@ -8,9 +8,9 @@
 
 Порядок строгий, одна задача одновременно. Ветка и worktree на задачу: `../omp-lite-worktrees/<task>`.
 
-- T0. замер «до». 1 sp. Blocked by: нет.
-- T1. `files`: карта. 2 sp. Blocked by: T0.
-- T2. `files`: широкий поиск. 2 sp. Blocked by: T1.
+Сделано: T0, T1, T2. Журнал: `omp-lite-audit/cursor-hints/RUN-LOG.md`.
+
+Остаток:
 - T3. переключение на родные тулы. 2 sp. Blocked by: T2.
 - T4. тексты тулов и хук. 2 sp. Blocked by: T3.
 - T5. сторож. 2 sp. Blocked by: T4.
