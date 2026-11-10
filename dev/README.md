@@ -5,6 +5,8 @@
 - [PROCESS.md](PROCESS.md) — порядок работы и проверки изменений.
 - [DECISIONS.md](DECISIONS.md) — текущие принятые решения.
 - [BACKLOG.md](BACKLOG.md) — только заказанная незавершённая работа.
+- [history/](history/README.md) — история решений по каждому модулю.
+- [REVIEW-LOG.md](REVIEW-LOG.md) — журнал кругов High Review по модулям.
 - [WORKFLOW-MANIFEST.md](WORKFLOW-MANIFEST.md) — личные принципы владельца, не процедура выполнения задач.
 - [config/](config/README.md) — настройки разработки.
 - [scripts/](scripts/README.md) — скрипты обслуживания репозитория.
