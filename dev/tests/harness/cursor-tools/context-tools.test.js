@@ -112,6 +112,9 @@ test("xd documents support exact line windows without changing the topic", async
 });
 
 test("xd reads keep native errors and validate windows", async () => {
+	const document = { content: [{ type: "text", text: "one\ntwo\nthree\n" }] };
+	const last = await executeRead("call", { path: "xd://eval/helpers", offset: -1 }, undefined, undefined, { invokeTool: async () => document });
+	expect(last.content[0].text).toBe("three");
 	const error = { isError: true, content: [{ type: "text", text: "Unknown topic" }] };
 	const result = await executeRead("call", { path: "xd://eval/missing", limit: 2 }, undefined, undefined, {
 		invokeTool: async () => error,

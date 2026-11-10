@@ -131,8 +131,11 @@ test("an existing path with mask characters is searched by the engine", async ()
 		expect(counts.content[0].text).toBe("a[b].txt:1");
 		await executeGrep("call", { pattern: "x", path: "app/[id]", type: "ts" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
 		expect(engine.calls[1][0].path).toBe(join(dir, "app", "[id]"));
-		const mask = await executeGrep("call", { pattern: "x", path: "c[d].txt", output_mode: "count" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
-		expect(mask.isError).toBe(true);
+		// A name that does not exist is a mask: the engine walks its directory and the mask filters the files.
+		const walk = fakeEngine({ matches: [match("cd.txt", 1, "x", { matchCount: 2 }), match("ce.txt", 1, "x")] });
+		const mask = await executeGrep("call", { pattern: "x", path: "c[d].txt", output_mode: "count" }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine: walk });
+		expect(walk.calls[0][0].path).toBe(dir);
+		expect(mask.content[0].text).toBe("cd.txt:2");
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
@@ -284,6 +287,38 @@ test("the line cap comes from the output setting and a cut line shows its column
 	expect(result.content[0].text).toBe("src/a.ts:3:...x NEEDLE y... [col 40002]");
 	await searchGrep(request({ path: "src" }), ctx, { engine, maxColumns: 0 });
 	expect("maxColumns" in engine.calls[1][0]).toBe(false);
+});
+
+test("a mask in the path is searched by the engine and keeps every Cursor argument", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-mask-"));
+	try {
+		mkdirSync(join(dir, "src"));
+		mkdirSync(join(dir, "tests"));
+		const engine = fakeEngine({ matches: [match("a.js", 1, "x"), match("sub/b.js", 2, "x"), match("c.ts", 3, "x")] });
+		const seen = [];
+		const nativeCtx = { cwd: dir, invokeTool: async params => (seen.push(params.path), { content: [{ type: "text", text: "native" }] }) };
+		const one = await executeGrep("call", { pattern: "x", path: "src/*.js", head_limit: 5, "-C": 1, type: "js", multiline: true }, undefined, undefined, nativeCtx, { engine });
+		expect(engine.calls[0][0].path).toBe(join(dir, "src"));
+		expect(one.content[0].text).toBe("src/a.js:1:x");
+		const deep = await executeGrep("call", { pattern: "x", path: "src/**/*.{js,ts}", output_mode: "files_with_matches" }, undefined, undefined, nativeCtx, { engine });
+		expect(deep.content[0].text).toBe("src/a.js\nsrc/sub/b.js\nsrc/c.ts");
+		await executeGrep("call", { pattern: "x", path: "src/*.js, tests/*.{js,ts}", head_limit: 5 }, undefined, undefined, nativeCtx, { engine });
+		expect(engine.calls.slice(2).map(call => call[0].path)).toEqual([join(dir, "src"), join(dir, "tests")]);
+		expect(seen).toEqual([]);
+		await executeGrep("call", { pattern: "x", path: "gone/*.js" }, undefined, undefined, nativeCtx, { engine });
+		expect(seen).toEqual(["gone/*.js"]);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("a line selector collects its file whole, another search stops at the collection limit", async () => {
+	const engine = fakeEngine({ matches: [match("/work/a.ts", 150000, "x")] });
+	const result = await searchGrep({ ...request({ path: "/work/a.ts" }), ranges: [[140000, 160000]] }, ctx, { engine });
+	expect("maxCount" in engine.calls[0][0]).toBe(false);
+	expect(result.content[0].text).toContain(":150000:x");
+	await searchGrep(request({ path: "src" }), ctx, { engine });
+	expect(engine.calls[1][0].maxCount).toBe(100000);
 });
 
 test("the native branch refuses arguments it cannot honour", async () => {
@@ -490,7 +525,7 @@ test("non-host lists keep the native route through the tool entry", async () => 
 	const dir = mkdtempSync(join(tmpdir(), "grep-native-list-"));
 	try {
 		writeFileSync(join(dir, "a.ts"), "x");
-		for (const path of ["a.ts;ssh://h/x", "a.ts;*.ts", "a.ts;missing", "a.ts;"]) {
+		for (const path of ["a.ts;ssh://h/x", "a.ts;gone/*.ts", "a.ts;missing", "a.ts;"]) {
 			const seen = [];
 			const ctx = { cwd: dir, invokeTool: async params => (seen.push(params), { content: [{ type: "text", text: "native" }] }) };
 			const result = await executeGrep("call", { pattern: "x", path }, undefined, undefined, ctx);
