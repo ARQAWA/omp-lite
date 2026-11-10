@@ -815,6 +815,8 @@ function createMemory(options = {}) {
 			if (!healthy) throw new Error(format(messages.memoryTimeout, { seconds: Math.round((attempts * intervalMs) / 1000) }));
 			stop();
 			for (const text of ["память", "project memory"]) await probe(port, key, text);
+			// The server may have died after its last answer: a dead server never counts as started.
+			stop();
 			child.once("exit", code => {
 				if (id === generation) options.onExit?.(code);
 			});
