@@ -70,19 +70,47 @@ test("a count search ignores context through the tool entry", async () => {
 });
 
 test("renders a match with its own context lines", () => {
-	const entries = contentEntries([
-		match("a.ts", 5, "hit", { contextBefore: [{ lineNumber: 4, line: "before" }], contextAfter: [{ lineNumber: 6, line: "after" }] }),
-	]);
+	const entries = contentEntries(
+		[match("a.ts", 5, "hit", { contextBefore: [{ lineNumber: 4, line: "before" }], contextAfter: [{ lineNumber: 6, line: "after" }] })],
+		undefined,
+		1,
+		1,
+	);
 	expect(contentLines(entries[0])).toEqual(["a.ts:4-before", "a.ts:5:hit", "a.ts:6-after"]);
 });
 
 test("context before a later match stays with that match", () => {
-	const entries = contentEntries([
-		match("a.ts", 2, "first"),
-		match("a.ts", 9, "second", { contextBefore: [{ lineNumber: 8, line: "near" }] }),
-	]);
+	const entries = contentEntries(
+		[match("a.ts", 2, "first"), match("a.ts", 9, "second", { contextBefore: [{ lineNumber: 8, line: "near" }] })],
+		undefined,
+		1,
+	);
 	expect(contentLines(entries[0])).toEqual(["a.ts:2:first"]);
 	expect(contentLines(entries[1])).toEqual(["a.ts:8-near", "a.ts:9:second"]);
+});
+
+// The engine hands line 11 to the match it follows and gives the next match no line before it.
+const neighbours = [
+	match("a.ts", 10, "first", { contextBefore: [{ lineNumber: 9, line: "nine" }], contextAfter: [{ lineNumber: 11, line: "eleven" }] }),
+	match("a.ts", 12, "second", { contextAfter: [{ lineNumber: 13, line: "thirteen" }] }),
+];
+
+test("every match keeps its whole window and a page prints a shared line once", () => {
+	const entries = contentEntries(neighbours, undefined, 1, 1);
+	expect(contentLines(entries[0])).toEqual(["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven"]);
+	expect(contentLines(entries[1])).toEqual(["a.ts:11-eleven", "a.ts:12:second", "a.ts:13-thirteen"]);
+	expect(paginate(entries, contentLines, {}).text.split("\n")).toEqual(["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven", "a.ts:12:second", "a.ts:13-thirteen"]);
+	const wide = contentEntries(neighbours, undefined, 2, 2);
+	expect(contentLines(wide[0])).toEqual(["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven", "a.ts:12:second"]);
+	expect(wide[1].at).toBe(2);
+});
+
+test("a page break keeps the context on both sides", async () => {
+	const engine = fakeEngine({ matches: neighbours });
+	const first = await searchGrep(request({ "-C": 1, head_limit: 1 }), ctx, { engine });
+	expect(first.content[0].text).toBe("a.ts:9-nine\na.ts:10:first\na.ts:11-eleven\n[1+ of 2 matches shown. Use offset=1 for the next page.]");
+	const second = await searchGrep(request({ "-C": 1, head_limit: 1, offset: 1 }), ctx, { engine });
+	expect(second.content[0].text).toBe("a.ts:11-eleven\na.ts:12:second\na.ts:13-thirteen");
 });
 
 test("pages by whole entries and names the next offset", () => {

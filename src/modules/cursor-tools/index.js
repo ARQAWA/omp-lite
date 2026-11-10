@@ -38,42 +38,32 @@ export function shrink(lines, at, budget = PAGE_BUDGET) {
 }
 
 /**
- * One entry per match line. A context line belongs to the next match in the file,
- * or to the last one after it, so a page never carries another match's context.
+ * One entry per match line, with every known line of its window: `before` lines above, `after` below.
+ * The engine hands a context line to one match only, so a window also takes its neighbours' lines.
  */
-export function contentEntries(matches, display = path => path) {
+export function contentEntries(matches, display = path => path, before = 0, after = 0) {
 	const byFile = new Map();
 	for (const match of matches) {
 		const file = display(match.path);
-		let list = byFile.get(file);
-		if (list === undefined) byFile.set(file, (list = []));
-		list.push(match);
+		let lines = byFile.get(file);
+		if (lines === undefined) byFile.set(file, (lines = new Map()));
+		// The engine cuts an over-long match line around its match and reports the column, as the native tool prints it.
+		const line = match.truncated === true ? `${match.line} [col ${match.column}]` : match.line;
+		lines.set(match.lineNumber, { lineNumber: match.lineNumber, line, isContext: false });
+		for (const context of [...(match.contextBefore ?? []), ...(match.contextAfter ?? [])]) {
+			if (!lines.has(context.lineNumber)) lines.set(context.lineNumber, { lineNumber: context.lineNumber, line: context.line, isContext: true });
+		}
 	}
 	const entries = [];
-	for (const [file, list] of byFile) {
-		list.sort((a, b) => a.lineNumber - b.lineNumber);
-		const owned = new Map(list.map(match => [match.lineNumber, []]));
-		const context = new Map();
-		for (const match of list) {
-			for (const side of [match.contextBefore ?? [], match.contextAfter ?? []]) {
-				for (const line of side) {
-					if (!context.has(line.lineNumber) && !owned.has(line.lineNumber)) {
-						context.set(line.lineNumber, { lineNumber: line.lineNumber, line: line.line, isContext: true });
-					}
-				}
-			}
-		}
-		let cursor = 0;
-		for (const number of [...context.keys()].sort((a, b) => a - b)) {
-			while (cursor < list.length && list[cursor].lineNumber < number) cursor++;
-			const owner = cursor === list.length ? list.length - 1 : cursor;
-			owned.get(list[owner].lineNumber).push(context.get(number));
-		}
-		for (const match of list) {
-			// The engine cuts an over-long match line around its match and reports the column, as the native tool prints it.
-			const line = match.truncated === true ? `${match.line} [col ${match.column}]` : match.line;
-			const lines = [...owned.get(match.lineNumber), { lineNumber: match.lineNumber, line, isContext: false }];
-			entries.push({ file, lines: lines.sort((a, b) => a.lineNumber - b.lineNumber) });
+	for (const [file, lines] of byFile) {
+		const sorted = [...lines.values()].sort((a, b) => a.lineNumber - b.lineNumber);
+		let low = 0;
+		for (const [at, own] of sorted.entries()) {
+			if (own.isContext) continue;
+			while (sorted[low].lineNumber < own.lineNumber - before) low++;
+			let high = at;
+			while (high + 1 < sorted.length && sorted[high + 1].lineNumber <= own.lineNumber + after) high++;
+			entries.push({ file, lines: sorted.slice(low, high + 1), at: at - low });
 		}
 	}
 	return entries;
@@ -90,12 +80,14 @@ export function paginate(entries, render, options = {}) {
 	const limit = options.limit;
 	const budget = options.budget ?? PAGE_BUDGET;
 	const lines = [];
+	const printed = new Set();
 	let used = 0;
 	let taken = 0;
 	let index = offset;
 	for (; index < entries.length; index++) {
 		if (limit !== undefined && taken >= limit) break;
-		const chunk = render(entries[index]);
+		// Windows of neighbouring matches overlap; a page prints each line once.
+		const chunk = render(entries[index]).filter(line => !printed.has(line));
 		const size = chunk.reduce((sum, line) => sum + line.length + 1, 0);
 		if (taken > 0 && used + size > budget) break;
 		if (taken === 0 && size > budget) {
@@ -105,6 +97,7 @@ export function paginate(entries, render, options = {}) {
 			break;
 		}
 		lines.push(...chunk);
+		for (const line of chunk) printed.add(line);
 		used += size;
 		taken++;
 	}
@@ -285,9 +278,8 @@ export async function searchGrep(request, ctx, options = {}) {
 	const tail = notes(outcome);
 	const fileContinuation = next => `Use offset=${next} for the next page.`;
 	if (request.mode === "content") {
-		const entries = contentEntries(outcome.matches ?? [], display);
-		const anchor = entry => entry.lines.findIndex(line => !line.isContext);
-		const page = paginate(entries, contentLines, { offset: request.offset ?? 0, limit: request.headLimit, anchor });
+		const entries = contentEntries(outcome.matches ?? [], display, request.contextBefore ?? 0, request.contextAfter ?? 0);
+		const page = paginate(entries, contentLines, { offset: request.offset ?? 0, limit: request.headLimit, anchor: entry => entry.at });
 		const shown = page.next === undefined ? entries.length : `${Math.min(page.next, entries.length)}+`;
 		const footer = page.next === undefined ? tail : `\n[${shown} of ${entries.length} matches shown. Use offset=${page.next} for the next page.]${tail}`;
 		return text(`${page.text || "No matches found"}${footer}`);
@@ -506,14 +498,15 @@ function hasSelector(path) {
 }
 
 /** Cursor sends a 1-indexed offset and a line count; the native tool takes a path selector. */
-export function readRequest(params) {
+export function readRequest(params, cwd = process.cwd()) {
 	const input = params ?? {};
 	const path = input.path;
 	if (typeof path !== "string" || path === "") return { error: "path must not be empty" };
 	const offset = input.offset;
 	const limit = input.limit;
 	if (offset === undefined && limit === undefined) return { params: { path } };
-	if (hasSelector(path)) return { error: "path already carries a selector; drop offset and limit" };
+	// An existing file named like a selector is read literally, as the native tool does.
+	if (hasSelector(path) && !existsSync(resolve(cwd, path))) return { error: "path already carries a selector; drop offset and limit" };
 	if (offset !== undefined && (!Number.isInteger(offset) || offset === 0)) return { error: "offset must be a non-zero integer" };
 	if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) return { error: "limit must be a positive integer" };
 	const start = offset ?? 1;
@@ -528,7 +521,7 @@ export function readRequest(params) {
 }
 
 export async function executeRead(toolCallId, params, signal, onUpdate, ctx) {
-	const mapped = readRequest(params);
+	const mapped = readRequest(params, ctx?.cwd);
 	if (mapped.error) return text(mapped.error, true);
 	if (typeof ctx?.invokeTool !== "function") return text("native read is unavailable in this runtime", true);
 	if (mapped.document) {
