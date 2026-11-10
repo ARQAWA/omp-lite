@@ -1008,10 +1008,11 @@ function createUpdater(deps) {
 			if (typeof value !== "string" || !REVISION.test(value)) throw new Error(format(messages.pointer, { path: path.join(base, "current.json") }));
 			if (value === sha) return { revision: sha, changed: false };
 		}
-		const file = path.join(storageDir, "omp-lite-" + sha + ".tar.gz");
-		await downloadAsset("https://codeload.github.com/ARQAWA/omp-lite/tar.gz/" + sha, file, { request, curl: deps.curl });
+		// A name of its own per attempt: a broken download never blocks the next one.
+		const file = path.join(storageDir, "omp-lite-" + sha + "." + randomUUID() + ".tar.gz");
 		const stage = path.join(base, sha);
 		try {
+			await downloadAsset("https://codeload.github.com/ARQAWA/omp-lite/tar.gz/" + sha, file, { request, curl: deps.curl });
 			await fsp.rm(stage, { recursive: true, force: true });
 			await fsp.mkdir(stage, { recursive: true });
 			await extract({ archive: file, stage, revision: sha });

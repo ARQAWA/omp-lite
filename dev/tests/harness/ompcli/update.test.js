@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { applyHarness, createUpdater, extractArchive } from "../../../../src/modules/ompcli/index.js";
@@ -92,6 +92,31 @@ function environment({ bootstrap = "bootstrap", pointer = null, tarball } = {}) 
 	};
 	return { deps, calls, storageDir, extensionPath, agentDir, pointer: join(storageDir, "payload", version, "current.json") };
 }
+
+test("an interrupted download leaves no archive and does not block the next update", async () => {
+	const env = environment();
+	const request = env.deps.request;
+	let broken = true;
+	env.deps.request = async url => {
+		if (url.endsWith("/commits/main") || !broken) return request(url);
+		broken = false;
+		let sent = false;
+		return new Response(
+			new ReadableStream({
+				pull(controller) {
+					if (sent) return controller.error(new Error("network down"));
+					sent = true;
+					controller.enqueue(new Uint8Array(8));
+				},
+			}),
+		);
+	};
+	const archives = () => readdirSync(env.storageDir).filter(name => name.endsWith(".tar.gz"));
+	await expect(createUpdater(env.deps).run()).rejects.toThrow("network down");
+	expect(archives()).toEqual([]);
+	expect((await createUpdater(env.deps).run()).changed).toBe(true);
+	expect(archives()).toEqual([]);
+});
 
 afterEach(() => {
 	for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
