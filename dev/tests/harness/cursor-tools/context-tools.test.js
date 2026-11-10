@@ -18,7 +18,7 @@ test("glob maps the Cursor pattern and directory, keeping native fields", () => 
 	for (const [pattern, path] of [["*.ts", "**/*.ts"], ["src/*.js", "**/src/*.js"], ["./src/*.js", "**/src/*.js"], ["package.json", "**/package.json"], ["src/a.ts", "**/src/a.ts"]]) {
 		expect(globRequest({ glob_pattern: pattern }, cwd)).toEqual({ params: { path } });
 	}
-	for (const kept of ["**/a.ts", "/work/*.ts", "../x/*.ts", "~/x/*.ts", "omp://tools/*.md", "a/*.ts; b/*.ts", "./"]) {
+	for (const kept of ["**/a.ts", "/work/*.ts", "../x/*.ts", "~/x/*.ts", "omp://tools/*.md", "omp:/tools/*.md", "a/*.ts; b/*.ts", "./"]) {
 		expect(globRequest({ glob_pattern: kept }, cwd)).toEqual({ params: { path: kept } });
 	}
 	expect(globRequest({ glob_pattern: "*.ts", target_directory: "/work/src/", hidden: false, limit: 5 })).toEqual({
@@ -41,6 +41,13 @@ test("an existing directory or name with mask characters stays a path for glob",
 		expect(globRequest({ glob_pattern: "./src" }, dir).params.path).toBe("src");
 		expect(globRequest({ glob_pattern: "src", target_directory: dir }).params.path).toBe(`${dir}/src`);
 		expect(globRequest({ glob_pattern: "plain.txt" }, dir).params.path).toBe("**/plain.txt");
+		// A list is the native tool's as written; with a directory every mask of it is searched inside.
+		expect(globRequest({ glob_pattern: "*.js, src/*.ts" }, dir).params.path).toBe("*.js, src/*.ts");
+		expect(globRequest({ glob_pattern: "*.js;./*.ts; src", target_directory: dir }).params.path).toBe(`${dir}/**/*.js;${dir}/**/*.ts;${dir}/src`);
+		expect(globRequest({ glob_pattern: "*.js, *.ts", target_directory: dir }).params.path).toBe(`${dir}/**/*.js;${dir}/**/*.ts`);
+		expect(globRequest({ glob_pattern: "*.js *.{ts,tsx}", target_directory: dir }).params.path).toBe(`${dir}/**/*.js;${dir}/**/*.{ts,tsx}`);
+		// A name with a space is not a list while its parts do not resolve.
+		expect(globRequest({ glob_pattern: "my file*.txt", target_directory: dir }).params.path).toBe(`${dir}/**/my file*.txt`);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
@@ -55,6 +62,9 @@ test("read maps Cursor offset and limit to an exact raw selector", () => {
 	expect(readRequest({ path: "a.ts:1-3", offset: 2 }).error).toBe("path already carries a selector; drop offset and limit");
 	expect(readRequest({ path: "a.ts:-5", offset: 2 }).error).toBe("path already carries a selector; drop offset and limit");
 	expect(readRequest({ path: "https://example.com:8080/page", offset: 2 }).params.path).toBe("https://example.com:8080/page:2-:raw");
+	// The port of an address is not a selector, in any spelling of the address.
+	expect(readRequest({ path: "www.example.com:8080", offset: 2 }).params.path).toBe("www.example.com:8080:2-:raw");
+	expect(readRequest({ path: "https://example.com:8080", offset: 2 }).params.path).toBe("https://example.com:8080:2-:raw");
 	expect(readRequest({ path: "a.ts:10..20", offset: 2 }).error).toBe("path already carries a selector; drop offset and limit");
 	expect(readRequest({ path: "a.ts:1-3,5-10", offset: 2 }).error).toBe("path already carries a selector; drop offset and limit");
 	expect(readRequest({ path: "a.ts", offset: 0 }).error).toBe("offset must be a non-zero integer");
