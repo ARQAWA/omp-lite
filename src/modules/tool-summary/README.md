@@ -8,6 +8,8 @@
 
 **Строка:** `read 2 · edit 1 · run 3 · failed 1`. Нулевые части опущены. Счётчики начинаются заново на каждом шаге агента и на каждом новом запросе, в том числе из очереди.
 
+**Виды:** карта имён тулов лежит в `tool-summary.json`. `read` — чтение; `edit`, `apply_patch`, `write` — правка; `grep`, `glob`, `find`, `web_search` — поиск; `bash`, `eval` — запуск. Прочие тулы идут в `other`.
+
 **Установка:** скопировать два файла в `~/.omp/agent/extensions/`:
 ```bash
 cp src/modules/tool-summary/index.js ~/.omp/agent/extensions/tool-summary.js
