@@ -4,6 +4,8 @@
 
 **Вход:** `~/.omp/agent/extensions/base-tools.js` и `base-tools.descriptions.json`, ставятся по [манифесту](../../../install.manifest.json).
 
+**Настройки:** `base-tools.yml` в `config` манифеста с режимом `merge`: `edit.mode: apply_patch`, `grep.contextBefore: 3`, `grep.contextAfter: 3`, `tools.artifactSpillThreshold: 100`.
+
 **Поведение `files` без `pattern`:**
 - обходит всю папку `path` по маске `glob`;
 - первая строка: `total N files`;
@@ -39,7 +41,7 @@
 
 **Движок:** `glob` и `grep` из `@oh-my-pi/pi-natives`, через `await import`. В тесте движок подменён.
 
-**Пометка «костыль»:** `omp://extensions.md` не описывает импорт движка из расширения. Импорт проверен пробой и уже используется модулем `cursor-tools`. Сторож в T5 будет сверять экспорты движка после обновления OMP.
+**Пометка «костыль»:** `omp://extensions.md` не описывает импорт движка из расширения. Импорт проверен живой пробой. Сторож в T5 будет сверять экспорты движка после обновления OMP.
 
 **Границы:** только локальные папки. URL и архивы остаются у родных `glob`, `grep` и `read`. Один вызов покрывает папку целиком; листания нет.
 

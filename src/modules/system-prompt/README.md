@@ -19,7 +19,7 @@
 - каналы `commentary` и `final` → обычные сообщения;
 - `<user_query>` → `in each message`;
 - ссылка на код: только `filepath`, без `startLine:endLine` и без пометки «в редакторе»;
-- строка bash: `working_directory` вместо `cd`, без обещания общего окружения;
+- строка bash: `cwd` вместо `cd`, без обещания общего окружения;
 - рендер: `styled by Cursor` → `rendered by OMP`.
 
 **Удалено:** блоки `<mode_selection>`, `<dynamic_tools>` и `<terminal_files_information>`, строка про markdown-картинки.

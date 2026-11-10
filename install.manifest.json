@@ -15,14 +15,6 @@
 			"to": "extensions/compactions.js"
 		},
 		{
-			"from": "src/modules/cursor-tools/index.js",
-			"to": "extensions/cursor-tools/index.js"
-		},
-		{
-			"from": "src/modules/cursor-tools/descriptions.json",
-			"to": "extensions/cursor-tools/descriptions.json"
-		},
-		{
 			"from": "src/modules/base-tools/index.js",
 			"to": "extensions/base-tools.js"
 		},
@@ -193,6 +185,11 @@
 			"from": "src/modules/runtime-config/config.yml",
 			"to": "config.yml",
 			"mode": "merge-missing"
+		},
+		{
+			"from": "src/modules/base-tools/base-tools.yml",
+			"to": "config.yml",
+			"mode": "merge"
 		},
 		{
 			"from": "src/modules/compaction-400k/thresholds.yml",

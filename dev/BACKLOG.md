@@ -8,10 +8,9 @@
 
 Порядок строгий, одна задача одновременно. Ветка и worktree на задачу: `../omp-lite-worktrees/<task>`.
 
-Сделано: T0, T1, T2. Журнал: `omp-lite-audit/cursor-hints/RUN-LOG.md`.
+Сделано: T0, T1, T2, T3. Журнал: `omp-lite-audit/cursor-hints/RUN-LOG.md`.
 
 Остаток:
-- T3. переключение на родные тулы. 2 sp. Blocked by: T2.
 - T4. тексты тулов и хук. 2 sp. Blocked by: T3.
 - T5. сторож. 2 sp. Blocked by: T4.
 - T6. строка «файл целый». 1 sp. Blocked by: T4.
@@ -19,13 +18,4 @@
 
 Стоп-точки владельца: тексты промптов диффами по пять (T4); установка в рантайм (T7). Журнал: `omp-lite-audit/cursor-hints/RUN-LOG.md`.
 
-## cursor-tools: довести High Review до двух clean
-
-Отложено владельцем 2026-11-10: «к Cursor Tools мы вернёмся в другой задаче».
-
-- Состояние: одиннадцать кругов ревью, ни одного `clean`. Журнал: [REVIEW-LOG.md](REVIEW-LOG.md). История: [history/cursor-tools.md](history/cursor-tools.md).
-- Открытая находка 1: `read` дописывает диапазон сразу после порта адреса. По `omp://tools/read.md` перед селектором нужен `/`: `https://example.com/:80`.
-- Открытая находка 2: `grep` с путём `src;!src/..foo` теряет исключение. Имя `..foo` принято за выход из каталога.
-- Готово, когда: обе находки исправлены с тестами, по модулю два `clean` подряд.
-
-Уже сделано и лежит в [src/modules/](../src/modules/README.md): 20 модулей, список в README каталога.
+Уже сделано и лежит в [src/modules/](../src/modules/README.md): 19 модулей, список в README каталога.

@@ -1,0 +1,7 @@
+edit:
+  mode: apply_patch
+grep:
+  contextBefore: 3
+  contextAfter: 3
+tools:
+  artifactSpillThreshold: 100

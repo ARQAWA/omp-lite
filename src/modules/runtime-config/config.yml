@@ -90,7 +90,7 @@ mnemopi:
   embeddingApiUrl: http://127.0.0.1:11434/v1
   embeddingApiKey: ollama
 tools:
-  artifactSpillThreshold: 50
+  artifactSpillThreshold: 100
   artifactHeadBytes: 50
   artifactTailBytes: 0
   artifactMaxBytes: 32
@@ -106,8 +106,12 @@ startup:
   showSplash: false
   checkUpdate: false
 edit:
+  mode: apply_patch
   autoRepair:
     enabled: true
+grep:
+  contextBefore: 3
+  contextAfter: 3
 lsp:
   diagnosticsOnEdit: true
 bashInterceptor:
@@ -145,7 +149,7 @@ bashInterceptor:
       message: "Use `bash` with `name` for watch mode so its output, input, and lifecycle stay managed."
     - pattern: ^\s*sed\s+-n\s+
       tool: read
-      message: "Use the `read` tool with `offset` and `limit` instead of sed -n."
+      message: "Use the `read` tool with a line range in `path` instead of sed -n."
     - pattern: '^\s*(?:ls|tree)(?:\s|$)'
       tool: read
       message: "Use the `read` tool for directory listings instead of ls/tree."

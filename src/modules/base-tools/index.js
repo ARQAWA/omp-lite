@@ -1,7 +1,7 @@
 // `files`: project file map and wide search on OMP's native engines.
 // No 200-path cap and no git: the engine walks the directory itself.
 // The engine import is a marked workaround: omp://extensions.md does not
-// describe imports from an extension, but cursor-tools already does it.
+// describe imports from an extension; a live probe confirms it works.
 
 import { isAbsolute, relative, resolve } from "node:path";
 import { constants } from "node:fs";
