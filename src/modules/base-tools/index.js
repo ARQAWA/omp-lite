@@ -1,4 +1,4 @@
-// `files`: the project file map on OMP's own native glob engine.
+// `files`: project file map and wide search on OMP's native engines.
 // No 200-path cap and no git: the engine walks the directory itself.
 // The engine import is a marked workaround: omp://extensions.md does not
 // describe imports from an extension, but cursor-tools already does it.
@@ -7,12 +7,18 @@ import { isAbsolute, relative, resolve } from "node:path";
 
 export const TIMEOUT_MS = 30000;
 export const SPILL_RESERVE_KB = 5;
+export const MAX_FILE_BYTES = 4 * 1024 * 1024;
+export const MAX_MATCH_COLUMNS = 512;
 
-export const FILES_DESCRIPTION = `Project file map. One call covers the whole directory, nothing is dropped.
+export const FILES_DESCRIPTION = `Project file map and wide search. Start here when the task needs project files: one call covers the whole directory, nothing is dropped.
 - No \`pattern\`: all files under \`path\` that match \`glob\`. First line: \`total N files\`.
+- With \`pattern\` (regex over file contents; same syntax and same \`case\` rule as \`grep\`): every matching file with its match count and its first matching line, most matches first. First line: \`N files, M matches, searched K of T files\`.
+An invalid regex is searched as plain text, as in \`grep\`. \`0 files\` on a long pattern: check its brackets.
+Wide search: one call per topic, \`case: false\`. Join the topic word, its synonyms, spellings (\`retry_count|retryCount\`) and library names with \`|\`, up to 30 words. Send the map call and 3-6 topic calls in one response.
+Files over 4 MiB are searched in their first 4 MiB only; they are named in a \`searched in part\` line. Binary and unreadable files are not searched: \`K of T\` shows how many.
 Every file is either listed or counted in a folded line of its directory: \`src/vendor/ (812 files)\`. Expand a folded directory with \`path\`.
 A map too large for one answer comes as \`artifact://N\`: \`read\` it in ranges, all in one response.
-Left out, as in \`glob\`: files excluded by \`.gitignore\` (unless \`gitignore: false\`), \`node_modules\`, \`.git\`.
+Left out, as in \`glob\` and \`grep\`: files excluded by \`.gitignore\` (unless \`gitignore: false\`), \`node_modules\`, \`.git\`.
 Local directories only.
 Last line is always \`[all N files listed]\` or \`[N files: K listed, the rest folded into M directories]\`.
 A timeout is an error, never a partial list: narrow \`path\`.
@@ -21,6 +27,12 @@ Next step: \`read\` every relevant file, all in one response.`;
 
 const bytes = line => Buffer.byteLength(`${line}\n`);
 const byPath = (a, b) => a.localeCompare(b);
+const inNodeModules = path => path.split("/").includes("node_modules");
+const left = deadline => {
+	const ms = deadline - Date.now();
+	if (ms <= 0) throw new Error("timed out after 30s");
+	return ms;
+};
 
 /** The answer budget: the spill threshold minus a small reserve for the last line. */
 export function mapBudget(threshold) {
@@ -29,12 +41,13 @@ export function mapBudget(threshold) {
 }
 
 /** Engine paths are relative to the search root; keep one stable path spelling. */
+export function normalizePath(file, root) {
+	const path = isAbsolute(file) ? file : resolve(root, file);
+	return relative(root, path).replace(/\\/g, "/");
+}
+
 export function normalizeFiles(files, root) {
-	const shown = files.map(file => {
-		const path = isAbsolute(file) ? file : resolve(root, file);
-		return relative(root, path).replace(/\\/g, "/");
-	});
-	return [...new Set(shown)].sort(byPath);
+	return [...new Set(files.map(file => normalizePath(file, root)))].sort(byPath);
 }
 
 /** One group per directory, root files in the empty group. */
@@ -57,8 +70,8 @@ function linesOf(group) {
 }
 
 /**
- * Renders the map under `budget` bytes. Deep directories are folded first,
- * then the root. Counts in the last line always add up to the total.
+ * Renders the map under `budget` bytes. Deep directories are folded first.
+ * Counts in the last line always add up to the total.
  */
 export function renderMap(files, budget = Infinity) {
 	const groups = groupByDirectory(files);
@@ -94,6 +107,75 @@ export function renderMap(files, budget = Infinity) {
 	return [`${header}`, ...body, footer()].join("\n");
 }
 
+const matchesWord = count => `${count} ${count === 1 ? "match" : "matches"}`;
+
+function clip(line, max = MAX_MATCH_COLUMNS) {
+	const clean = String(line ?? "").replace(/\r?\n/g, "\\n").replace(/\r$/, "");
+	if (Buffer.byteLength(clean) <= max) return clean;
+	let out = clean.slice(0, max);
+	while (out.length > 0 && Buffer.byteLength(`${out}...`) > max) out = out.slice(0, -1);
+	return `${out}...`;
+}
+
+function searchLine(entry, firstLine) {
+	return `${entry.path} (${matchesWord(entry.count)}): ${clip(firstLine.get(entry.path) ?? "")}`;
+}
+
+// Groups the tail by its directory, or by the top-level directory when even
+// those lines are too many.
+function foldTail(tail, firstLine, level) {
+	const groups = new Map();
+	const root = [];
+	for (const entry of tail) {
+		const at = entry.path.lastIndexOf("/");
+		if (at < 0) {
+			root.push(entry);
+			continue;
+		}
+		const parent = entry.path.slice(0, at);
+		const dir = level === 0 ? parent : parent.split("/")[0];
+		const group = groups.get(dir) ?? { files: 0, matches: 0 };
+		group.files++;
+		group.matches += entry.count;
+		groups.set(dir, group);
+	}
+	const dirLines = [...groups]
+		.sort((a, b) => b[1].matches - a[1].matches || a[0].localeCompare(b[0]))
+		.map(([dir, group]) => `${dir}/ (${group.files} files, ${group.matches} matches)`);
+	return {
+		dirLines,
+		rootLines: root.map(entry => searchLine(entry, firstLine)),
+		dirs: groups.size,
+		listedRoot: root.length,
+	};
+}
+
+/** Renders wide-search results. Files are listed by match count, the tail is folded. */
+export function renderSearch(entries, firstLine, meta, budget = Infinity) {
+	const sorted = [...entries].sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
+	const header = `${sorted.length} files, ${meta.matches} matches, searched ${meta.searched} of ${meta.total} files`;
+	const oversized = meta.oversized?.length ? [`searched in part (first 4 MiB): ${meta.oversized.join(", ")}`] : [];
+	const base = [header, ...oversized];
+	if (sorted.length === 0) return [...base, "No files matched.", "[all 0 files listed]"].join("\n");
+	const footer = (listed, dirs) =>
+		dirs === 0 ? `[all ${sorted.length} files listed]` : `[${sorted.length} files: ${listed} listed, the rest folded into ${dirs} directories]`;
+
+	for (const level of [0, 1]) {
+		for (let listed = sorted.length; listed >= 0; listed--) {
+			const folded = foldTail(sorted.slice(listed), firstLine, level);
+			const body = [
+				...sorted.slice(0, listed).map(entry => searchLine(entry, firstLine)),
+				...folded.rootLines,
+				...folded.dirLines,
+			];
+			const text = [...base, ...body, footer(listed + folded.listedRoot, folded.dirs)].join("\n");
+			if (Buffer.byteLength(text) <= budget) return text;
+		}
+	}
+	const folded = foldTail(sorted, firstLine, 1);
+	return [...base, ...folded.rootLines, ...folded.dirLines, footer(folded.listedRoot, folded.dirs)].join("\n");
+}
+
 async function defaultEngine() {
 	return import("@oh-my-pi/pi-natives");
 }
@@ -111,10 +193,77 @@ async function spillThreshold(pi) {
 	}
 }
 
+async function scanFiles(natives, root, params, signal, timeoutMs = TIMEOUT_MS) {
+	const result = await natives.glob({
+		pattern: typeof params.glob === "string" && params.glob !== "" ? params.glob : "**/*",
+		path: root,
+		fileType: natives.FileType?.File ?? 1,
+		hidden: params.hidden !== false,
+		gitignore: params.gitignore !== false,
+		includeNodeModules: false,
+		timeoutMs,
+		signal,
+	});
+	return (result?.matches ?? []).filter(match => !inNodeModules(match.path));
+}
+
+// Grep's glob selects every file under a matched directory. The glob engine
+// returns the directory itself, so count its descendants too.
+async function scopeFiles(natives, root, params, signal, deadline) {
+	const glob = typeof params.glob === "string" && params.glob !== "" ? params.glob : "**/*";
+	const base = {
+		pattern: glob,
+		path: root,
+		hidden: params.hidden !== false,
+		gitignore: params.gitignore !== false,
+		includeNodeModules: false,
+		timeoutMs: left(deadline),
+		signal,
+	};
+	const all = (await natives.glob(base))?.matches ?? [];
+	const hidden = new Set();
+	const files = [];
+	const dirType = natives.FileType?.Dir ?? 2;
+	const mentions = glob.includes("node_modules");
+	for (const match of all) {
+		if (!inNodeModules(match.path)) {
+			if (match.fileType !== dirType) files.push(match);
+			continue;
+		}
+		if (!mentions) continue;
+		if (match.fileType !== dirType) {
+			hidden.add(match.path);
+			continue;
+		}
+		// A hidden directory is searched by grep; count its files, not the directory.
+		const pattern = `${match.path.replace(/\/+$/, "")}/**`;
+		const sub = (await natives.glob({ ...base, pattern, includeNodeModules: true, timeoutMs: left(deadline) }))?.matches ?? [];
+		for (const child of sub) if (child.fileType !== dirType) hidden.add(child.path);
+	}
+	// These masks already cover descendants; other masks may match a directory.
+	const coversAll = glob === "**" || glob === "**/*" || glob.endsWith("/**") || glob.endsWith("/**/*");
+	if (!coversAll) {
+		for (const match of all) {
+			if (match.fileType !== dirType || inNodeModules(match.path)) continue;
+			const pattern = `${match.path.replace(/\/+$/, "")}/**`;
+			const sub = (await natives.glob({ ...base, pattern, includeNodeModules: mentions, timeoutMs: left(deadline) }))?.matches ?? [];
+			for (const child of sub) {
+				if (inNodeModules(child.path)) {
+					if (mentions && child.fileType !== dirType) hidden.add(child.path);
+				} else if (child.fileType !== dirType) files.push(child);
+			}
+		}
+	}
+	const byPath = new Map();
+	for (const match of files) byPath.set(normalizePath(match.path, root), match);
+	return { files: [...byPath.values()], hidden: hidden.size };
+}
+
 /** Runs one map call. `engine` and `threshold` are injected by tests. */
 export async function runMap(params = {}, ctx = {}, options = {}) {
 	const cwd = ctx.cwd ?? process.cwd();
 	const root = params.path ? (isAbsolute(params.path) ? params.path : resolve(cwd, params.path)) : cwd;
+	if (inNodeModules(root.replace(/\\/g, "/"))) return text("total 0 files\n[all 0 files listed]");
 	let natives;
 	try {
 		natives = await (options.engine ?? defaultEngine)();
@@ -122,21 +271,76 @@ export async function runMap(params = {}, ctx = {}, options = {}) {
 		return text(`files: native engine unavailable (${error instanceof Error ? error.message : String(error)})`, true);
 	}
 	if (typeof natives?.glob !== "function") return text("files: native engine has no glob function", true);
-	const pattern = typeof params.glob === "string" && params.glob !== "" ? params.glob : "**/*";
+	const deadline = Date.now() + TIMEOUT_MS;
 	try {
-		const result = await natives.glob({
-			pattern,
-			path: root,
-			fileType: natives.FileType?.File ?? 1,
-			hidden: params.hidden !== false,
-			gitignore: params.gitignore !== false,
-			includeNodeModules: false,
-			timeoutMs: TIMEOUT_MS,
-			signal: options.signal,
-		});
+		const matches = await scanFiles(natives, root, params, options.signal, left(deadline));
 		const threshold = options.threshold ?? (await spillThreshold(options.pi));
-		const files = normalizeFiles((result?.matches ?? []).map(match => match.path), root);
-		return text(renderMap(files, mapBudget(threshold)));
+		return text(renderMap(normalizeFiles(matches.map(match => match.path), root), mapBudget(threshold)));
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		return text(`files: ${message}. Narrow path and try again.`, true);
+	}
+}
+
+/** Runs one wide-search call. `engine` and `threshold` are injected by tests. */
+export async function runSearch(params = {}, ctx = {}, options = {}) {
+	const pattern = typeof params.pattern === "string" ? params.pattern : "";
+	if (pattern.trim() === "") return text("files: pattern must not be empty", true);
+	const cwd = ctx.cwd ?? process.cwd();
+	const root = params.path ? (isAbsolute(params.path) ? params.path : resolve(cwd, params.path)) : cwd;
+	if (inNodeModules(root.replace(/\\/g, "/"))) {
+		return text("0 files, 0 matches, searched 0 of 0 files\nNo files matched.\n[all 0 files listed]");
+	}
+	let natives;
+	try {
+		natives = await (options.engine ?? defaultEngine)();
+	} catch (error) {
+		return text(`files: native engine unavailable (${error instanceof Error ? error.message : String(error)})`, true);
+	}
+	if (typeof natives?.glob !== "function") return text("files: native engine has no glob function", true);
+	if (typeof natives?.grep !== "function") return text("files: native engine has no grep function", true);
+	const grepOptions = {
+		pattern,
+		path: root,
+		ignoreCase: params.case === false,
+		multiline: pattern.includes("\n") || pattern.includes("\\n"),
+		hidden: params.hidden !== false,
+		gitignore: params.gitignore !== false,
+		signal: options.signal,
+	};
+	if (!grepOptions.multiline) delete grepOptions.multiline;
+	if (typeof params.glob === "string" && params.glob !== "") grepOptions.glob = params.glob;
+	const deadline = Date.now() + TIMEOUT_MS;
+	try {
+		const scanned = await scopeFiles(natives, root, params, options.signal, deadline);
+		const counts = await natives.grep({ ...grepOptions, mode: "count", timeoutMs: left(deadline) });
+		const entries = (counts?.matches ?? [])
+			.map(match => ({ path: normalizePath(match.path, root), count: Number(match.matchCount ?? 0) }))
+			.filter(entry => entry.count > 0 && !inNodeModules(entry.path))
+			.sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
+		const firstLine = new Map();
+		if (entries.length > 0) {
+			const first = await natives.grep({
+				...grepOptions,
+				mode: "content",
+				timeoutMs: left(deadline),
+				maxCountPerFile: 1,
+				maxColumns: MAX_MATCH_COLUMNS,
+			});
+			for (const match of first?.matches ?? []) {
+				const path = normalizePath(match.path, root);
+				if (!firstLine.has(path)) firstLine.set(path, match.line ?? "");
+			}
+		}
+		const total = scanned.files.length;
+		const searched = Math.min(Math.max(0, Number(counts?.filesSearched ?? total) - scanned.hidden), total);
+		const threshold = options.threshold ?? (await spillThreshold(options.pi));
+		return text(renderSearch(entries, firstLine, {
+			matches: entries.reduce((sum, entry) => sum + entry.count, 0),
+			searched,
+			total,
+			oversized: scanned.files.filter(match => (match.size ?? 0) > MAX_FILE_BYTES).map(match => normalizePath(match.path, root)),
+		}, mapBudget(threshold)));
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		return text(`files: ${message}. Narrow path and try again.`, true);
@@ -156,10 +360,13 @@ export function install(pi, options = {}) {
 		parameters: z.object({
 			path: z.string().optional(),
 			glob: z.string().optional(),
+			pattern: z.string().optional(),
+			case: z.boolean().optional(),
 			hidden: z.boolean().optional(),
 			gitignore: z.boolean().optional(),
 		}),
-		execute: (toolCallId, params, signal, onUpdate, ctx) => runMap(params, ctx, { signal, pi, ...options }),
+		execute: (toolCallId, params, signal, onUpdate, ctx) =>
+			(params.pattern === undefined ? runMap : runSearch)(params, ctx, { signal, pi, ...options }),
 	});
 }
 
