@@ -9,17 +9,31 @@ const text = content => typeof content === "string" ? content
 	: content.filter(block => block.type === "text").map(block => block.text).join("\n");
 const sums = dir => frozen.map(name =>
 	`${createHash("sha256").update(readFileSync(join(dir, name))).digest("hex")}  ${name}`).join("\n") + "\n";
+const parse = line => {
+	try {
+		return JSON.parse(line) ?? {};
+	} catch {
+		return {};
+	}
+};
 
 // Owner and agent replies of a session file, without tool calls, tool results and thinking.
-export const replies = file => readFileSync(file, "utf8").split("\n").flatMap(line => {
-	try {
-		const { type, timestamp, message } = JSON.parse(line);
-		const body = type === "message" && ["user", "assistant"].includes(message.role) && text(message.content).trim();
-		return body ? [{ role: message.role, time: timestamp, text: body }] : [];
-	} catch {
-		return [];
-	}
-});
+// The file also keeps abandoned branches: the last entry is the leaf, `parentId` leads to the root (omp://session.md).
+export const replies = file => {
+	const entries = readFileSync(file, "utf8").split("\n").map(parse);
+	const byId = new Map(entries.map(entry => [entry.id, entry]));
+	const branch = new Set();
+	for (let entry = entries.findLast(entry => entry.parentId !== undefined); entry && !branch.has(entry); entry = byId.get(entry.parentId)) branch.add(entry);
+	return entries.flatMap(entry => {
+		try {
+			const { id, type, timestamp, message } = entry;
+			const body = (id === undefined || branch.has(entry)) && type === "message" && ["user", "assistant"].includes(message.role) && text(message.content).trim();
+			return body ? [{ role: message.role, time: timestamp, text: body }] : [];
+		} catch {
+			return [];
+		}
+	});
+};
 
 // Writes dir/slice.md from [file, first reply number, last reply number] parts, oldest session first.
 export function slice(dir, parts) {

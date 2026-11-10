@@ -11,7 +11,7 @@ The caller's message gives:
 - `repo`: the directory where the work lives.
 
 Load the script in eval, JavaScript: `const rv = await import(Bun.pathToFileURL(script).href)`.
-`rv.replies(file)` lists the owner (`user`) and agent replies of a session file, without tool calls. Number them from 1.
+`rv.replies(file)` lists the owner (`user`) and agent replies on the active branch of a session file, without tool calls and abandoned branches. Number them from 1.
 
 ## Start and end
 Read `session` from the last reply backward. Stop at the owner message that started the task under review. The task ends at the last reply.
