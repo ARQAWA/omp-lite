@@ -15,7 +15,8 @@
     "grep": "search",
     "glob": "search",
     "find": "search",
+    "web_search": "search",
     "bash": "run",
-    "python": "run"
+    "eval": "run"
   }
 }

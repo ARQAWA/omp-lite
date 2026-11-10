@@ -32,6 +32,10 @@ test("apply_patch, the wire name of edit on GPT models, counts as edit", () => {
 	expect(summarize([{ name: "apply_patch", isError: false }])).toBe("edit 1");
 });
 
+test("eval counts as run and web_search as search", () => {
+	expect(summarize([{ name: "eval", isError: false }, { name: "web_search", isError: false }])).toBe("search 1 · run 1");
+});
+
 test("one widget line accumulates calls", () => {
 	const { handlers, painted } = mount();
 	handlers.agent_start();
