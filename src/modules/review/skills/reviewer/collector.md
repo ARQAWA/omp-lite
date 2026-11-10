@@ -20,7 +20,7 @@ Sessions named in the task replies (by id or path) belong to it: find their `*_<
 ## Steps
 1. Write the slice: `rv.slice(dir, [[file, firstReplyNumber, lastReplyNumber], ...])`, oldest session first. Omit `lastReplyNumber` to take a session to its end. Read `dir/slice.md`.
 2. Requirements: every owner instruction of the task, cumulative. A later owner quote overrides an earlier one. Agent proposals count only with the owner's approval; quote both. Name the reply numbers of the quotes in the requirement line.
-3. Work: in `repo`, find the base commit before the task's first change, the task commits oldest first, the changed files and the uncommitted changes. Use git and the raw session file as evidence. Work outside git (a plan, collected context, an analysis) has no commits: write `base: none` and `commits: none`, and list the work files named in the session.
+3. Work: in `repo`, find the base commit before the task's first change, the task commits oldest first, the changed files and the uncommitted changes. Use git and the raw session file as evidence. The session decides where the work is: when its tool calls changed files in another worktree (`git worktree list`) or directory, collect the work there and write that path as `repo`. Work outside git (a plan, collected context, an analysis) has no commits: write `base: none` and `commits: none`, and list the work files named in the session.
 4. Write `dir/facts.md` in the format below.
 5. Self-check: every owner instruction in the slice is a requirement or cancelled; every requirement has a quote; the work facts match git.
 6. Run `rv.freeze(dir)`, then `rv.check(dir)`. If the list is not empty, fix `facts.md` and repeat this step.
