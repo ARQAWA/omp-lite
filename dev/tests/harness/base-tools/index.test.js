@@ -75,6 +75,15 @@ test("the last resort folds whole top-level directories, which path can expand",
 	expect(text.split("\n").at(-1)).toBe("[1000 files: 0 listed, the rest folded into 10 directories]");
 });
 
+test("root files are named, never folded into an unexpandable ./ line", () => {
+	const files = ["rootA.ts", "rootB.ts"];
+	for (let top = 0; top < 10; top++) for (let dir = 0; dir < 100; dir++) files.push(`g${top}/d${dir}/file.ts`);
+	const text = renderMap(files, 5 * 1024);
+	expect(text).toContain("rootA.ts");
+	expect(text).toContain("rootB.ts");
+	expect(text).not.toContain("./ (");
+});
+
 test("the engine receives the mask, hidden and gitignore settings", async () => {
 	const capture = [];
 	await run({ glob: "**/*.ts", hidden: false, gitignore: false }, ["src/a.ts"], { capture });

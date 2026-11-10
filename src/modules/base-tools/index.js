@@ -73,7 +73,7 @@ export function renderMap(files, budget = Infinity) {
 		return `[${files.length} files: ${listed} listed, the rest folded into ${folded.size} directories]`;
 	};
 	const fold = group => {
-		const label = group.dir === "" ? `./ (${group.names.length} files)` : `${group.dir}/ (${group.names.length} files)`;
+		const label = `${group.dir}/ (${group.names.length} files)`;
 		for (const line of lines.get(group)) size -= bytes(line);
 		size += bytes(label);
 		lines.set(group, [label]);
@@ -87,8 +87,6 @@ export function renderMap(files, budget = Infinity) {
 		if (total() <= budget) break;
 		fold(group);
 	}
-	const root = groups.find(group => group.dir === "");
-	if (total() > budget && root !== undefined && !folded.has(root)) fold(root);
 
 	const body = groups.flatMap(group => lines.get(group));
 	const text = [`${header}`, ...body, footer()].join("\n");
