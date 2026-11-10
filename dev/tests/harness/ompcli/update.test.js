@@ -165,11 +165,10 @@ test("an update that lost the race leaves the finished revision alone", async ()
 	expect(readFileSync(join(env.storageDir, "payload", version, newSha, "src/modules/a/index.js"), "utf8")).toBe("new");
 });
 
-test("an update after a crashed one undoes the crash first and then updates", async () => {
-	const env = environment();
+// A crashed run: half of the harness and the pointer are written, the journal is left.
+function crash(env) {
 	const id = "0".repeat(8) + "-0000-0000-0000-" + "0".repeat(12);
 	const backups = join(env.agentDir, ".ompcli-backups");
-	// The crashed run wrote half of the harness and the pointer, and left its journal.
 	write(join(backups, id, "0"), "old");
 	write(join(env.agentDir, "extensions/a.js"), "half");
 	write(env.pointer, JSON.stringify(newSha));
@@ -183,11 +182,32 @@ test("an update after a crashed one undoes the crash first and then updates", as
 			],
 		}),
 	);
+	return join(backups, "journal.json");
+}
+
+test("an update after a crashed one undoes the crash first and then updates", async () => {
+	const env = environment();
+	const journal = crash(env);
 	const result = await createUpdater(env.deps).run();
 	expect(result).toEqual({ revision: newSha, changed: true, applied: true });
 	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
 	expect(readFileSync(env.pointer, "utf8")).toBe(JSON.stringify(newSha));
-	expect(existsSync(join(backups, "journal.json"))).toBe(false);
+	expect(existsSync(journal)).toBe(false);
+});
+
+test("another update crashing during the download is undone, not taken for a finished one", async () => {
+	const env = environment();
+	const request = env.deps.request;
+	const updater = createUpdater({
+		...env.deps,
+		request: async url => {
+			if (!url.endsWith("/commits/main")) crash(env);
+			return request(url);
+		},
+	});
+	expect(await updater.run()).toEqual({ revision: newSha, changed: true, applied: true });
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
+	expect(existsSync(join(env.agentDir, ".ompcli-backups", "journal.json"))).toBe(false);
 });
 
 afterEach(() => {
