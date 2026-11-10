@@ -25,6 +25,19 @@ test("glob maps the Cursor pattern and directory, keeping native fields", () => 
 	expect(globRequest({ glob_pattern: "" }).error).toBe("glob_pattern must not be empty");
 });
 
+test("an existing name with mask characters stays a file for glob", () => {
+	const dir = mkdtempSync(join(tmpdir(), "glob-literal-"));
+	try {
+		writeFileSync(join(dir, "a[b].txt"), "x");
+		expect(globRequest({ glob_pattern: "a[b].txt" }, dir).params.path).toBe("a[b].txt");
+		expect(globRequest({ glob_pattern: "a[b].txt", target_directory: dir }).params.path).toBe(`${dir}/a[b].txt`);
+		expect(globRequest({ glob_pattern: "c[d].txt" }, dir).params.path).toBe("**/c[d].txt");
+		expect(globRequest({ glob_pattern: "c[d].txt", target_directory: dir }).params.path).toBe(`${dir}/**/c[d].txt`);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
 test("read maps Cursor offset and limit to an exact raw selector", () => {
 	expect(readRequest({ path: "a.ts" })).toEqual({ params: { path: "a.ts" } });
 	expect(readRequest({ path: "a.ts", offset: 10 })).toEqual({ params: { path: "a.ts:10-:raw" } });
