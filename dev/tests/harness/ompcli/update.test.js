@@ -104,6 +104,14 @@ test("an unchanged upstream revision does nothing", async () => {
 	expect(existsSync(env.pointer)).toBe(false);
 });
 
+test("main back at the built-in revision replaces a newer installed payload", async () => {
+	const env = environment({ pointer: newSha });
+	env.deps.request = async url => (url.endsWith("/commits/main") ? Response.json({ sha: oldSha }) : new Response(readFileSync(archive(upstream()))));
+	expect(await createUpdater(env.deps).run()).toEqual({ revision: oldSha, changed: true, applied: true });
+	expect(JSON.parse(readFileSync(env.pointer, "utf8"))).toBe(oldSha);
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
+});
+
 test("a new revision installs the harness and keeps personal state", async () => {
 	const env = environment();
 	const result = await createUpdater(env.deps).run();
