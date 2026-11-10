@@ -702,3 +702,38 @@ lease и только потом читает указатель. Раньше �
 
 **Документация OMP:** `omp://skills.md`, `omp://cli-reference.md`.
 **Носители:** `src/modules/review/skills/reviewer/`, README модуля.
+
+## D-038 — карта проекта тулом `files` на движке OMP
+
+**Решение:** модуль [base-tools](../src/modules/base-tools/README.md) даёт тул `files`.
+Без `pattern` он отдаёт карту папки целиком.
+Первая строка: `total N files`.
+Пути сгруппированы по папкам.
+Последняя строка: `[all N files listed]` или `[N files: K listed, the rest folded into M directories]`.
+Ответ держится ниже порога спилла минус 5 КБ.
+Глубокие папки сворачиваются в `dir/ (N files)`.
+`node_modules`, `.git` и файлы из `.gitignore` скрыты.
+Таймаут 30 секунд это ошибка, не частичный список.
+
+**Основание:** поручение владельца закрыть потолок 200 у `glob` и работу без git раз и навсегда.
+План: `omp-lite-audit/cursor-hints/PLAN.md`, задача T1.
+Проект: `BLUEPRINT.md` версия 3, раздел 4.
+
+**Причина:** родной `glob` режет список на 200 путях и не пишет общее число.
+`git ls-files` не работает без git.
+Движок OMP обходит папку сам, без потолка и без git.
+
+**Пометка «костыль»:** `omp://extensions.md` не описывает импорт движка из расширения.
+Импорт проверен пробой и уже используется `cursor-tools`.
+Сторож T5 будет сверять экспорты движка после обновления OMP.
+
+**Документация OMP:** `omp://extensions.md`, `omp://natives-text-search-pipeline.md`,
+`omp://natives-binding-contract.md`, `omp://settings.md`, `omp://tools/glob.md`.
+
+**Границы:** только локальные папки.
+URL и архивы остаются у родных `glob` и `read`.
+Листания нет: один вызов покрывает папку.
+Порог спилла поднимается отдельным решением T3.
+
+**Носители правила:** модуль, README, тест `dev/tests/harness/base-tools/`,
+запись в [install.manifest.json](../install.manifest.json).
