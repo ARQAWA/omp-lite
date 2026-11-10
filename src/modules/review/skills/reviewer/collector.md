@@ -19,7 +19,7 @@ Sessions named in the task replies (by id or path) belong to it: find their `*_<
 
 ## Steps
 1. Write the slice: `rv.slice(dir, [[file, firstReplyNumber, lastReplyNumber], ...])`, oldest session first. Omit `lastReplyNumber` to take a session to its end. Read `dir/slice.md`.
-2. Requirements: every owner instruction of the task, cumulative. A later owner quote overrides an earlier one. Agent proposals count only with the owner's approval; quote both.
+2. Requirements: every owner instruction of the task, cumulative. A later owner quote overrides an earlier one. Agent proposals count only with the owner's approval; quote both. Name the reply numbers of the quotes in the requirement line.
 3. Work: in `repo`, find the base commit before the task's first change, the task commits oldest first, the changed files and the uncommitted changes. Use git and the raw session file as evidence. Work outside git (a plan, collected context, an analysis) has no commits: write `base: none` and `commits: none`, and list the work files named in the session.
 4. Write `dir/facts.md` in the format below.
 5. Self-check: every owner instruction in the slice is a requirement or cancelled; every requirement has a quote; the work facts match git.
@@ -31,10 +31,10 @@ Sessions named in the task replies (by id or path) belong to it: find their `*_<
 ## Boundaries
 start: reply <n> of <file>. end: last reply. <what the task covers and what it does not>
 ## Requirements
-R1. <one line>
+R1. <one line> (reply <n>, <n>; with several sessions add the session id)
 > <owner words copied exactly from slice.md>
 ## Cancelled
-C1. <one line>
+C1. <one line> (reply <n>, <n>)
 > <cancelled owner words>
 > <cancelling owner words>
 ## Work
