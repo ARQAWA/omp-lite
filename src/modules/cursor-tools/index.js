@@ -38,8 +38,9 @@ export function shrink(lines, at, budget = PAGE_BUDGET) {
 }
 
 /**
- * One entry per match line, with every known line of its window: `before` lines above, `after` below.
+ * One entry per match line, with the context lines of its window: `before` lines above, `after` below.
  * The engine hands a context line to one match only, so a window also takes its neighbours' lines.
+ * It stops at the neighbour matches: they are entries of their own, maybe on another page.
  */
 export function contentEntries(matches, display = path => path, before = 0, after = 0) {
 	const byFile = new Map();
@@ -57,14 +58,15 @@ export function contentEntries(matches, display = path => path, before = 0, afte
 	const entries = [];
 	for (const [file, lines] of byFile) {
 		const sorted = [...lines.values()].sort((a, b) => a.lineNumber - b.lineNumber);
-		let low = 0;
-		for (const [at, own] of sorted.entries()) {
-			if (own.isContext) continue;
-			while (sorted[low].lineNumber < own.lineNumber - before) low++;
+		const own = sorted.flatMap((line, at) => (line.isContext ? [] : [at]));
+		own.forEach((at, order) => {
+			const number = sorted[at].lineNumber;
+			let low = at;
+			while (low - 1 > (own[order - 1] ?? -1) && sorted[low - 1].lineNumber >= number - before) low--;
 			let high = at;
-			while (high + 1 < sorted.length && sorted[high + 1].lineNumber <= own.lineNumber + after) high++;
+			while (high + 1 < (own[order + 1] ?? sorted.length) && sorted[high + 1].lineNumber <= number + after) high++;
 			entries.push({ file, lines: sorted.slice(low, high + 1), at: at - low });
-		}
+		});
 	}
 	return entries;
 }
@@ -111,6 +113,7 @@ const FILE_PAGE = 20;
 const COLLECTED = 100000;
 const TIMEOUT_MS = 20000;
 const MAX_LINE = 12000; // bytes: a longer line is cut by the engine around its match, so a match line always fits a page
+const WINDOW = 4 * 1024 * 1024; // bytes of a file the engine reads in a directory walk (omp://tools/grep.md, Limits & Caps)
 
 const ARCHIVE = /\.(?:tar\.(?:gz|bz2|xz|zst|z)|tar|tbz2|tbz|tgz|txz|tzst|zip|jar|war|ear|apk|whl|ipa|xpi|vsix|nupkg|cbz|rar|cbr|7z|iso|cab|cpio|rpm|deb|ar|a|lib|lzh|lha|arj|asar|gz|bz2|xz|zst|z|lzma):/i;
 const SELECTOR = /:(?:L?\d+\.\.L?\d*|L?\d+-L?\d*|-L?\d+|L?\d+\+L?\d+|raw|conflicts|img|L?\d+(?:-L?\d+)?)(?:,-?L?\d+(?:(?:-|\.\.)L?\d*)?)*$/;
@@ -226,7 +229,16 @@ function notes(outcome) {
 	const parts = [];
 	if (outcome.limitReached) parts.push(`collection stopped at ${COLLECTED} matches`);
 	if (outcome.skippedOversized > 0) parts.push(`${outcome.skippedOversized} files skipped as too large`);
+	if (outcome.partial.length > 0) parts.push(`only the first 4 MiB searched in ${outcome.partial.slice(0, 5).join(", ")}${outcome.partial.length > 5 ? " and others" : ""}; search such a file by its own path`);
 	return parts.length === 0 ? "" : `\n[${parts.join("; ")}]`;
+}
+
+function oversized(path) {
+	try {
+		return statSync(path).size > WINDOW;
+	} catch {
+		return false;
+	}
 }
 
 /** Runs one search and renders it. `engine` is injected so tests never touch the real native module. */
@@ -242,12 +254,17 @@ export async function searchGrep(request, ctx, options = {}) {
 		return shown.startsWith("..") ? absolute : shown;
 	};
 	const parts = [];
+	const walked = new Set();
 	let limitReached = false;
 	let skippedOversized = 0;
 	for (const entry of request.paths ?? [request.path]) {
 		const entryBase = entry === undefined ? cwd : isAbsolute(entry) ? entry : resolve(cwd, entry);
 		const part = (await natives.grep(engineRequest(request, entryBase, options.signal))) ?? {};
-		parts.push(...(part.matches ?? []).map(match => ({ ...match, path: isAbsolute(match.path) ? match.path : join(entryBase, match.path) })));
+		for (const match of part.matches ?? []) {
+			// The engine names a file of a directory walk by a relative path; it reads such a file only up to its window.
+			if (!isAbsolute(match.path)) walked.add(join(entryBase, match.path));
+			parts.push({ ...match, path: isAbsolute(match.path) ? match.path : join(entryBase, match.path) });
+		}
 		limitReached = limitReached || part.limitReached === true;
 		skippedOversized += part.skippedOversized ?? 0;
 	}
@@ -261,6 +278,7 @@ export async function searchGrep(request, ctx, options = {}) {
 		}),
 		limitReached,
 		skippedOversized,
+		partial: [...walked].filter(oversized).map(display),
 	};
 	if (request.ranges !== undefined) {
 		const inside = number => request.ranges.some(([start, end]) => number >= start && number <= end);
@@ -429,18 +447,21 @@ export async function executeBash(toolCallId, params, signal, onUpdate, ctx) {
 // -------------------------------------------------------------------- glob
 
 /** Cursor sends a pattern plus an optional directory; the rest of the arguments are native. */
-export function globRequest(params) {
+export function globRequest(params, cwd = process.cwd()) {
 	const input = params ?? {};
 	const pattern = input.glob_pattern;
 	if (typeof pattern !== "string" || pattern === "") return { error: "glob_pattern must not be empty" };
 	const directory = input.target_directory;
+	const native = { hidden: input.hidden, gitignore: input.gitignore, limit: input.limit };
 	if (typeof directory !== "string" || directory === "") {
-		// Cursor's rule for a relative glob; rooted paths, URLs, lists and plain paths stay native.
-		const rooted = /^(?:\*\*\/|\.{0,2}\/|~|[A-Za-z]:)|:\/\/|;/.test(pattern) || !GLOB.test(pattern);
-		return { params: { path: rooted ? pattern : `**/${pattern}`, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
+		// Cursor's rule for a relative glob; rooted paths, URLs, lists, plain paths and existing names stay native.
+		const rooted = /^(?:\*\*\/|\.{0,2}\/|~|[A-Za-z]:)|:\/\/|;/.test(pattern) || !GLOB.test(pattern) || existsSync(resolve(cwd, pattern));
+		return { params: { path: rooted ? pattern : `**/${pattern}`, ...native } };
 	}
-	const recursive = pattern.startsWith("**/") ? pattern : `**/${pattern}`;
-	return { params: { path: `${directory.replace(/\/+$/, "")}/${recursive}`, hidden: input.hidden, gitignore: input.gitignore, limit: input.limit } };
+	const base = directory.replace(/\/+$/, "");
+	// An existing name with mask characters is a file, not a mask, as in the native tool.
+	const recursive = pattern.startsWith("**/") || existsSync(resolve(cwd, base, pattern)) ? pattern : `**/${pattern}`;
+	return { params: { path: `${base}/${recursive}`, ...native } };
 }
 
 /** Newest first, as Cursor promises; only host paths can be ordered this way. */
@@ -458,7 +479,7 @@ export function sortByMtime(files, cwd = process.cwd()) {
 }
 
 export async function executeGlob(toolCallId, params, signal, onUpdate, ctx) {
-	const mapped = globRequest(params);
+	const mapped = globRequest(params, ctx?.cwd);
 	if (mapped.error) return text(mapped.error, true);
 	if (typeof ctx?.invokeTool !== "function") return text("native glob is unavailable in this runtime", true);
 	const native = mapped.params;

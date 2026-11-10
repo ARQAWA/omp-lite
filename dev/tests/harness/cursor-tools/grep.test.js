@@ -95,14 +95,15 @@ const neighbours = [
 	match("a.ts", 12, "second", { contextAfter: [{ lineNumber: 13, line: "thirteen" }] }),
 ];
 
-test("every match keeps its whole window and a page prints a shared line once", () => {
+test("every match keeps its window up to its neighbours and a page prints a shared line once", () => {
 	const entries = contentEntries(neighbours, undefined, 1, 1);
 	expect(contentLines(entries[0])).toEqual(["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven"]);
 	expect(contentLines(entries[1])).toEqual(["a.ts:11-eleven", "a.ts:12:second", "a.ts:13-thirteen"]);
 	expect(paginate(entries, contentLines, {}).text.split("\n")).toEqual(["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven", "a.ts:12:second", "a.ts:13-thirteen"]);
 	const wide = contentEntries(neighbours, undefined, 2, 2);
-	expect(contentLines(wide[0])).toEqual(["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven", "a.ts:12:second"]);
-	expect(wide[1].at).toBe(2);
+	expect(contentLines(wide[0])).toEqual(["a.ts:9-nine", "a.ts:10:first", "a.ts:11-eleven"]);
+	expect(contentLines(wide[1])).toEqual(["a.ts:11-eleven", "a.ts:12:second", "a.ts:13-thirteen"]);
+	expect(wide[1].at).toBe(1);
 });
 
 test("a page break keeps the context on both sides", async () => {
@@ -111,6 +112,21 @@ test("a page break keeps the context on both sides", async () => {
 	expect(first.content[0].text).toBe("a.ts:9-nine\na.ts:10:first\na.ts:11-eleven\n[1+ of 2 matches shown. Use offset=1 for the next page.]");
 	const second = await searchGrep(request({ "-C": 1, head_limit: 1, offset: 1 }), ctx, { engine });
 	expect(second.content[0].text).toBe("a.ts:11-eleven\na.ts:12:second\na.ts:13-thirteen");
+	const wide = await searchGrep(request({ "-C": 2, head_limit: 1 }), ctx, { engine });
+	expect(wide.content[0].text.split("\n").filter(line => /^a\.ts:\d+:/.test(line))).toEqual(["a.ts:10:first"]);
+});
+
+test("a file over the engine window found in a directory walk is named in a note", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-window-"));
+	try {
+		writeFileSync(join(dir, "big.log"), Buffer.alloc(4 * 1024 * 1024 + 1, "x"));
+		const walk = await searchGrep(request({}), { cwd: dir }, { engine: fakeEngine({ matches: [match("big.log", 1, "TODO")] }) });
+		expect(walk.content[0].text).toBe("big.log:1:TODO\n[only the first 4 MiB searched in big.log; search such a file by its own path]");
+		const named = await searchGrep(request({ path: "big.log" }), { cwd: dir }, { engine: fakeEngine({ matches: [match(join(dir, "big.log"), 1, "TODO")] }) });
+		expect(named.content[0].text).toBe("big.log:1:TODO");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
 });
 
 test("pages by whole entries and names the next offset", () => {
