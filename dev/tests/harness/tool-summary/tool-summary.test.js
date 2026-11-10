@@ -28,6 +28,10 @@ test("summarize counts tool kinds and failures", () => {
 	).toBe("read 2 · edit 1 · run 1 · other 1 · failed 1");
 });
 
+test("apply_patch, the wire name of edit on GPT models, counts as edit", () => {
+	expect(summarize([{ name: "apply_patch", isError: false }])).toBe("edit 1");
+});
+
 test("one widget line accumulates calls", () => {
 	const { handlers, painted } = mount();
 	handlers.agent_start();

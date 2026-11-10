@@ -10,6 +10,7 @@
   "tools": {
     "read": "read",
     "edit": "edit",
+    "apply_patch": "edit",
     "write": "edit",
     "grep": "search",
     "glob": "search",
