@@ -24,6 +24,9 @@
 |cursor-tools|6|findings|2026-11-10|`48969cd`|
 |cursor-tools|7|findings|2026-11-10|`ad8efbe`|
 |cursor-tools|8|findings|2026-11-10|`78b7401`|
+|cursor-tools|9|findings|2026-11-10|`d775985`|
+|cursor-tools|10|findings|2026-11-10|`7e7eb49`|
+|cursor-tools|11|findings|2026-11-10|`76c4472`|
 |dyslexia|1|findings|2026-11-10|`1da713b`|
 |dyslexia|2|clean|2026-11-10|`7f28bde`|
 |dyslexia|3|findings|2026-11-10|`7f28bde`|
@@ -50,6 +53,7 @@
 |ompcli|12|findings|2026-11-10|`4336586`|
 |ompcli|13|findings|2026-11-10|`c51ac0d`|
 |ompcli|14|findings|2026-11-10|`49c611e`|
+|ompcli|15|findings|2026-11-10|`b8750db`|
 |review|1|findings|2026-11-10|`ae153ef`|
 |review|2|findings|2026-11-10|`7f28bde`|
 |review|3|clean|2026-11-10|`f763b9e`|
@@ -98,11 +102,11 @@
 |codex-transport|3|принят|
 |compaction-400k|3|принят|
 |compactions|2|принят|
-|cursor-tools|8|не принят|
+|cursor-tools|11|не принят: отменён владельцем в этой задаче, отложен в BACKLOG|
 |dyslexia|5|принят|
 |memory-tool-prompts|3|принят|
 |model-picker|4|принят|
-|ompcli|14|не принят|
+|ompcli|15|закрыт владельцем без двух clean подряд|
 |review|7|принят|
 |runtime-config|3|принят|
 |skill-alias|2|принят|
