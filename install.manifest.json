@@ -23,6 +23,10 @@
 			"to": "extensions/cursor-tools/descriptions.json"
 		},
 		{
+			"from": "src/modules/base-tools/index.js",
+			"to": "extensions/base-tools.js"
+		},
+		{
 			"from": "src/modules/dyslexia/index.js",
 			"to": "extensions/dyslexia.js"
 		},
