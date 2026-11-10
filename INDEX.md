@@ -13,6 +13,8 @@
 - [PROCESS.md](dev/PROCESS.md) — процесс выполнения и проверки изменений.
 - [DECISIONS.md](dev/DECISIONS.md) — принятые решения и их основания.
 - [BACKLOG.md](dev/BACKLOG.md) — заказанная незавершённая и отложенная работа.
+- [history/README.md](dev/history/README.md) — история решений по модулям, файл на модуль.
+- [REVIEW-LOG.md](dev/REVIEW-LOG.md) — журнал кругов High Review: модуль, круг, вердикт.
 - [WORKFLOW-MANIFEST.md](dev/WORKFLOW-MANIFEST.md) — личные принципы владельца, дословная копия из my-pi.
 - [config/README.md](dev/config/README.md) — место настроек разработки.
 - [scripts/README.md](dev/scripts/README.md) — место скриптов обслуживания репозитория.
