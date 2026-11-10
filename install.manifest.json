@@ -44,15 +44,7 @@
 		},
 		{
 			"from": "src/modules/review/index.js",
-			"to": "extensions/review/index.js"
-		},
-		{
-			"from": "src/modules/review/review.json",
-			"to": "extensions/review/review.json"
-		},
-		{
-			"from": "src/modules/review/skills/reviewer/WORKFLOW.md",
-			"to": "extensions/review/skills/reviewer/WORKFLOW.md"
+			"to": "skills/reviewer/index.js"
 		},
 		{
 			"from": "src/modules/review/skills/blindreview/SKILL.md",
@@ -67,8 +59,20 @@
 			"to": "skills/reviewer/SKILL.md"
 		},
 		{
-			"from": "src/modules/review/skills/reviewer/REVIEWER.md",
-			"to": "extensions/review/skills/reviewer/REVIEWER.md"
+			"from": "src/modules/review/skills/reviewer/collector.md",
+			"to": "skills/reviewer/collector.md"
+		},
+		{
+			"from": "src/modules/review/skills/reviewer/collector.yml",
+			"to": "skills/reviewer/collector.yml"
+		},
+		{
+			"from": "src/modules/review/skills/reviewer/reviewer.md",
+			"to": "skills/reviewer/reviewer.md"
+		},
+		{
+			"from": "src/modules/review/skills/reviewer/reviewer.yml",
+			"to": "skills/reviewer/reviewer.yml"
 		},
 		{
 			"from": "src/modules/skill-alias/index.js",

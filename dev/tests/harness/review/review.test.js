@@ -1,137 +1,65 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import review from "../../../../src/modules/review/index.js";
+import { appendFileSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { check, freeze, replies, slice } from "../../../../src/modules/review/index.js";
 
-const model = { provider: "openai-codex", id: "gpt-6.1-terra" };
-const reply = { stopReason: "stop", content: [{ type: "text", text: "CLEAN\nCHECKED: packet" }] };
+const message = (role, content) => JSON.stringify({ type: "message", timestamp: `t-${role}`, message: { role, content } });
+const session = [
+	JSON.stringify({ type: "session", id: "s1" }),
+	message("user", "старая задача"),
+	message("user", [{ type: "text", text: "сохрани защиту от повторного выставления" }]),
+	message("assistant", [
+		{ type: "thinking", thinking: "hidden" },
+		{ type: "toolCall", name: "bash", arguments: { command: "git diff" } },
+		{ type: "text", text: "готово" },
+	]),
+	message("assistant", [{ type: "toolCall", name: "read", arguments: {} }]),
+	message("toolResult", [{ type: "text", text: "tool output" }]),
+	JSON.stringify({ type: "custom", data: "x" }),
+	"{broken",
+].join("\n");
 
-function fixture(response = reply, load) {
-	let tool;
-	const calls = [];
-	const scalar = { min() { return this; }, describe() { return this; } };
-	const pi = {
-		zod: { object: value => value, string: () => scalar, enum: () => scalar },
-		registerTool: value => { tool = value; },
-	};
-	const ctx = {
-		modelRegistry: { getAvailable: () => [model], getApiKey: async () => "test-key" },
-		get memory() { throw new Error("parent memory accessed"); },
-		get sessionManager() { throw new Error("parent history accessed"); },
-		get getSystemPrompt() { throw new Error("parent prompt accessed"); },
-	};
-	review(pi, load ? undefined : async (...args) => { calls.push(args); return response; }, load);
-	return { calls, ctx, run: (packet, level = "blind", signal) => tool.execute("call", { level, packet }, signal, undefined, ctx) };
+function review(facts) {
+	const dir = mkdtempSync(join(tmpdir(), "review-"));
+	const file = join(dir, "s.jsonl");
+	writeFileSync(file, session);
+	slice(dir, [[file, 2]]);
+	writeFileSync(join(dir, "facts.md"), facts);
+	freeze(dir);
+	return dir;
 }
 
-for (const [level, reasoning] of [["blind", "high"], ["high", "xhigh"]]) {
-	test(`${level} sends only the explicit packet and installed rules`, async () => {
-		const f = fixture();
-		const result = await f.run("original task and result", level);
-		expect(result.isError).toBeUndefined();
-		expect(result.content[0].text).toBe("CLEAN\nCHECKED: packet");
-		const [used, context, options] = f.calls[0];
-		expect(used).toBe(model);
-		expect(context.messages).toEqual([{ role: "user", content: "original task and result" }]);
-		expect(context.tools).toEqual([]);
-		expect(context.systemPrompt).toHaveLength(2);
-		expect(context.systemPrompt[0]).toContain("# Acceptance reviewer");
-		expect(context.systemPrompt[1]).toContain("# Standing workflow principles");
-		expect(options.reasoning).toBe(reasoning);
-		expect(options.apiKey).toBe("test-key");
-	});
-}
-
-test("the next call has no previous task or verdict", async () => {
-	const f = fixture();
-	await f.run("first task");
-	f.calls[0][1].messages.push({ role: "assistant", content: "old opinion" });
-	f.calls[0][1].systemPrompt.push("old context");
-	await f.run("second task");
-	expect(f.calls[1][1].messages).toEqual([{ role: "user", content: "second task" }]);
-	expect(f.calls[1][1].systemPrompt).toHaveLength(2);
+test("replies keep only owner and agent text", () => {
+	const dir = mkdtempSync(join(tmpdir(), "review-"));
+	writeFileSync(join(dir, "s.jsonl"), session);
+	expect(replies(join(dir, "s.jsonl"))).toEqual([
+		{ role: "user", time: "t-user", text: "старая задача" },
+		{ role: "user", time: "t-user", text: "сохрани защиту от повторного выставления" },
+		{ role: "assistant", time: "t-assistant", text: "готово" },
+	]);
 });
 
-test("native completion starts loading during registration", async () => {
-	let loads = 0;
-	const f = fixture(reply, () => {
-		loads++;
-		return Promise.resolve({ completeSimple: async () => reply });
-	});
-	expect(loads).toBe(1);
-	expect((await f.run("task")).isError).toBeUndefined();
+test("slice starts at the given reply", () => {
+	const text = readFileSync(join(review("# Facts\n"), "slice.md"), "utf8");
+	expect(text).toContain("## 2 user t-user\n\nсохрани защиту");
+	expect(text).not.toContain("старая задача");
+	expect(text).not.toContain("tool output");
 });
 
-test("failed native load reports an error", async () => {
-	const f = fixture(reply, () => Promise.reject(new Error("native load failed")));
-	const result = await f.run("task");
-	expect(result.isError).toBe(true);
-	expect(result.content[0].text).toContain("native load failed");
+test("a frozen fact file with real quotes passes", () => {
+	expect(check(review("R1. guard\n> сохрани защиту\n> от повторного   выставления\n"))).toEqual([]);
 });
 
-test("quoted UNCHECKED is not an unchecked section", async () => {
-	for (const text of [
-		"CLEAN\nCHECKED: quoted UNCHECKED example",
-		"CLEAN\nCHECKED: quote\n> UNCHECKED: logs",
-	]) {
-		const f = fixture({ stopReason: "stop", content: [{ type: "text", text }] });
-		expect((await f.run("task")).isError).toBeUndefined();
-	}
+test("a changed fact file fails the hash", () => {
+	const dir = review("R1. guard\n");
+	appendFileSync(join(dir, "facts.md"), "R2. extra\n");
+	expect(check(dir)).toEqual(["facts changed after freeze"]);
 });
 
-test("CLEAN with missing proof cannot pass", async () => {
-	for (const text of [
-		"CLEAN",
-		"CLEAN\nUNCHECKED: logs",
-		"CLEAN\nCHECKED: code\nUNCHECKED: tests",
-		"CLEAN\nCHECKED: code\n**UNCHECKED:** tests",
-		"CLEAN\nCHECKED: code\n## UNCHECKED: tests",
-		"CLEAN\nCHECKED: code\n  ## UNCHECKED: tests",
-		"CLEAN\nCHECKED: code\n## UNCHECKED\ntests",
-		"CLEAN\nCHECKED: code\n- UNCHECKED: tests",
-		"CLEAN\nCHECKED: code\n## UNCHECKED \u2014 test logs",
-	]) {
-		const f = fixture({ stopReason: "stop", content: [{ type: "text", text }] });
-		expect((await f.run("task")).isError).toBe(true);
-	}
-});
-
-for (const stopReason of ["length", "toolUse", "error", "aborted"]) {
-	test(`${stopReason} never becomes a successful review`, async () => {
-		const f = fixture({ ...reply, stopReason });
-		expect((await f.run("task")).isError).toBe(true);
-	});
-}
-
-test("empty output and tool calls cannot become acceptance", async () => {
-	for (const content of [[], [{ type: "toolCall", name: "recall", arguments: {} }]]) {
-		expect((await fixture({ stopReason: "stop", content }).run("task")).isError).toBe(true);
-	}
-});
-
-test("missing model or credentials does not choose a fallback", async () => {
-	for (const missing of ["model", "auth"]) {
-		const f = fixture();
-		if (missing === "model") f.ctx.modelRegistry.getAvailable = () => [];
-		else f.ctx.modelRegistry.getApiKey = async () => undefined;
-		expect((await f.run("task")).isError).toBe(true);
-		expect(f.calls).toHaveLength(0);
-	}
-});
-
-test("cancellation is passed through and pre-cancelled calls do not start", async () => {
-	const f = fixture();
-	const controller = new AbortController();
-	await f.run("task", "blind", controller.signal);
-	expect(f.calls[0][2].signal).toBe(controller.signal);
-	controller.abort();
-	expect((await f.run("task", "blind", controller.signal)).isError).toBe(true);
-	expect(f.calls).toHaveLength(1);
-});
-
-test("installed workflow quotations retain their original source", () => {
-	const source = readFileSync(new URL("../../../WORKFLOW-MANIFEST.md", import.meta.url), "utf8");
-	const shipped = readFileSync(new URL("../../../../src/modules/review/skills/reviewer/WORKFLOW.md", import.meta.url), "utf8");
-	const quotes = shipped.split("\n").filter(line => line.startsWith("> "));
-	expect(quotes.length).toBeGreaterThan(0);
-	for (const quote of quotes) expect(source).toContain(quote.slice(2));
+test("a quote absent from the slice is caught", () => {
+	expect(check(review("> старая задача\n> добавь журнал\n"))).toEqual([
+		"quote not in slice: старая задача",
+		"quote not in slice: добавь журнал",
+	]);
 });

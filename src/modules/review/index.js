@@ -1,54 +1,42 @@
-import { readFileSync } from "node:fs";
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
-const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
-const config = JSON.parse(read("./review.json"));
-const systemPrompt = [read("./skills/reviewer/REVIEWER.md"), read("./skills/reviewer/WORKFLOW.md")];
+const frozen = ["slice.md", "facts.md"];
+const read = (dir, name) => readFileSync(join(dir, name), "utf8");
+const flat = text => text.replace(/\s+/g, " ").trim();
+const text = content => typeof content === "string" ? content
+	: content.filter(block => block.type === "text").map(block => block.text).join("\n");
+const sums = dir => frozen.map(name =>
+	`${createHash("sha256").update(readFileSync(join(dir, name))).digest("hex")}  ${name}`).join("\n") + "\n";
 
-export default function review(pi, complete, load = () => import("@oh-my-pi/pi-ai")) {
-	const z = pi.zod;
-	const run = complete ?? load()
-		.then(module => module.completeSimple)
-		.catch(error => () => { throw error; });
-	pi.registerTool({
-		name: "review",
-		label: "review",
-		loadMode: "essential",
-		description: config.description,
-		parameters: z.object({
-			level: z.enum(["blind", "high"]).describe(config.level),
-			packet: z.string().min(1).describe(config.packet),
-		}),
-		async execute(_id, { level, packet }, signal, _onUpdate, ctx) {
-			try {
-				signal?.throwIfAborted();
-				const spec = config.models[level];
-				const model = ctx.modelRegistry.getAvailable().find(item =>
-					item.provider === spec.provider && item.id === spec.id);
-				if (!model) throw new Error(config.errors.model);
-				const sessionId = randomUUID();
-				const apiKey = await ctx.modelRegistry.getApiKey(model, sessionId);
-				if (!apiKey) throw new Error(config.errors.auth);
-				const result = await (await run)(model, {
-					systemPrompt: [...systemPrompt],
-					messages: [{ role: "user", content: packet }],
-					tools: [],
-				}, { apiKey, sessionId, signal, reasoning: spec.reasoning });
-				if (result.stopReason !== "stop" || result.content.some(block => block.type === "toolCall")) {
-					throw new Error(result.errorMessage || config.errors.incomplete);
-				}
-				const text = result.content.filter(block => block.type === "text").map(block => block.text).join("\n").trim();
-				const label = /^ {0,3}(?:(?:#{1,6}|[-*+]|\d+[.)])\s+)?(?:\*\*)?(CHECKED:|UNCHECKED\b)/;
-				const labels = text.split("\n")
-					.filter(line => !/^\s*>/.test(line))
-					.map(line => label.exec(line)?.[1]);
-				if (!text || (/^CLEAN\b/.test(text) && (!labels.includes("CHECKED:") || labels.includes("UNCHECKED")))) {
-					throw new Error(config.errors.incomplete);
-				}
-				return { content: [{ type: "text", text }] };
-			} catch (error) {
-				return { content: [{ type: "text", text: String(error) }], isError: true };
-			}
-		},
-	});
+// Owner and agent replies of a session file, without tool calls, tool results and thinking.
+export const replies = file => readFileSync(file, "utf8").split("\n").flatMap(line => {
+	try {
+		const { type, timestamp, message } = JSON.parse(line);
+		const body = type === "message" && ["user", "assistant"].includes(message.role) && text(message.content).trim();
+		return body ? [{ role: message.role, time: timestamp, text: body }] : [];
+	} catch {
+		return [];
+	}
+});
+
+// Writes dir/slice.md from [file, first reply number] parts, oldest session first.
+export function slice(dir, parts) {
+	const body = parts.map(([file, from = 1]) => `# ${file}\n\n` + replies(file)
+		.map((reply, i) => i + 1 < from ? "" : `## ${i + 1} ${reply.role} ${reply.time}\n\n${reply.text}\n\n`).join(""));
+	writeFileSync(join(dir, "slice.md"), body.join(""));
+}
+
+export const freeze = dir => writeFileSync(join(dir, "sha256"), sums(dir));
+
+// Problems of a frozen fact file: changed files and quotes absent from the slice. Empty means valid.
+export function check(dir) {
+	const errors = sums(dir) === read(dir, "sha256") ? [] : ["facts changed after freeze"];
+	const source = flat(read(dir, "slice.md"));
+	for (const line of read(dir, "facts.md").split("\n")) {
+		const quote = line.startsWith("> ") && flat(line.slice(2));
+		if (quote && !source.includes(quote)) errors.push(`quote not in slice: ${quote}`);
+	}
+	return errors;
 }
