@@ -136,6 +136,28 @@ test("a narrow width shortens the selected name and keeps the efforts", () => {
 	expect(instance.render(38).join("\n")).toContain("{error|Effort needs 39 columns}");
 });
 
+test("the selected model stays on the middle row, as in MyP", () => {
+	const { instance } = picker([opus, flash, plain], { model: opus, effort: "auto" });
+	const top = instance.render(120);
+	expect(top.slice(3, 5)).toEqual(["", ""]);
+	expect(top[5]).toContain("{accent|› }{text|**Opus 4.5**}");
+	expect(top.slice(6, 8)).toEqual(["  {muted|DeepSeek Flash}", "  {muted|GPT Plain}"]);
+	expect(top[8]).toBe("{dim|↑↓ model · ←→ effort · type to filter · }**Enter**{dim| OK · }**Esc**{dim| cancel}");
+	instance.handleInput("\x1b[B");
+	instance.handleInput("\x1b[B");
+	const bottom = instance.render(120);
+	expect(bottom.slice(3, 5)).toEqual(["  {muted|Opus 4.5}", "  {muted|DeepSeek Flash}"]);
+	expect(bottom[5]).toContain("{accent|› }{text|**GPT Plain**}");
+	expect(bottom.slice(6, 8)).toEqual(["", ""]);
+});
+
+test("a long unselected name is shortened with an ellipsis", () => {
+	const long = model("x", "long", "A very long model name here");
+	const rows = picker([plain, long], { model: plain }).instance.render(20);
+	expect(rows[6]).toBe("  {muted|A very long model…}");
+	expect(rows[8]).toBe("{dim|Enter/Esc}");
+});
+
 test("an empty list renders No models", () => {
 	const { instance } = picker([]);
 	const rows = instance.render(80);
