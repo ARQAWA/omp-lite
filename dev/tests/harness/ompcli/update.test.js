@@ -70,6 +70,7 @@ function environment({ bootstrap = "bootstrap", pointer = null, tarball } = {}) 
 		write(join(storageDir, "payload", version, pointer, ".revision"), pointer + "\n");
 		write(join(storageDir, "payload", version, pointer, "install.manifest.json"), JSON.stringify(manifest(bootstrap)));
 		write(join(storageDir, "payload", version, pointer, "src/modules/a/index.js"), "previous");
+		write(join(storageDir, "payload", version, pointer, "src/modules/a/memory.yml"), "{}\n");
 	}
 	const file = tarball ?? archive(upstream({ bootstrap }));
 	const calls = { apply: [] };
@@ -245,6 +246,16 @@ test("a pointer to another revision is replaced when upstream returns to the bui
 	expect(result).toEqual({ revision: oldSha, changed: true, applied: true });
 	expect(JSON.parse(readFileSync(env.pointer, "utf8"))).toBe(oldSha);
 	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
+});
+
+test("an update of the same revision restores a lost harness file", async () => {
+	const env = environment({ pointer: newSha });
+	await createUpdater(env.deps).run();
+	rmSync(join(env.agentDir, "extensions/a.js"));
+	expect(await createUpdater(env.deps).run()).toEqual({ revision: newSha, changed: true });
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("previous");
+	expect(env.calls.apply.at(-1).sourceDir).toBe(join(env.storageDir, "payload", version, newSha));
+	expect(await createUpdater(env.deps).run()).toEqual({ revision: newSha, changed: false });
 });
 
 test("a new revision installs the harness and keeps personal state", async () => {

@@ -1008,30 +1008,31 @@ function createUpdater(deps) {
 			if (typeof value !== "string" || !REVISION.test(value)) throw new Error(format(messages.pointer, { path: path.join(base, "current.json") }));
 			return value;
 		};
-		// A crashed run is undone first: its pointer must not pass for a finished update.
-		const settled = async () => {
+		const stage = path.join(base, sha);
+		// A revision that is already here, in the payload directory or in the extension itself, is installed
+		// again as for a tab: a lost harness file comes back, and nothing changes when all is in place.
+		const present = async () => {
+			// A crashed run is undone first: its pointer must not pass for a finished update.
 			await (deps.recover ?? recover)(deps.agentDir, path.dirname(base));
-			return (await pointed()) === sha;
-		};
-		const done = await lease(deps.agentDir, async () => {
-			if (await settled()) return { revision: sha, changed: false };
-			if (current.trim() !== sha || (await pointed()) !== null) return null;
-			// The extension carries this revision itself: its own payload is installed, as for a tab.
+			const value = await pointed();
+			const sourceDir = value === sha ? stage : value === null && current.trim() === sha ? builtIn : null;
+			if (!sourceDir) return null;
 			const live = await tabs(storageDir);
 			if (live.some(entry => entry.revision !== sha)) throw new Error(messages.closeTabs);
-			const result = await apply({ bun: deps.bun, sourceDir: builtIn, agentDir: deps.agentDir, revision: sha, lease: false, guard: live.length > 0, payloadRoot: path.dirname(base) });
+			const result = await apply({ bun: deps.bun, sourceDir, agentDir: deps.agentDir, revision: sha, lease: false, guard: live.length > 0, payloadRoot: path.dirname(base) });
 			return { revision: sha, changed: result?.changed === true };
-		});
+		};
+		const done = await lease(deps.agentDir, present);
 		if (done) return done;
 		// A name of its own per attempt: a broken download never blocks the next one.
 		const file = path.join(storageDir, "omp-lite-" + sha + "." + randomUUID() + ".tar.gz");
-		const stage = path.join(base, sha);
 		try {
 			await downloadAsset("https://codeload.github.com/ARQAWA/omp-lite/tar.gz/" + sha, file, { request, curl: deps.curl });
 			// One lease from the revision directory to the pointer: two updates never share that directory.
 			return await lease(deps.agentDir, async () => {
-				// Another update may have finished or crashed during the download: a finished revision stays as it is.
-				if (await settled()) return { revision: sha, changed: false };
+				// Another update may have finished or crashed during the download: a finished revision keeps its directory.
+				const raced = await present();
+				if (raced) return raced;
 				await fsp.rm(stage, { recursive: true, force: true });
 				await fsp.mkdir(stage, { recursive: true });
 				await extract({ archive: file, stage, revision: sha });
