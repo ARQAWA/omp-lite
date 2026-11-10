@@ -39,6 +39,17 @@ test("read maps Cursor offset and limit to an exact raw selector", () => {
 	expect(readRequest({ path: "a.ts", offset: 0 }).error).toBe("offset must be a non-zero integer");
 });
 
+test("an existing file named like a selector is read with offset", () => {
+	const dir = mkdtempSync(join(tmpdir(), "read-literal-"));
+	try {
+		writeFileSync(join(dir, "report:12"), "a\nb\nc\n");
+		expect(readRequest({ path: "report:12", offset: 2, limit: 2 }, dir)).toEqual({ params: { path: "report:12:2-3:raw" } });
+		expect(readRequest({ path: "other:12", offset: 2 }, dir).error).toBe("path already carries a selector; drop offset and limit");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
 test("a negative offset with a limit counts lines first, then slices", async () => {
 	const seen = [];
 	const ctx = {
