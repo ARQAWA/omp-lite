@@ -103,6 +103,19 @@ test("an oversized entry is emitted alone, keeping both ends", () => {
 	expect(page.text.endsWith("end")).toBe(true);
 });
 
+test("an oversized entry keeps its match line and the nearest context", () => {
+	const context = number => ({ lineNumber: number, line: `${number}${"c".repeat(1000)}`, isContext: true });
+	const lines = [...Array.from({ length: 20 }, (_, i) => context(i + 1)), { lineNumber: 21, line: "the match", isContext: false }, ...Array.from({ length: 20 }, (_, i) => context(i + 22))];
+	const anchor = entry => entry.lines.findIndex(line => !line.isContext);
+	const page = paginate([{ file: "x", lines }], contentLines, { anchor });
+	const rows = page.text.split("\n");
+	expect(page.text.length).toBeLessThan(15100);
+	expect(rows).toContain("x:21:the match");
+	expect([rows[0], rows.at(-1)]).toEqual(["…", "…"]);
+	expect(rows[1].startsWith("x:14-14c")).toBe(true);
+	expect(rows.at(-2).startsWith("x:28-28c")).toBe(true);
+});
+
 test("searches from the session directory and shows paths from it", async () => {
 	const engine = fakeEngine({ matches: [match("a.ts", 1, "one")] });
 	const result = await searchGrep(request({ path: "src" }), ctx, { engine });

@@ -19,6 +19,24 @@ export function cut(text) {
 	return `${text.slice(0, PAGE_BUDGET - TAIL - 1)}…${text.slice(-TAIL)}`;
 }
 
+/** An oversized entry keeps its match line and the nearest context lines that fit; `…` marks dropped lines. */
+export function shrink(lines, at, budget = PAGE_BUDGET) {
+	let from = at;
+	let to = at + 1;
+	let used = lines[at].length + 5; // the line break and both markers
+	for (let grew = true; grew; ) {
+		grew = false;
+		for (const next of [from - 1, to]) {
+			if (next < 0 || next >= lines.length || used + lines[next].length + 1 > budget) continue;
+			used += lines[next].length + 1;
+			if (next < from) from--;
+			else to++;
+			grew = true;
+		}
+	}
+	return [...(from > 0 ? ["…"] : []), ...lines.slice(from, to), ...(to < lines.length ? ["…"] : [])];
+}
+
 /**
  * One entry per match line. A context line belongs to the next match in the file,
  * or to the last one after it, so a page never carries another match's context.
@@ -79,7 +97,7 @@ export function paginate(entries, render, options = {}) {
 		const size = chunk.reduce((sum, line) => sum + line.length + 1, 0);
 		if (taken > 0 && used + size > budget) break;
 		if (taken === 0 && size > budget) {
-			lines.push(cut(chunk.join("\n")));
+			lines.push(cut(shrink(chunk, options.anchor?.(entries[index]) ?? 0, budget).join("\n")));
 			taken++;
 			index++;
 			break;
@@ -264,7 +282,8 @@ export async function searchGrep(request, ctx, options = {}) {
 	const fileContinuation = next => `Use offset=${next} for the next page.`;
 	if (request.mode === "content") {
 		const entries = contentEntries(outcome.matches ?? [], display);
-		const page = paginate(entries, contentLines, { offset: request.offset ?? 0, limit: request.headLimit });
+		const anchor = entry => entry.lines.findIndex(line => !line.isContext);
+		const page = paginate(entries, contentLines, { offset: request.offset ?? 0, limit: request.headLimit, anchor });
 		const shown = page.next === undefined ? entries.length : `${Math.min(page.next, entries.length)}+`;
 		const footer = page.next === undefined ? tail : `\n[${shown} of ${entries.length} matches shown. Use offset=${page.next} for the next page.]${tail}`;
 		return text(`${page.text || "No matches found"}${footer}`);
@@ -578,16 +597,17 @@ function readSchema(z) {
 }
 
 function bashSchema(z) {
+	const d = texts.bashParameters;
 	return z.object({
-		command: z.string(),
+		command: z.string().describe(d.command),
 		timeout: z.number().optional(),
 		pty: z.boolean().optional(),
 		name: z.string().optional(),
 		ready: z
 			.object({ log: z.string().optional(), port: z.number().optional(), host: z.string().optional(), timeout: z.number().optional() })
 			.optional(),
-		working_directory: z.string().optional(),
-		block_until_ms: z.number().optional(),
+		working_directory: z.string().optional().describe(d.working_directory),
+		block_until_ms: z.number().optional().describe(d.block_until_ms),
 	});
 }
 
