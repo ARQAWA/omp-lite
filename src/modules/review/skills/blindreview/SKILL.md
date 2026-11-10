@@ -5,6 +5,4 @@ description: "Run a blind review of the current work when the user requests blin
 
 # Blind review
 
-Run a blind review of the current work by the review rules of the reviewer skill, level blind.
-
-Read `skill://reviewer/SKILL.md` and follow it. Call the isolated `review` tool with level `blind`; do not launch a task agent.
+Read `skill://reviewer/SKILL.md` and follow it with level blind.
