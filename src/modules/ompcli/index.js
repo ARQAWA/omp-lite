@@ -995,7 +995,6 @@ function createUpdater(deps) {
 		const { sha } = await lookup.json();
 		if (typeof sha !== "string" || !REVISION.test(sha)) throw new Error(format(messages.revision, {}));
 		const current = (await readText(path.join(builtIn, ".revision"))) ?? "";
-		if (current.trim() === sha) return { revision: sha, changed: false };
 		const base = payloadBase(storageDir, version);
 		const pointed = async () => {
 			const pointer = await readText(path.join(base, "current.json"));
@@ -1014,7 +1013,16 @@ function createUpdater(deps) {
 			await (deps.recover ?? recover)(deps.agentDir, path.dirname(base));
 			return (await pointed()) === sha;
 		};
-		if (await lease(deps.agentDir, settled)) return { revision: sha, changed: false };
+		const done = await lease(deps.agentDir, async () => {
+			if (await settled()) return { revision: sha, changed: false };
+			if (current.trim() !== sha || (await pointed()) !== null) return null;
+			// The extension carries this revision itself: its own payload is installed, as for a tab.
+			const live = await tabs(storageDir);
+			if (live.some(entry => entry.revision !== sha)) throw new Error(messages.closeTabs);
+			const result = await apply({ bun: deps.bun, sourceDir: builtIn, agentDir: deps.agentDir, revision: sha, lease: false, guard: live.length > 0, payloadRoot: path.dirname(base) });
+			return { revision: sha, changed: result?.changed === true };
+		});
+		if (done) return done;
 		// A name of its own per attempt: a broken download never blocks the next one.
 		const file = path.join(storageDir, "omp-lite-" + sha + "." + randomUUID() + ".tar.gz");
 		const stage = path.join(base, sha);
