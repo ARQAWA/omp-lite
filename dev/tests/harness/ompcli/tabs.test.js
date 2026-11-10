@@ -458,6 +458,26 @@ test("a busy lease is retried until the closed tab record is gone", async () => 
 	expect(leases).toBeGreaterThanOrEqual(3);
 });
 
+test("a tab closed while loading leaves no lease when the memory then fails", async () => {
+	const runtime = deferred();
+	const { api, storageDir, instance } = cli({
+		control: { ensureRuntime: () => runtime.promise },
+		memory: () => ({
+			ensure: async () => {
+				throw new Error("memory failed");
+			},
+			stop: () => {},
+		}),
+	});
+	await instance.newTab();
+	// Closed before the lease record exists, so closing has nothing to remove.
+	api.state.terminals[0].pty.close();
+	await instance.closeTerminal(api.state.terminals[0]);
+	runtime.resolve({ dir: "/runtime/deadbeef", omp: "/runtime/deadbeef/omp.exe", bun: "/runtime/deadbeef/bun.exe" });
+	await until(() => api.state.messages.includes("memory failed"));
+	await until(() => !existsSync(join(storageDir, "leases", process.pid + ".json")));
+});
+
 test("a crashed pointer is undone before the payload is selected", async () => {
 	const { agent, storageDir, oldSha, newSha } = recovered();
 	const picked = [];
