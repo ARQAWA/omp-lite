@@ -2,11 +2,11 @@
 
 Расширение OMP. Показывает одну строку со счётчиками тулов под редактором. Карточки тулов не трогает.
 
-**Вход OMP:** `omp://extensions.md` — `ctx.ui.setWidget`, события `session_start`, `agent_start`, `tool_execution_start`, `tool_execution_end`.
+**Вход OMP:** `omp://extensions.md` — `ctx.ui.setWidget`, события `session_start`, `agent_start`, `before_agent_start`, `tool_execution_start`, `tool_execution_end`.
 
 **Настройка OMP:** не нужна. Карточки тулов видны: в конфиге `display.hideToolActivity: false`.
 
-**Строка:** `read 2 · edit 1 · run 3 · failed 1`. Нулевые части опущены. Счётчики начинаются заново на каждом шаге агента.
+**Строка:** `read 2 · edit 1 · run 3 · failed 1`. Нулевые части опущены. Счётчики начинаются заново на каждом шаге агента и на каждом новом запросе, в том числе из очереди.
 
 **Установка:** скопировать два файла в `~/.omp/agent/extensions/`:
 ```bash

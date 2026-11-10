@@ -38,6 +38,8 @@ export default function toolSummary(pi) {
 		reset();
 	});
 	pi.on("agent_start", reset);
+	// A queued request is dequeued inside a live run, without another agent_start.
+	pi.on("before_agent_start", reset);
 	pi.on("tool_execution_start", event => {
 		calls.push({ id: event.toolCallId, name: event.toolName, isError: false });
 		paint();
