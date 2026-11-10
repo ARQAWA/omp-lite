@@ -1142,6 +1142,14 @@ function createCli(host) {
 	let chatCount = 0;
 	let shellCount = 0;
 	let leaseTimer = null;
+	let queue = Promise.resolve();
+
+	// One window takes the install lease in turn: its second tab waits for the first instead of meeting a busy lease.
+	function leased(action) {
+		const section = queue.then(() => (host.lease ?? withInstallLease)(resolveAgentDir(host.env, host.homedir), action));
+		queue = section.catch(() => {});
+		return section;
+	}
 
 	function workDir() {
 		return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? host.homedir;
@@ -1178,10 +1186,10 @@ function createCli(host) {
 			curl,
 			progress: value => write(format(messages.preparing, value)),
 		});
-		const agentDir = resolveAgentDir(host.env, host.homedir);
 		const install = control.install ?? spawnInstaller;
 		const payloadRoot = path.join(host.storageDir, "payload");
-		await (host.lease ?? withInstallLease)(agentDir, async () => {
+		const agentDir = resolveAgentDir(host.env, host.homedir);
+		await leased(async () => {
 			// A crashed run must be undone before the payload for this tab is chosen.
 			await (control.recover ?? recover)(agentDir, payloadRoot);
 			const sourceDir = await (control.selectPayload ?? selectPayload)({ extensionPath: host.extensionPath, storageDir: host.storageDir, version: host.version });
@@ -1242,7 +1250,7 @@ function createCli(host) {
 		if (tabs) return;
 		let removed = false;
 		try {
-			await (host.lease ?? withInstallLease)(resolveAgentDir(host.env, host.homedir), async () => {
+			await leased(async () => {
 				if (tabs) return;
 				await closeTabLease(host.storageDir);
 				removed = true;
@@ -1293,6 +1301,7 @@ function createCli(host) {
 			agentDir,
 			bun: paths.bun,
 			apply: host.install ?? spawnInstaller,
+			lease: (dir, action) => leased(action),
 		});
 		const result = await updater.run();
 		if (result.changed) vscode.window.showInformationMessage(messages.updated);

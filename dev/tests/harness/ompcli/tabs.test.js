@@ -256,6 +256,16 @@ test("a memory server restarted on the same port gives the next tab a fresh over
 	expect(keys).toEqual(["key-1", "key-2"]);
 });
 
+test("two first tabs of one window open together and share one memory server", async () => {
+	let servers = 0;
+	const { api, pty, instance } = cli({ memory: () => (servers++, { ensure: async () => ({ port: 5015, key: "k" }), stop: () => {} }) });
+	await Promise.all([instance.newTab(), instance.shellTab()]);
+	await until(() => pty.spawned.length === 2 || api.state.messages.length > 0);
+	expect(api.state.messages).toEqual([]);
+	expect(pty.spawned.length).toBe(2);
+	expect(servers).toBe(1);
+});
+
 test("closing the last tab stops the local memory", async () => {
 	const spy = { count: 0, stopped: 0 };
 	const { api, instance } = cli({ memory: memory(spy) });
