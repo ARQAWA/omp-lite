@@ -121,6 +121,7 @@ const WINDOW = 4 * 1024 * 1024; // bytes of a file the engine reads in a directo
 const ARCHIVE = /\.(?:tar\.(?:gz|bz2|xz|zst|z)|tar|tbz2|tbz|tgz|txz|tzst|zip|jar|war|ear|apk|whl|ipa|xpi|vsix|nupkg|cbz|rar|cbr|7z|iso|cab|cpio|rpm|deb|ar|a|lib|lzh|lha|arj|asar|gz|bz2|xz|zst|z|lzma):/i;
 const SELECTOR = /:(?:L?\d+\.\.L?\d*|L?\d+-L?\d*|-L?\d+|L?\d+\+L?\d+|raw|conflicts|img|L?\d+(?:-L?\d+)?)(?:,-?L?\d+(?:(?:-|\.\.)L?\d*)?)*$/;
 const GLOB = /[*?[\]{}]/;
+const SEPARATOR = /[,\s]+(?![^{]*\})/; // a comma or a space outside braces splits a path list
 
 /** Anything the native tool does better than we can is handed back to it. */
 export function routeFor(path) {
@@ -212,7 +213,8 @@ function engineRequest(request, base, signal, maxColumns) {
 		hidden: true,
 		gitignore: request.gitignore,
 		mode: request.ranges !== undefined ? ENGINE_MODES.content : ENGINE_MODES[request.mode],
-		maxCount: COLLECTED,
+		// A line selector filters after the search, so its one file is collected whole.
+		maxCount: request.ranges !== undefined ? undefined : COLLECTED,
 		timeoutMs: TIMEOUT_MS,
 		// The line cap is the `tools.outputMaxColumns` setting; 0 means no cap.
 		maxColumns: maxColumns > 0 ? maxColumns : undefined,
@@ -262,9 +264,13 @@ export async function searchGrep(request, ctx, options = {}) {
 	let limitReached = false;
 	let skippedOversized = 0;
 	for (const entry of request.paths ?? [request.path]) {
-		const entryBase = entry === undefined ? cwd : isAbsolute(entry) ? entry : resolve(cwd, entry);
+		const { path: target, mask } = typeof entry === "object" ? entry : { path: entry };
+		const entryBase = target === undefined ? cwd : isAbsolute(target) ? target : resolve(cwd, target);
+		const fits = mask === undefined ? undefined : new Bun.Glob(mask);
 		const part = (await natives.grep(engineRequest(request, entryBase, options.signal, options.maxColumns))) ?? {};
 		for (const match of part.matches ?? []) {
+			// A mask names files from its directory, the way the engine names them in a walk.
+			if (fits !== undefined && !fits.match(match.path)) continue;
 			// The engine names a file of a directory walk by a relative path; it reads such a file only up to its window.
 			if (!isAbsolute(match.path)) walked.add(join(entryBase, match.path));
 			parts.push({ ...match, path: isAbsolute(match.path) ? match.path : join(entryBase, match.path) });
@@ -363,16 +369,27 @@ export function parseHostSelector(path, cwd = process.cwd()) {
 	return { base, ranges };
 }
 
-/** A pure host path list can go through the engine, one entry at a time. */
+/** One entry of a host search: an existing path, or a mask under an existing directory. */
+function hostEntry(entry, cwd) {
+	if (entry === "" || entry.includes("://") || ARCHIVE.test(entry) || SELECTOR.test(entry)) return undefined;
+	if (existsSync(resolve(cwd, entry))) return entry;
+	const segments = entry.split("/");
+	const at = segments.findIndex(segment => GLOB.test(segment));
+	if (at < 0) return undefined;
+	const base = resolve(cwd, segments.slice(0, at).join("/") || (entry.startsWith("/") ? "/" : "."));
+	const mask = segments.slice(at).join("/");
+	return !SEPARATOR.test(mask) && statSync(base, { throwIfNoEntry: false })?.isDirectory() ? { path: base, mask } : undefined;
+}
+
+/** Host paths and masks go through the engine, one entry at a time. */
 export function hostList(path, cwd) {
 	if (typeof path !== "string") return undefined;
-	// `;` always splits; a comma or a space splits only when the whole text is not an existing path.
-	const separator = path.includes(";") ? ";" : existsSync(resolve(cwd, path)) ? undefined : /[,\s]+/;
-	if (separator === undefined) return undefined;
-	const entries = path.split(separator).map(entry => entry.trim());
-	if (entries.length < 2 || entries.some(entry => entry === "" || entry.includes("://") || ARCHIVE.test(entry) || SELECTOR.test(entry) || GLOB.test(entry))) return undefined;
-	if (entries.some(entry => !existsSync(resolve(cwd, entry)))) return undefined;
-	return [...new Set(entries)];
+	// `;` always splits; a comma or a space splits only when the whole text is not one entry.
+	const parts = path.includes(";") ? path.split(";") : hostEntry(path, cwd) !== undefined ? [path] : path.split(SEPARATOR);
+	const entries = parts.map(part => hostEntry(part.trim(), cwd));
+	// One plain existing path is not a list: it is searched as it is.
+	if (entries.includes(undefined) || (entries.length === 1 && typeof entries[0] === "string")) return undefined;
+	return [...new Map(entries.map(entry => [JSON.stringify(entry), entry])).values()];
 }
 
 /** Full tool body: route, then either delegate or search. */
@@ -557,6 +574,8 @@ export async function executeRead(toolCallId, params, signal, onUpdate, ctx) {
 		if (result.isError) return result;
 		const content = result.content ?? [];
 		const lines = content.filter(part => part.type === "text").map(part => part.text).join("\n").split("\n");
+		// A final line break ends the last line; it does not start one more.
+		if (lines.length > 1 && lines.at(-1) === "") lines.pop();
 		const { offset, limit } = mapped.document;
 		const start = offset < 0 ? lines.length + offset : offset - 1;
 		if (start < 0) return text("offset is past the start of the file", true);
