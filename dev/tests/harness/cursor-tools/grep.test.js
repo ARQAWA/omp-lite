@@ -191,6 +191,22 @@ test("the native branch forwards only the fields the native tool takes", async (
 	expect(result.content[0].text).toBe("native");
 });
 
+test("a comma or space joined path list goes to the native tool", async () => {
+	const seen = [];
+	const nativeCtx = { cwd: "/work", invokeTool: async params => (seen.push(params.path), { content: [{ type: "text", text: "native" }] }) };
+	for (const path of ["src, tests", "src tests"]) await executeGrep("call", { pattern: "x", path }, undefined, undefined, nativeCtx);
+	expect(seen).toEqual(["src, tests", "src tests"]);
+	const refused = await executeGrep("call", { pattern: "x", path: "src, tests", "-C": 1 }, undefined, undefined, nativeCtx);
+	expect(refused.content[0].text).toContain("not supported for archive, selector, path-list or URL searches");
+});
+
+test("the engine cuts an over-long line around its match and the column is shown", async () => {
+	const engine = fakeEngine({ matches: [match("a.ts", 3, "...x NEEDLE y...", { truncated: true, column: 40002 })] });
+	const result = await searchGrep(request({ path: "src" }), ctx, { engine });
+	expect(engine.calls[0][0].maxColumns).toBe(12000);
+	expect(result.content[0].text).toBe("src/a.ts:3:...x NEEDLE y... [col 40002]");
+});
+
 test("the native branch refuses arguments it cannot honour", async () => {
 	const nativeCtx = { cwd: "/work", invokeTool: async () => ({ content: [{ type: "text", text: "native" }] }) };
 	const result = await executeGrep("call", { pattern: "x", path: "a.zip:b", output_mode: "count" }, undefined, undefined, nativeCtx);
