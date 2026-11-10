@@ -161,12 +161,12 @@ test("pages by whole entries and names the next offset", () => {
 	expect(page.next).toBe(1);
 });
 
-test("an oversized entry is emitted alone, keeping both ends", () => {
-	const entries = [{ file: "x", lines: [{ lineNumber: 1, line: `${"a".repeat(20000)}end`, isContext: false }] }];
+test("an over-long match line is emitted alone and whole", () => {
+	const long = `${"a".repeat(20000)}end`;
+	const entries = [{ file: "x", lines: [{ lineNumber: 1, line: long, isContext: false }] }, { file: "x", lines: [{ lineNumber: 2, line: "b", isContext: false }] }];
 	const page = paginate(entries, contentLines, {});
-	expect(page.text.length).toBeLessThan(15100);
-	expect(page.text).toContain("…");
-	expect(page.text.endsWith("end")).toBe(true);
+	expect(page.text).toBe(`x:1:${long}`);
+	expect(page.next).toBe(1);
 });
 
 test("an oversized entry keeps its match line and the nearest context", () => {
@@ -257,20 +257,33 @@ test("the native branch forwards only the fields the native tool takes", async (
 	expect(result.content[0].text).toBe("native");
 });
 
-test("a comma or space joined path list goes to the native tool", async () => {
-	const seen = [];
-	const nativeCtx = { cwd: "/work", invokeTool: async params => (seen.push(params.path), { content: [{ type: "text", text: "native" }] }) };
-	for (const path of ["src, tests", "src tests"]) await executeGrep("call", { pattern: "x", path }, undefined, undefined, nativeCtx);
-	expect(seen).toEqual(["src, tests", "src tests"]);
-	const refused = await executeGrep("call", { pattern: "x", path: "src, tests", "-C": 1 }, undefined, undefined, nativeCtx);
-	expect(refused.content[0].text).toContain("not supported for archive, selector, path-list or URL searches");
+test("a comma or space joined list of existing paths is searched by the engine, another one by the native tool", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-joined-"));
+	try {
+		mkdirSync(join(dir, "src"));
+		mkdirSync(join(dir, "tests"));
+		const engine = fakeEngine({ matches: [] });
+		const seen = [];
+		const nativeCtx = { cwd: dir, invokeTool: async params => (seen.push(params.path), { content: [{ type: "text", text: "native" }] }) };
+		for (const path of ["src, tests", "src tests"]) await executeGrep("call", { pattern: "x", path, "-C": 1 }, undefined, undefined, nativeCtx, { engine });
+		expect(engine.calls.map(call => call[0].path)).toEqual([join(dir, "src"), join(dir, "tests"), join(dir, "src"), join(dir, "tests")]);
+		expect(seen).toEqual([]);
+		await executeGrep("call", { pattern: "x", path: "src, gone" }, undefined, undefined, nativeCtx, { engine });
+		expect(seen).toEqual(["src, gone"]);
+		const refused = await executeGrep("call", { pattern: "x", path: "src, gone", "-C": 1 }, undefined, undefined, nativeCtx, { engine });
+		expect(refused.content[0].text).toContain("not supported for archive, selector, path-list or URL searches");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
 });
 
-test("the engine cuts an over-long line around its match and the column is shown", async () => {
+test("the line cap comes from the output setting and a cut line shows its column", async () => {
 	const engine = fakeEngine({ matches: [match("a.ts", 3, "...x NEEDLE y...", { truncated: true, column: 40002 })] });
-	const result = await searchGrep(request({ path: "src" }), ctx, { engine });
-	expect(engine.calls[0][0].maxColumns).toBe(12000);
+	const result = await searchGrep(request({ path: "src" }), ctx, { engine, maxColumns: 768 });
+	expect(engine.calls[0][0].maxColumns).toBe(768);
 	expect(result.content[0].text).toBe("src/a.ts:3:...x NEEDLE y... [col 40002]");
+	await searchGrep(request({ path: "src" }), ctx, { engine, maxColumns: 0 });
+	expect("maxColumns" in engine.calls[1][0]).toBe(false);
 });
 
 test("the native branch refuses arguments it cannot honour", async () => {

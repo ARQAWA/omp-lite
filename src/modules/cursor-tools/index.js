@@ -11,13 +11,6 @@ import texts from "./descriptions.json";
 // ---------------------------------------------------------------- rendering
 
 export const PAGE_BUDGET = 15000;
-const TAIL = 400;
-
-/** An oversized entry keeps its head and its tail, because the match may sit anywhere. */
-export function cut(text) {
-	if (text.length <= PAGE_BUDGET) return text;
-	return `${text.slice(0, PAGE_BUDGET - TAIL - 1)}…${text.slice(-TAIL)}`;
-}
 
 /** An oversized entry keeps its match line and the nearest context lines that fit; `…` marks dropped lines. */
 export function shrink(lines, at, budget = PAGE_BUDGET) {
@@ -99,7 +92,8 @@ export function paginate(entries, render, options = {}) {
 		const size = fresh.reduce((sum, at) => sum + chunk[at].length + 1, 0);
 		if (taken > 0 && used + size > budget) break;
 		if (taken === 0 && size > budget) {
-			lines.push(cut(shrink(chunk, own, budget).join("\n")));
+			// The match line is never cut here: a huge answer spills by the output settings of OMP.
+			lines.push(...shrink(chunk, own, budget));
 			taken++;
 			index++;
 			break;
@@ -122,7 +116,6 @@ export const MODES = ["content", "files_with_matches", "count"];
 const FILE_PAGE = 20;
 const COLLECTED = 100000;
 const TIMEOUT_MS = 20000;
-const MAX_LINE = 12000; // bytes: a longer line is cut by the engine around its match, so a match line always fits a page
 const WINDOW = 4 * 1024 * 1024; // bytes of a file the engine reads in a directory walk (omp://tools/grep.md, Limits & Caps)
 
 const ARCHIVE = /\.(?:tar\.(?:gz|bz2|xz|zst|z)|tar|tbz2|tbz|tgz|txz|tzst|zip|jar|war|ear|apk|whl|ipa|xpi|vsix|nupkg|cbz|rar|cbr|7z|iso|cab|cpio|rpm|deb|ar|a|lib|lzh|lha|arj|asar|gz|bz2|xz|zst|z|lzma):/i;
@@ -208,7 +201,7 @@ async function defaultEngine() {
 const ENGINE_MODES = { content: "content", count: "count", files_with_matches: "filesWithMatches" };
 
 /** The native binding takes exactly one options object; a second argument is its onMatch callback. */
-function engineRequest(request, base, signal) {
+function engineRequest(request, base, signal, maxColumns) {
 	const options = {
 		pattern: request.pattern,
 		path: base,
@@ -221,7 +214,8 @@ function engineRequest(request, base, signal) {
 		mode: request.ranges !== undefined ? ENGINE_MODES.content : ENGINE_MODES[request.mode],
 		maxCount: COLLECTED,
 		timeoutMs: TIMEOUT_MS,
-		maxColumns: MAX_LINE,
+		// The line cap is the `tools.outputMaxColumns` setting; 0 means no cap.
+		maxColumns: maxColumns > 0 ? maxColumns : undefined,
 		contextBefore: request.contextBefore,
 		contextAfter: request.contextAfter,
 		signal,
@@ -269,7 +263,7 @@ export async function searchGrep(request, ctx, options = {}) {
 	let skippedOversized = 0;
 	for (const entry of request.paths ?? [request.path]) {
 		const entryBase = entry === undefined ? cwd : isAbsolute(entry) ? entry : resolve(cwd, entry);
-		const part = (await natives.grep(engineRequest(request, entryBase, options.signal))) ?? {};
+		const part = (await natives.grep(engineRequest(request, entryBase, options.signal, options.maxColumns))) ?? {};
 		for (const match of part.matches ?? []) {
 			// The engine names a file of a directory walk by a relative path; it reads such a file only up to its window.
 			if (!isAbsolute(match.path)) walked.add(join(entryBase, match.path));
@@ -371,9 +365,12 @@ export function parseHostSelector(path, cwd = process.cwd()) {
 
 /** A pure host path list can go through the engine, one entry at a time. */
 export function hostList(path, cwd) {
-	if (typeof path !== "string" || !path.includes(";")) return undefined;
-	const entries = path.split(";").map(entry => entry.trim());
-	if (entries.some(entry => entry === "" || entry.includes("://") || ARCHIVE.test(entry) || SELECTOR.test(entry) || GLOB.test(entry))) return undefined;
+	if (typeof path !== "string") return undefined;
+	// `;` always splits; a comma or a space splits only when the whole text is not an existing path.
+	const separator = path.includes(";") ? ";" : existsSync(resolve(cwd, path)) ? undefined : /[,\s]+/;
+	if (separator === undefined) return undefined;
+	const entries = path.split(separator).map(entry => entry.trim());
+	if (entries.length < 2 || entries.some(entry => entry === "" || entry.includes("://") || ARCHIVE.test(entry) || SELECTOR.test(entry) || GLOB.test(entry))) return undefined;
 	if (entries.some(entry => !existsSync(resolve(cwd, entry)))) return undefined;
 	return [...new Set(entries)];
 }
@@ -400,7 +397,7 @@ export async function executeGrep(toolCallId, params, signal, onUpdate, ctx, opt
 		request.paths = list;
 		request.path = undefined;
 	}
-	// A comma or space joined list of paths is the native tool's to expand.
+	// A comma or space joined list with a missing part is the native tool's to expand.
 	const joined = typeof request.path === "string" && /[,\s]/.test(request.path) && !existsSync(resolve(cwd, request.path));
 	if (request.literal !== true && (joined || routeFor(request.path) === "native")) {
 		const refused = plainMessage(request);
@@ -660,7 +657,7 @@ export function install(pi, options = {}) {
 		strict: false,
 		description: GREP_DESCRIPTION,
 		parameters: grepSchema(z),
-		execute: (toolCallId, params, signal, onUpdate, ctx) => executeGrep(toolCallId, params, signal, onUpdate, ctx, options),
+		execute: async (toolCallId, params, signal, onUpdate, ctx) => executeGrep(toolCallId, params, signal, onUpdate, ctx, { maxColumns: await lineCap(pi), ...options }),
 	});
 	pi.registerTool({
 		name: "glob",
@@ -698,6 +695,16 @@ export function install(pi, options = {}) {
 	const enable = () => enableApplyPatch(pi);
 	pi.on?.("session_start", enable);
 	enable();
+}
+
+/** The per-line byte cap of tool output from the settings (omp://settings.md); 0 means no cap. */
+async function lineCap(pi) {
+	try {
+		const { lookup } = await import("@oh-my-pi/pi-coding-agent/config/registry");
+		return lookup("tools.outputMaxColumns")?.get(pi.pi.settings) ?? 0;
+	} catch {
+		return 0;
+	}
 }
 
 /** Runtime-only: the apply-patch contract without touching the saved settings. */
