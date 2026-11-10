@@ -71,4 +71,9 @@ test("grep parameters carry their Cursor description on their own field", () => 
 	for (const [field, text] of Object.entries(expected)) expect(grep.parameters.shape[field].text).toBe(text);
 	expect(Object.keys(grep.parameters.shape).filter(field => grep.parameters.shape[field].text !== undefined)).toEqual(Object.keys(expected));
 	expect(grep.parameters.shape.gitignore.text).toBeUndefined();
+	const bash = tools.find(tool => tool.name === "bash").parameters.shape;
+	expect(bash.command.text).toBe("The command to execute");
+	expect(bash.working_directory.text).toBe("The absolute path to the working directory to execute the command in (defaults to current directory)");
+	expect(bash.block_until_ms.text).toBe("Set to 0 to immediately run the command in the background.");
+	expect(bash.timeout.text).toBeUndefined();
 });

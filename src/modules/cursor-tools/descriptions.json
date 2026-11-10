@@ -25,5 +25,10 @@
 		"limit": "The number of lines to read. Only provide if the file is too large to read at once.",
 		"offset": "The line number to start reading from. Positive values are 1-indexed from the start of the file. Negative values count backwards from the end (e.g. -1 is the last line). Only provide if the file is too large to read at once.",
 		"path": "The absolute path of the file to read."
+	},
+	"bashParameters": {
+		"command": "The command to execute",
+		"working_directory": "The absolute path to the working directory to execute the command in (defaults to current directory)",
+		"block_until_ms": "Set to 0 to immediately run the command in the background."
 	}
 }
