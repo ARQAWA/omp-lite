@@ -328,6 +328,40 @@ test("a line selector collects its file whole, another search stops at the colle
 	expect(result.content[0].text).toContain(":150000:x");
 	await searchGrep(request({ path: "src" }), ctx, { engine });
 	expect(engine.calls[1][0].maxCount).toBe(100000);
+	// The page offset is applied after the search, so the collection reaches past it.
+	const far = fakeEngine({ matches: [], limitReached: true });
+	const page = await searchGrep(request({ path: "src", offset: 100000 }), ctx, { engine: far });
+	expect(far.calls[0][0].maxCount).toBe(200000);
+	expect(page.content[0].text).toContain("collection stopped at 200000 matches");
+	// The engine raises its flag on the first match of a named file too: that is not a full collection.
+	const single = fakeEngine({ matches: [match("/work/a.ts", 0, "")], limitReached: true, totalMatches: 2 });
+	const files = await searchGrep(request({ path: "/work/a.ts", output_mode: "files_with_matches" }), ctx, { engine: single });
+	expect(files.content[0].text).not.toContain("collection stopped");
+});
+
+test("`!` entries of a path list are exclusions with the native rules", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "grep-exclude-"));
+	try {
+		mkdirSync(join(dir, "src"));
+		writeFileSync(join(dir, "src", "a.test.ts"), "x\n");
+		writeFileSync(join(dir, "!keep.txt"), "x\n");
+		const engine = fakeEngine({ matches: [] });
+		const run = path => executeGrep("call", { pattern: "x", path, head_limit: 5 }, undefined, undefined, { cwd: dir, invokeTool: undefined }, { engine });
+		// A bare name is dropped at any depth; a path only under the working directory, rebased onto the root.
+		await run("src;!*.test.ts;!vendor;!src/legacy;!./gen");
+		expect(engine.calls[0][0]).toMatchObject({ path: join(dir, "src"), exclude: ["*.test.ts", "vendor", "/legacy"] });
+		// Exclusions alone search the working directory.
+		await run("!*.test.ts;!./gen");
+		expect(engine.calls[1][0]).toMatchObject({ path: dir, exclude: ["*.test.ts", "/gen"] });
+		// A named file is searched even when an exclusion matches it, and an existing `!name` is a path.
+		await run("src/a.test.ts;!*.test.ts");
+		expect(engine.calls[2][0].path).toBe(join(dir, "src", "a.test.ts"));
+		expect("exclude" in engine.calls[2][0]).toBe(false);
+		await run("src;!keep.txt");
+		expect(engine.calls.slice(3).map(call => call[0].path)).toEqual([join(dir, "src"), join(dir, "!keep.txt")]);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
 });
 
 test("the native branch refuses arguments it cannot honour", async () => {

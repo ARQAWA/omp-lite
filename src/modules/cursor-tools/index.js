@@ -202,7 +202,7 @@ async function defaultEngine() {
 const ENGINE_MODES = { content: "content", count: "count", files_with_matches: "filesWithMatches" };
 
 /** The native binding takes exactly one options object; a second argument is its onMatch callback. */
-function engineRequest(request, base, { signal, maxColumns, mask, flat, whole }) {
+function engineRequest(request, base, { signal, maxColumns, mask, flat, whole, limit, exclude }) {
 	const options = {
 		pattern: request.pattern,
 		path: base,
@@ -210,6 +210,7 @@ function engineRequest(request, base, { signal, maxColumns, mask, flat, whole })
 		glob: mask ?? request.glob,
 		// A mask after a directory names the entries of that directory, so the engine must not make it recursive.
 		recursive: flat ? false : undefined,
+		exclude: exclude?.length > 0 ? exclude : undefined,
 		type: request.type,
 		ignoreCase: !request.caseSensitive,
 		multiline: request.multiline,
@@ -217,7 +218,7 @@ function engineRequest(request, base, { signal, maxColumns, mask, flat, whole })
 		gitignore: request.gitignore,
 		mode: request.ranges !== undefined ? ENGINE_MODES.content : ENGINE_MODES[request.mode],
 		// What is filtered after the search is collected whole, so no match is lost behind the limit.
-		maxCount: request.ranges !== undefined || whole ? undefined : COLLECTED,
+		maxCount: request.ranges !== undefined || whole ? undefined : limit,
 		timeoutMs: TIMEOUT_MS,
 		// The line cap is the `tools.outputMaxColumns` setting; 0 means no cap.
 		maxColumns: maxColumns > 0 ? maxColumns : undefined,
@@ -236,7 +237,7 @@ function text(value, isError = false) {
 /** Notes what the engine could not cover, so a short answer never looks complete. */
 function notes(outcome) {
 	const parts = [];
-	if (outcome.limitReached) parts.push(`collection stopped at ${COLLECTED} matches`);
+	if (outcome.limitReached) parts.push(`collection stopped at ${outcome.limit} matches`);
 	if (outcome.skippedOversized > 0) parts.push(`${outcome.skippedOversized} files skipped as too large`);
 	if (outcome.partial.length > 0) parts.push(`only the first 4 MiB searched in ${outcome.partial.slice(0, 5).join(", ")}${outcome.partial.length > 5 ? " and others" : ""}; search such a file by its own path`);
 	return parts.length === 0 ? "" : `\n[${parts.join("; ")}]`;
@@ -248,6 +249,13 @@ function oversized(path) {
 	} catch {
 		return false;
 	}
+}
+
+/** The native rule of `!` entries: a bare name is dropped at any depth, a path only under the working directory. */
+function exclusionFor(raw, cwd, root) {
+	if (!raw.includes("/")) return raw;
+	const inside = relative(root, resolve(cwd, raw));
+	return inside === "" || inside.startsWith("..") ? undefined : `/${inside}`;
 }
 
 /** Runs one search and renders it. `engine` is injected so tests never touch the real native module. */
@@ -266,19 +274,28 @@ export async function searchGrep(request, ctx, options = {}) {
 	const walked = new Set();
 	let limitReached = false;
 	let skippedOversized = 0;
-	for (const entry of request.paths ?? [request.path]) {
+	// The page offset is applied after the search, so the collection reaches as far as the page asks.
+	const limit = COLLECTED + (request.offset ?? 0);
+	const listed = request.paths ?? [request.path];
+	const excluded = listed.filter(entry => entry?.exclude !== undefined).map(entry => entry.exclude);
+	const roots = listed.filter(entry => entry?.exclude === undefined);
+	// Exclusions alone search the working directory, as in the native tool.
+	for (const entry of roots.length > 0 ? roots : [undefined]) {
 		const { path: target, mask, flat } = typeof entry === "object" ? entry : { path: entry };
 		const entryBase = target === undefined ? cwd : isAbsolute(target) ? target : resolve(cwd, target);
+		// An exclusion filters what is walked below a named path, never a named file itself.
+		const exclude = excluded.length === 0 || statSync(entryBase, { throwIfNoEntry: false })?.isFile() ? [] : excluded.map(raw => exclusionFor(raw, cwd, entryBase)).filter(Boolean);
 		// The engine takes one file filter. With a mask in the path the `glob` argument narrows the files here.
 		const narrow = mask !== undefined && request.glob !== undefined ? new Bun.Glob(request.glob.includes("/") ? request.glob : `**/${request.glob}`) : undefined;
-		const part = (await natives.grep(engineRequest(request, entryBase, { signal: options.signal, maxColumns: options.maxColumns, mask, flat, whole: narrow !== undefined }))) ?? {};
+		const part = (await natives.grep(engineRequest(request, entryBase, { signal: options.signal, maxColumns: options.maxColumns, mask, flat, whole: narrow !== undefined, limit, exclude }))) ?? {};
 		for (const match of part.matches ?? []) {
 			if (narrow !== undefined && !narrow.match(match.path)) continue;
 			// The engine names a file of a directory walk by a relative path; it reads such a file only up to its window.
 			if (!isAbsolute(match.path)) walked.add(join(entryBase, match.path));
 			parts.push({ ...match, path: isAbsolute(match.path) ? match.path : join(entryBase, match.path) });
 		}
-		limitReached = limitReached || part.limitReached === true;
+		// The engine also raises its flag when it stops at the first match of a named file: only a full collection counts.
+		limitReached = limitReached || (part.limitReached === true && (part.totalMatches ?? limit) >= limit);
 		skippedOversized += part.skippedOversized ?? 0;
 	}
 	const seen = new Set();
@@ -290,6 +307,7 @@ export async function searchGrep(request, ctx, options = {}) {
 			return true;
 		}),
 		limitReached,
+		limit,
 		skippedOversized,
 		partial: [...walked].filter(oversized).map(display),
 	};
@@ -376,6 +394,8 @@ export function parseHostSelector(path, cwd = process.cwd()) {
 function hostEntry(entry, cwd) {
 	if (entry === "" || entry.includes("://") || ARCHIVE.test(entry) || SELECTOR.test(entry)) return undefined;
 	if (existsSync(resolve(cwd, entry))) return entry;
+	// `!name` is an exclusion, not a search root, unless a path has that very name.
+	if (entry.startsWith("!")) return entry.length > 1 ? { exclude: entry.slice(1) } : undefined;
 	const segments = entry.replace(/^\.\//, "").split("/");
 	const at = segments.findIndex(segment => GLOB.test(segment));
 	if (at < 0) return undefined;
