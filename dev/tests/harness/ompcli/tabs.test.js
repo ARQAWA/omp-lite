@@ -427,6 +427,9 @@ test("proxy credentials travel in the environment, never in the command line", a
 	expect(proc.args.join(" ")).not.toContain("secret");
 	expect(readFileSync(join(storageDir, "chat-" + process.pid + ".sh"), "utf8")).not.toContain("secret");
 	expect(proc.options.env.OMPCLI_HTTPS_PROXY).toBe("http://user:secret@proxy.local:8080");
+	// The profile may change PI_PROXY too: the wrapper restores it like the other proxy variables.
+	expect(proc.options.env.OMPCLI_PI_PROXY).toBe("http://user:secret@proxy.local:8080");
+	expect(readFileSync(join(storageDir, "chat-" + process.pid + ".sh"), "utf8")).toContain('[ -n "$OMPCLI_PI_PROXY" ] && export PI_PROXY="$OMPCLI_PI_PROXY"');
 });
 
 test("previous overlays stay before the window overlay", async () => {
