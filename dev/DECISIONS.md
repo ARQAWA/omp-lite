@@ -1003,3 +1003,5 @@ URL и архивы остаются у родных `grep` и `read`.
 **Граница:** на VDI не проверено. На macOS проверено под чистым Node: настоящий архив GitHub распакован и сверен с git, харнес поставлен, настоящий OMP `18.18.8` прочитал слои и `memory.backend: off`.
 
 **Носители правила:** `src/modules/ompcli/index.js` (`installHarness`, `configOverlays`, `extractArchive`, `readTar`, `sweep`, `configFiles`), `dev/scripts/ompcli-build/`, `dev/tests/harness/ompcli/`.
+
+**Выпуск D-052:** `0.0.6`, ревизия `7a3124692949150a356105666d26bb2f2e22433c`, 153520208 байт, sha256 `1ffff315dff207584ed967f9d13c651d878a23f76abfa603ff42e822a4d802b4`, Marketplace `win32-x64 validated`, 2026-11-11 06:54 UTC. На VDI не проверено.
