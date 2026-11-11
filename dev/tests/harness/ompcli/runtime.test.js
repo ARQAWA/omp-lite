@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { curlTransport, ensureRuntime, proxiedRequest, runtimeId, verifyRuntime, zipEntry } from "../../../../src/modules/ompcli/index.js";
+import { curlTransport, ensureRuntime, pickProxy, proxiedRequest, runtimeId, verifyRuntime, zipEntry } from "../../../../src/modules/ompcli/index.js";
 
 const dirs = [];
 
@@ -114,6 +114,10 @@ test("a cached runtime is verified by content, not by the ready marker", async (
 });
 
 test("proxied assets stream to a file instead of memory", async () => {
+	expect(pickProxy(" http://set:1 ", { HTTPS_PROXY: "http://env:2" })).toBe("http://set:1");
+	expect(pickProxy("", { https_proxy: "http://env:2", HTTP_PROXY: "http://env:3" })).toBe("http://env:2");
+	expect(pickProxy(undefined, { Http_Proxy: "http://env:3" })).toBe("http://env:3");
+	expect(pickProxy("", {})).toBe("");
 	const seen = [];
 	const download = curlTransport("http://user:secret@proxy.local:8080", {
 		run: async (file, args, input, options) => {

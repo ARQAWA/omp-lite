@@ -207,7 +207,13 @@ async function runProcessBuffered(file, args, input, options = {}) {
 	});
 }
 
-// Node's fetch ignores `http.proxy`; curl follows it, including CONNECT tunnels.
+// The `http.proxy` setting wins; an empty one falls back to the proxy VS Code was started with.
+function pickProxy(setting, env) {
+	const value = typeof setting === "string" ? setting.trim() : "";
+	return value || envGet(env, "HTTPS_PROXY") || envGet(env, "HTTP_PROXY") || envGet(env, "ALL_PROXY") || "";
+}
+
+// Node's fetch ignores both `http.proxy` and the proxy environment; curl follows them, including CONNECT tunnels.
 // curl reads the proxy from the environment, so credentials never reach argv.
 function curlEnv(proxy) {
 	const env = { ...process.env };
@@ -1191,7 +1197,7 @@ function createCli(host) {
 	function transport() {
 		if (host.request) return { request: host.request };
 		const { proxy, proxyStrictSSL } = httpSettings();
-		const value = typeof proxy === "string" ? proxy.trim() : "";
+		const value = pickProxy(proxy, host.env);
 		if (!value) return { request: fetch };
 		const options = { insecure: proxyStrictSSL === false };
 		return { request: proxiedRequest(value, options), curl: curlTransport(value, options) };
@@ -1419,6 +1425,7 @@ module.exports = {
 	createCli,
 	createEnv,
 	curlTransport,
+	pickProxy,
 	createMemory,
 	createUpdater,
 	ensureRuntime,

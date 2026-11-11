@@ -922,3 +922,15 @@ URL и архивы остаются у родных `grep` и `read`.
 **Граница:** пин `omp.exe` для Windows сменён по контрольной сумме релиза; запуск на Windows VDI проверяет владелец.
 
 **Носители правила:** `INSTALL.md`, `src/modules/ompcli/runtime.json`, `src/modules/base-tools/base-tools.reference.json`, `dev/tests/harness/base-tools/native-*.json`.
+
+## D-048 — ompcli берёт прокси из окружения
+
+**Решение:** загрузка комплекта и `Update` берут прокси из `http.proxy`; если настройка пуста — из окружения VS Code: `HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY`. С прокси загрузка идёт через `curl.exe`.
+
+**Основание:** проба владельца на VDI 11.11: `ompcli 0.0.3` падает с `fetch failed` на загрузке модели. На VDI `http.proxy` не задан, прокси приходит переменными окружения из скрипта запуска VS Code. PCLI там работает: он копирует окружение VS Code.
+
+**Документация OMP:** `omp://environment-variables.md`.
+
+**Граница:** на VDI не проверено; проверяет владелец новой версией расширения.
+
+**Носители правила:** `src/modules/ompcli/index.js` (`pickProxy`), `dev/tests/harness/ompcli/runtime.test.js`.

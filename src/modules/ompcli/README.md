@@ -41,8 +41,9 @@
 файлов. Повторный запуск сверяет размеры и хеши комплекта, поэтому удалённый файл
 скачивается заново.
 
-Сеть нужна к GitHub, Hugging Face и провайдерам. Если задан `http.proxy`, загрузка
-идёт через `curl.exe` с этим прокси: `fetch` в extension host прокси не читает.
+Сеть нужна к GitHub, Hugging Face и провайдерам. Прокси берётся из `http.proxy`; настройка
+пуста — из окружения VS Code: `HTTPS_PROXY`, затем `HTTP_PROXY`, затем `ALL_PROXY`. С прокси загрузка
+идёт через `curl.exe`: `fetch` в extension host прокси не читает.
 Явный `http.proxyStrictSSL: false` добавляет `--insecure`.
 
 Харнес ставится по `install.manifest.json`: файлы `~/.omp/agent` и слияние `config.yml`.
