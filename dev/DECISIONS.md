@@ -834,6 +834,8 @@ URL и архивы остаются у родных `grep` и `read`.
 
 **Носители правила:** `src/modules/base-tools/`, `dev/tests/harness/base-tools/`, `install.manifest.json`.
 
+**Уточнение 11.11:** хвост `scout` у `glob` и `grep` и две формы строки `bash` про `eval` принимаются оба. Эталон дочерней сессии снят с настоящего сабагента (10 тулов), не с возобновлённой сессии.
+
 ## D-043 — строка «файл целый»
 
 **Решение:** хук `tool_result` в [base-tools](../src/modules/base-tools/index.js) дописывает `[whole file: N lines]` только для целого обычного текстового файла.

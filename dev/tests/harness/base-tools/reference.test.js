@@ -6,26 +6,39 @@ import reference from "../../../../src/modules/base-tools/base-tools.reference.j
 import texts from "../../../../src/modules/base-tools/base-tools.texts.json";
 
 const natives = JSON.parse(readFileSync(join(import.meta.dir, "native-tools.json"), "utf8"));
-const live = JSON.parse(readFileSync(join(import.meta.dir, "native-live.json"), "utf8"));
+const mainTask = JSON.parse(readFileSync(join(import.meta.dir, "native-main-task.json"), "utf8")).tools;
+const mainNoTask = JSON.parse(readFileSync(join(import.meta.dir, "native-main-notask.json"), "utf8")).tools;
+const realChild = JSON.parse(readFileSync(join(import.meta.dir, "native-child.json"), "utf8")).tools;
 const schema = name => structuredClone(natives.find(tool => tool.name === name).parameters);
-const mainPayload = () => ({ tools: structuredClone(live.main) });
-const childPayload = () => ({ tools: structuredClone(live.child) });
+const flat = list => list.map(tool => tool.function ?? tool);
+const mainPayload = () => ({ tools: flat(structuredClone(mainTask)) });
+const childPayload = () => ({ tools: flat(structuredClone(realChild)) });
 
 test("native main and child tools equal the reference", () => {
 	expect(checkReference(mainPayload(), reference.settings)).toBeUndefined();
+	expect(checkReference({ tools: flat(structuredClone(mainNoTask)) }, reference.settings)).toBeUndefined();
 	expect(checkReference(childPayload(), reference.settings, "child")).toBeUndefined();
+});
+
+test("the scout suffix is accepted", () => {
+	const payload = { tools: flat(structuredClone(mainNoTask)) };
+	for (const name of ["glob", "grep"]) {
+		const tool = payload.tools.find(tool => tool.name === name);
+		expect(tool.description.endsWith(reference.suffixes[name])).toBe(true);
+	}
+	expect(checkReference(payload, reference.settings)).toBeUndefined();
 });
 
 test("both edit schemas are accepted", () => {
 	const payload = mainPayload();
-	const edit = payload.tools.find(tool => tool.name === "apply_patch");
+	const edit = payload.tools.find(tool => ["edit", "apply_patch"].includes(tool.name));
 	Object.assign(edit, { type: "function", name: "edit", format: undefined, parameters: schema("edit") });
 	expect(checkReference(payload, reference.settings)).toBeUndefined();
 });
 
 test("a child without edit is not a mismatch", () => {
 	const payload = childPayload();
-	payload.tools = payload.tools.filter(tool => tool.name !== "apply_patch");
+	payload.tools = payload.tools.filter(tool => !["edit", "apply_patch"].includes(tool.name));
 	expect(checkReference(payload, reference.settings, "child")).toBeUndefined();
 });
 
@@ -63,6 +76,12 @@ test("only the first mismatch in a session warns", () => {
 test("our text is still applied on a mismatch", () => {
 	const payload = mainPayload();
 	payload.tools.find(tool => tool.name === "grep").description = "native changed";
+	payload.tools.push({
+		type: "custom",
+		name: "apply_patch",
+		description: reference.main.edit.description,
+		format: Object.fromEntries(reference.main.edit.fields.map(field => [field, ""])),
+	});
 	expect(checkReference(payload, reference.settings)).toContain("grep");
 	rewritePayload(payload, true);
 	expect(payload.tools.find(tool => tool.name === "grep").description).toBe(texts.grep.withFiles);

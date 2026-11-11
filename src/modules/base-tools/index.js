@@ -446,6 +446,11 @@ function detectFiles(payload) {
 
 const fieldsOf = tool =>
 	Object.keys(tool?.parameters?.properties ?? tool?.input_schema?.properties ?? tool?.inputSchema?.properties ?? tool?.format ?? {}).sort();
+const nativeText = text =>
+	text.replace(
+		"Scripts/heredocs/`$(…)`/complex pipelines → `eval`.",
+		"Scripts/heredocs/`$(…)`/complex flow → dedicated tool or checked-in script.",
+	);
 
 /** Returns the first native tool or setting that moved away from the reference. */
 export function checkReference(payload, settings, kind = "main", expected = reference) {
@@ -456,7 +461,10 @@ export function checkReference(payload, settings, kind = "main", expected = refe
 			if (kind === "child") continue;
 			return `base-tools: native ${name} is missing`;
 		}
-		if (tool.description !== want.description) return `base-tools: native ${name} changed description`;
+		const suffix = expected.suffixes?.[name] ?? "";
+		if (nativeText(tool.description) !== nativeText(want.description) && nativeText(tool.description) !== nativeText(`${want.description}${suffix}`)) {
+			return `base-tools: native ${name} changed description`;
+		}
 		const fields = fieldsOf(tool);
 		const aliases = name === "edit" ? [want.fields, ["i", "input"]] : [want.fields];
 		if (!aliases.some(alias => alias.join("\n") === fields.join("\n"))) return `base-tools: native ${name} changed fields`;

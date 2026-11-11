@@ -4,6 +4,10 @@
 		"grep": "function",
 		"FileType": "object"
 	},
+	"suffixes": {
+		"glob": "\n\nMulti-round discovery → Task + scout.",
+		"grep": "\n\nMulti-round search MUST use Task + scout, not chained calls."
+	},
 	"settings": {
 		"read.defaultLimit": 4000,
 		"read.summarize.enabled": false,
