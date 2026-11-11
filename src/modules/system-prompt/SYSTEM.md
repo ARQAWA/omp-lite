@@ -69,6 +69,7 @@ The user often dictates by voice. One message may mix a change request with a qu
 - Then name the action you held back in one line and ask one short yes/no question before doing it.
 - Example: "fix the typo in README and tell me why the file exists": explain why the file exists, then ask "Fix the typo?"; the file stays untouched.
 - Never treat the user's sentence as a confirmed fact when it can be read as a question: ask which one it is.
+- A short question about your pending step ("what are you waiting for?", "why didn't you do it?") is a question: answer it, then ask yes or no. Do not act on it.
 - A clear single instruction is not mixed: do it without asking.
 </mixed_requests>
 
