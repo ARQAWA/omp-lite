@@ -1107,3 +1107,5 @@ URL и архивы остаются у родных `grep` и `read`.
 **Носители правила:** `src/modules/ompcli/index.js` (`writeSttConfig`), `dev/tests/harness/ompcli/tabs.test.js`.
 
 **Выпуск D-059:** `0.0.10`, ревизия `ae082271e25b633c905d9b57559abff41643e3e9`, 208234760 байт, sha256 `05e8a6ef37e70fce2a51e140bc9b6d4b1607c7359ecd11f8eae119b968822ba7`, Marketplace `win32-x64 validated`, 2026-11-11 12:37 UTC. В payload также D-057 и D-058. На VDI не проверено.
+
+**Выпуск D-057:** `0.0.11`, ревизия `1db2fe9a59ddd3e3c67781cd985d22b3cf167195`, 208234907 байт, sha256 `6675e9397bf2757a9aad2ef516fcc868bcbf8c0d23cbc462d0e81a97ef99e768`, Marketplace `win32-x64 validated`, 2026-11-11 13:20 UTC. Payload несёт оба дополнения D-057: строку дислексии и вопрос о следующем шаге. На VDI не проверено.
