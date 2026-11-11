@@ -7,6 +7,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { constants } from "node:fs";
 import { access, lstat, stat } from "node:fs/promises";
 import descriptions from "./base-tools.descriptions.json";
+import toolTexts from "./base-tools.texts.json";
 
 export const TIMEOUT_MS = 30000;
 export const SPILL_RESERVE_KB = 5;
@@ -403,6 +404,48 @@ export function install(pi, options = {}) {
 		execute: (toolCallId, params, signal, onUpdate, ctx) =>
 			(params.pattern === undefined ? runMap : runSearch)(params, ctx, { signal, pi, ...options }),
 	});
+	pi.on?.("before_provider_request", event => {
+		if (typeof event !== "object" || event === null || !("payload" in event)) return event;
+		rewritePayload(event.payload);
+		return event.payload;
+	});
+}
+
+const TEXT_NAMES = new Set(["grep", "glob", "read", "bash", "edit", "write"]);
+const plainName = name => (typeof name === "string" ? name.replace(/^_/, "") : "");
+
+const toolLists = payload => [
+	...(Array.isArray(payload) ? [payload] : []),
+	...(Array.isArray(payload?.tools) ? [payload.tools] : []),
+	...(Array.isArray(payload?.functions) ? [payload.functions] : []),
+];
+
+function detectFiles(payload) {
+	return toolLists(payload).flat().some(tool => plainName(tool?.function?.name ?? tool?.name) === "files");
+}
+
+function rewriteRecord(record, hasFiles) {
+	const name = plainName(record?.name);
+	if (!TEXT_NAMES.has(name)) return;
+	const text = toolTexts[name];
+	record.description = typeof text === "string" ? text : hasFiles ? text.withFiles : text.withoutFiles;
+}
+
+/** Rewrites the six native tool descriptions in one provider payload. */
+export function rewritePayload(payload, hasFiles = detectFiles(payload)) {
+	for (const list of toolLists(payload)) for (const node of list) {
+		if (typeof node !== "object" || node === null) continue;
+		const fn = node.function;
+		if (typeof fn === "object" && fn !== null) rewriteRecord(fn, hasFiles);
+		if (
+			typeof node.name === "string" &&
+			typeof node.description === "string" &&
+			("parameters" in node || "input_schema" in node || "inputSchema" in node || "strict" in node || node.type === "function")
+		) {
+			rewriteRecord(node, hasFiles);
+		}
+	}
+	return payload;
 }
 
 export default function baseTools(pi) {

@@ -6,6 +6,8 @@
 
 **Настройки:** `base-tools.yml` в `config` манифеста с режимом `merge`: `edit.mode: apply_patch`, `grep.contextBefore: 3`, `grep.contextAfter: 3`, `tools.artifactSpillThreshold: 100`.
 
+**Тексты шести тулов:** хук `before_provider_request` заменяет описания `grep`, `glob`, `read`, `bash`, `edit`, `write` на тексты из `base-tools.texts.json`. Схемы не трогаются. Имена с префиксом `_` понимаются. Строки про тул `files` ставятся только в запрос, где `files` есть; иначе `grep` и `glob` описывают свои потолки. Повторный проход ничего не меняет. Правка текста: изменить JSON и перезапустить сессию.
+
 **Поведение `files` без `pattern`:**
 - обходит всю папку `path` по маске `glob`;
 - первая строка: `total N files`;

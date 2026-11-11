@@ -795,3 +795,24 @@ URL и архивы остаются у родных `grep` и `read`.
 Проверка на Windows VDI остаётся за владельцем.
 
 **Носители правила:** `src/modules/base-tools/`, `runtime-config/config.yml`, `system-prompt/SYSTEM.md`, `install.manifest.json`, `INSTALL.md`.
+
+## D-041 — тексты шести родных тулов
+
+**Решение:** хук `before_provider_request` в [base-tools](../src/modules/base-tools/index.js) заменяет описания `grep`, `glob`, `read`, `bash`, `edit`, `write` на тексты из `base-tools.texts.json`.
+Схемы не меняются.
+Замена идёт по имени тула, понимает префикс `_` и плоскую и вложенную формы.
+Повторный проход идемпотентен.
+Строки про `files` выбираются по наличию `files` в запросе.
+У `edit` грамматика патча взята из родного текста дословно.
+В текстах нет слов `scout`, `subagent`, `Task +`.
+
+**Основание:** поручение владельца от 11.11: выполнить план `base-tools`, задача T4.
+План: `omp-lite-audit/cursor-hints/PLAN.md`.
+Проект: `BLUEPRINT.md` версия 3, раздел 5.
+
+**Документация OMP:** `omp://extensions.md`, `omp://tools/grep.md`, `omp://tools/glob.md`, `omp://tools/read.md`, `omp://tools/bash.md`, `omp://tools/edit.md`, `omp://tools/write.md`.
+
+**Границы:** тексты английские; числа сверяются с документацией OMP и живой пробой.
+Схемы тулов остаются родными.
+
+**Носители правила:** `src/modules/base-tools/`, `dev/tests/harness/base-tools/`, `install.manifest.json`.
