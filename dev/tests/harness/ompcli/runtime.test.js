@@ -1,8 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { curlTransport, ensureRuntime, pickProxy, proxiedRequest, runtimeId, verifyRuntime, zipEntry } from "../../../../src/modules/ompcli/index.js";
+import { curlTransport, ensureRuntime, pickProxy, proxiedRequest, sha256 } from "../../../../src/modules/ompcli/index.js";
 
 const dirs = [];
 
@@ -12,66 +12,77 @@ function temporary() {
 	return dir;
 }
 
-// Stored (uncompressed) zip: the reader must locate the entry by its central directory.
-function zipOf(entries) {
-	const locals = [];
-	const central = [];
-	let offset = 0;
-	for (const [name, content] of Object.entries(entries)) {
-		const data = Buffer.from(content);
-		const nameBytes = Buffer.from(name);
-		const local = Buffer.alloc(30);
-		local.writeUInt32LE(0x04034b50, 0);
-		local.writeUInt16LE(20, 4);
-		local.writeUInt32LE(data.length, 18);
-		local.writeUInt32LE(data.length, 22);
-		local.writeUInt16LE(nameBytes.length, 26);
-		locals.push(local, nameBytes, data);
-		const entry = Buffer.alloc(46);
-		entry.writeUInt32LE(0x02014b50, 0);
-		entry.writeUInt16LE(20, 4);
-		entry.writeUInt16LE(20, 6);
-		entry.writeUInt32LE(data.length, 20);
-		entry.writeUInt32LE(data.length, 24);
-		entry.writeUInt16LE(nameBytes.length, 28);
-		entry.writeUInt32LE(offset, 42);
-		central.push(Buffer.concat([entry, nameBytes]));
-		offset += 30 + nameBytes.length + data.length;
-	}
-	const directory = Buffer.concat(central);
-	const end = Buffer.alloc(22);
-	end.writeUInt32LE(0x06054b50, 0);
-	end.writeUInt16LE(Object.keys(entries).length, 8);
-	end.writeUInt16LE(Object.keys(entries).length, 10);
-	end.writeUInt32LE(directory.length, 12);
-	end.writeUInt32LE(offset, 16);
-	return Buffer.concat([...locals, directory, end]);
-}
-
 afterEach(() => {
 	for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-test("the pinned entry is read out of a zip archive", () => {
-	const archive = zipOf({ "bun-windows-x64-baseline/bun.exe": "binary", "other.txt": "x" });
-	expect(zipEntry(archive, "bun-windows-x64-baseline/bun.exe").toString()).toBe("binary");
-	expect(() => zipEntry(archive, "missing.exe")).toThrow("missing.exe");
+const assets = {
+	omp: { file: "omp.exe", size: 3 },
+	bun: { file: "bun.exe", unpackedSize: 3 },
+	model: { file: "model.gguf", size: 5, sha256: sha256("model"), url: "https://example.invalid/model.gguf" },
+};
+
+function installed() {
+	const extensionPath = temporary();
+	mkdirSync(join(extensionPath, "runtime", "llama"), { recursive: true });
+	for (const name of ["omp.exe", "bun.exe", "llama/llama-server.exe"]) writeFileSync(join(extensionPath, "runtime", name), "exe");
+	return extensionPath;
+}
+
+test("programs run from the extension directory and only the model is downloaded", async () => {
+	const extensionPath = installed();
+	const storageDir = temporary();
+	const urls = [];
+	const request = async url => (urls.push(url), new Response("model"));
+	const paths = await ensureRuntime({ extensionPath, storageDir, request, assets });
+	expect(paths.omp).toBe(join(extensionPath, "runtime", "omp.exe"));
+	expect(paths.bun).toBe(join(extensionPath, "runtime", "bun.exe"));
+	expect(paths.llama).toBe(join(extensionPath, "runtime", "llama"));
+	expect(paths.model).toBe(join(storageDir, "model", "model.gguf"));
+	expect(readFileSync(paths.model, "utf8")).toBe("model");
+	expect(urls).toEqual(["https://example.invalid/model.gguf"]);
+	await ensureRuntime({ extensionPath, storageDir, request, assets });
+	expect(urls.length).toBe(1);
+	writeFileSync(paths.model, "wrong");
+	await ensureRuntime({ extensionPath, storageDir, request, assets });
+	expect(readFileSync(paths.model, "utf8")).toBe("model");
+	expect(urls.length).toBe(2);
 });
 
-test("a ready marker does not hide a missing runtime file", async () => {
-	const extensionPath = temporary();
+test("a missing or cut program stops the tab and names the file", async () => {
+	const extensionPath = installed();
+	writeFileSync(join(extensionPath, "runtime", "bun.exe"), "cut!");
+	await expect(ensureRuntime({ extensionPath, storageDir: temporary(), request: async () => new Response("model"), assets })).rejects.toThrow("bun.exe");
+	rmSync(join(extensionPath, "runtime", "omp.exe"));
+	await expect(ensureRuntime({ extensionPath, storageDir: temporary(), request: async () => new Response("model"), assets })).rejects.toThrow("omp.exe");
+});
+
+test("the old storage runtime is removed and its model is kept without a download", async () => {
+	const extensionPath = installed();
 	const storageDir = temporary();
-	const dir = join(storageDir, "runtime", runtimeId());
-	mkdirSync(join(dir, "llama"), { recursive: true });
-	writeFileSync(join(dir, ".ready"), runtimeId() + "\n");
-	mkdirSync(join(extensionPath, "runtime", "llama"), { recursive: true });
-	let requests = 0;
-	const request = async () => {
-		requests++;
-		return new Response("wrong bytes");
-	};
-	await expect(ensureRuntime({ extensionPath, storageDir, request })).rejects.toThrow("Checksum mismatch");
-	expect(requests).toBe(1);
+	const old = join(storageDir, "runtime", "deadbeef");
+	mkdirSync(join(old, "llama"), { recursive: true });
+	for (const name of ["omp.exe", "bun.exe", "llama/llama-server.exe"]) writeFileSync(join(old, name), "old");
+	writeFileSync(join(old, "model.gguf"), "model");
+	const request = async () => { throw new Error("no network expected"); };
+	const paths = await ensureRuntime({ extensionPath, storageDir, request, assets });
+	expect(readFileSync(paths.model, "utf8")).toBe("model");
+	expect(existsSync(join(storageDir, "runtime"))).toBe(false);
+});
+
+test("Update and a tab starting together both get the old model", async () => {
+	const extensionPath = installed();
+	const storageDir = temporary();
+	mkdirSync(join(storageDir, "runtime", "deadbeef"), { recursive: true });
+	writeFileSync(join(storageDir, "runtime", "deadbeef", "model.gguf"), "model");
+	const request = async () => new Response("model");
+	const both = await Promise.all([ensureRuntime({ extensionPath, storageDir, request, assets }), ensureRuntime({ extensionPath, storageDir, request, assets })]);
+	for (const paths of both) expect(readFileSync(paths.model, "utf8")).toBe("model");
+});
+
+test("a failed model download names the model", async () => {
+	const request = async () => new Response("", { status: 502 });
+	await expect(ensureRuntime({ extensionPath: installed(), storageDir: temporary(), request, assets })).rejects.toThrow("could not download model.gguf");
 });
 
 test("a configured proxy is used for downloads", async () => {
@@ -103,14 +114,6 @@ test("strict TLS stays on unless the user turned it off", async () => {
 	});
 	await request("https://example.invalid/file");
 	expect(seen[0]).toContain("--insecure");
-});
-
-test("a cached runtime is verified by content, not by the ready marker", async () => {
-	const dir = temporary();
-	expect(await verifyRuntime(dir)).toBe(false);
-	mkdirSync(join(dir, "llama"), { recursive: true });
-	writeFileSync(join(dir, "omp.exe"), "not the pinned binary");
-	expect(await verifyRuntime(dir)).toBe(false);
 });
 
 test("proxied assets stream to a file instead of memory", async () => {

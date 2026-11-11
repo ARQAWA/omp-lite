@@ -93,6 +93,16 @@ async function stageRuntime() {
 	const vc = path.join(cache, "vc_redist.x64.exe");
 	await fetchRuntime(llama, resources.llama);
 	await fetchRuntime(vc, resources.vc);
+	// Programs run from the extension directory, so they ship inside the VSIX.
+	const omp = path.join(cache, "omp.exe");
+	await fetchRuntime(omp, resources.assets.omp);
+	await fsp.copyFile(omp, path.join(dist, "runtime", resources.assets.omp.file));
+	const bunZip = path.join(cache, "bun.zip");
+	await fetchRuntime(bunZip, resources.assets.bun);
+	run("tar", ["-xf", bunZip, "-C", temporary, resources.assets.bun.entry]);
+	const bun = await fsp.readFile(path.join(temporary, resources.assets.bun.entry));
+	if (bun.length !== resources.assets.bun.unpackedSize || shasum(bun) !== resources.assets.bun.unpacked) throw new Error("Bun checksum mismatch");
+	await fsp.writeFile(path.join(dist, "runtime", resources.assets.bun.file), bun);
 	const names = Object.keys(resources.llama.files);
 	run("tar", ["-xf", llama, "-C", temporary, ...names]);
 	for (const [name, expected] of Object.entries(resources.llama.files)) {

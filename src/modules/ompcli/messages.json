@@ -13,6 +13,8 @@
 	"preparing": "OMP CLI: preparing {name} ({size} MB)",
 	"download": "OMP download failed: HTTP {status}",
 	"checksum": "Checksum mismatch: {file}",
+	"bundle": "OMP CLI is damaged: {file}. Reinstall the extension.",
+	"asset": "OMP CLI could not download {name}: {reason}",
 	"extract": "OMP extraction failed: {reason}",
 	"revision": "OMP archive has no revision.",
 	"path": "Unsafe path: {value}",

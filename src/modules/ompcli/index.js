@@ -10,9 +10,8 @@ const net = require("node:net");
 const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
-const { Readable, Transform } = require("node:stream");
+const { Readable } = require("node:stream");
 const { pipeline } = require("node:stream/promises");
-const { inflateRawSync } = require("node:zlib");
 const messages = require("./messages.json");
 const runtime = require("./runtime.json");
 
@@ -71,14 +70,6 @@ function sha256(data) {
 	return createHash("sha256").update(data).digest("hex");
 }
 
-function canonicalJson(value) {
-	if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
-	if (value && typeof value === "object") {
-		return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + canonicalJson(value[key])).join(",") + "}";
-	}
-	return JSON.stringify(value);
-}
-
 async function sha256File(file) {
 	const hash = createHash("sha256");
 	for await (const chunk of createReadStream(file)) hash.update(chunk);
@@ -131,55 +122,17 @@ function envSet(env, name, value) {
 	env[name] = value;
 }
 
-// Zip entry reader: the Bun release ships a zip and the extension host has no unzip API.
-function zipEntry(buffer, name) {
-	let end = -1;
-	for (let offset = buffer.length - 22; offset >= 0 && offset > buffer.length - 65558; offset--) {
-		if (buffer.readUInt32LE(offset) === 0x06054b50) {
-			end = offset;
-			break;
-		}
-	}
-	if (end < 0) throw new Error(format(messages.extract, { reason: "no end record" }));
-	const count = buffer.readUInt16LE(end + 10);
-	let offset = buffer.readUInt32LE(end + 16);
-	for (let index = 0; index < count; index++) {
-		if (buffer.readUInt32LE(offset) !== 0x02014b50) throw new Error(format(messages.extract, { reason: "central directory" }));
-		const method = buffer.readUInt16LE(offset + 10);
-		const compressed = buffer.readUInt32LE(offset + 20);
-		const size = buffer.readUInt32LE(offset + 24);
-		const nameLength = buffer.readUInt16LE(offset + 28);
-		const extraLength = buffer.readUInt16LE(offset + 30);
-		const commentLength = buffer.readUInt16LE(offset + 32);
-		const local = buffer.readUInt32LE(offset + 42);
-		const entry = buffer.toString("utf8", offset + 46, offset + 46 + nameLength);
-		if (entry === name) {
-			if (buffer.readUInt32LE(local) !== 0x04034b50) throw new Error(format(messages.extract, { reason: "local header" }));
-			const start = local + 30 + buffer.readUInt16LE(local + 26) + buffer.readUInt16LE(local + 28);
-			const raw = buffer.subarray(start, start + compressed);
-			const data = method === 0 ? Buffer.from(raw) : inflateRawSync(raw);
-			if (data.length !== size) throw new Error(format(messages.extract, { reason: name }));
-			return data;
-		}
-		offset += 46 + nameLength + extraLength + commentLength;
-	}
-	throw new Error(format(messages.extract, { reason: name }));
-}
+// Pinned runtime files. Programs ship inside the extension and run from its directory;
+// only the model, which is data, is downloaded into the extension storage.
 
-// Pinned runtime files
-
-function runtimeId() {
-	return sha256(Buffer.from(canonicalJson(runtime)));
-}
-
-function runtimePaths(dir, id = runtimeId()) {
+function runtimePaths(extensionPath, storageDir, assets = runtime.assets) {
+	const dir = path.join(extensionPath, "runtime");
 	return {
-		id,
 		dir,
-		omp: path.join(dir, runtime.assets.omp.file),
-		bun: path.join(dir, runtime.assets.bun.file),
-		model: path.join(dir, runtime.assets.model.file),
+		omp: path.join(dir, assets.omp.file),
+		bun: path.join(dir, assets.bun.file),
 		llama: path.join(dir, "llama"),
+		model: path.join(storageDir, "model", assets.model.file),
 	};
 }
 
@@ -238,7 +191,7 @@ function proxiedRequest(proxy, { insecure = false, run = runProcessBuffered } = 
 function curlTransport(proxy, { insecure = false, run = runProcessBuffered } = {}) {
 	const env = curlEnv(proxy);
 	return async (url, file) => {
-		const args = ["--fail", "--silent", "--show-error", "--location", "--output", file];
+		const args = ["--fail", "--silent", "--show-error", "--location", "--retry", "3", "--output", file];
 		if (insecure) args.push("--insecure");
 		args.push(url);
 		await run(curlBinary(), args, undefined, { env });
@@ -276,61 +229,32 @@ async function fetchRuntime(file, asset, request = fetch, options = {}) {
 	}
 }
 
-async function fetchBytes(asset, request = fetch, options = {}) {
-	const temporary = path.join(os.tmpdir(), "ompcli-" + randomUUID() + ".tmp");
-	try {
-		await downloadAsset(asset.url, temporary, options.curl ? { curl: options.curl } : { request });
-		await verifyFile(temporary, asset);
-		return await fsp.readFile(temporary);
-	} finally {
-		await fsp.rm(temporary, { force: true });
+async function ensureRuntime({ extensionPath, storageDir, request = fetch, curl, progress = () => {}, assets = runtime.assets }) {
+	const paths = runtimePaths(extensionPath, storageDir, assets);
+	for (const [file, size] of [[paths.omp, assets.omp.size], [paths.bun, assets.bun.unpackedSize], [path.join(paths.llama, "llama-server.exe")]]) {
+		const actual = await sizeOf(file);
+		if (actual < 0 || (size !== undefined && actual !== size)) throw new Error(format(messages.bundle, { file: path.basename(file) }));
 	}
-}
-
-async function copyBundle(extensionPath, dir) {
-	const source = path.join(extensionPath, "runtime", "llama");
-	const target = path.join(dir, "llama");
-	const files = { ...runtime.llama.files, ...runtime.vc.files };
-	await fsp.mkdir(target, { recursive: true });
-	for (const [name, expected] of Object.entries(files)) {
-		assertRelative(name);
-		const data = await fsp.readFile(path.join(source, name)).catch(() => null);
-		if (!data || sha256(data) !== expected) throw new Error(format(messages.checksum, { file: name }));
-		await writeFileAtomic(path.join(target, name), data);
+	const asset = assets.model;
+	// Versions before 0.0.4 kept programs and the model under storage/runtime: the model moves, the rest goes.
+	const legacy = path.join(storageDir, "runtime");
+	await fsp.mkdir(path.dirname(paths.model), { recursive: true });
+	for (const name of (await sizeOf(paths.model)) === asset.size ? [] : await fsp.readdir(legacy).catch(() => [])) {
+		const old = path.join(legacy, name, asset.file);
+		// Update and a tab may run this together: the one that loses the file finds the model in place below.
+		try {
+			if ((await sizeOf(old)) !== asset.size || (await sha256File(old)) !== asset.sha256) continue;
+			await fsp.rename(old, paths.model);
+		} catch {}
+		break;
 	}
-}
-
-async function verifyRuntime(dir) {
-	const files = [
-		[path.join(dir, runtime.assets.omp.file), runtime.assets.omp.sha256],
-		[path.join(dir, runtime.assets.model.file), runtime.assets.model.sha256],
-		[path.join(dir, runtime.assets.bun.file), runtime.assets.bun.unpacked],
-		...Object.entries({ ...runtime.llama.files, ...runtime.vc.files }).map(([name, hash]) => [path.join(dir, "llama", name), hash]),
-	];
-	const hashes = await Promise.all(files.map(([file]) => sha256File(file).catch(() => null)));
-	return hashes.every((hash, index) => hash === files[index][1]);
-}
-
-async function ensureRuntime({ extensionPath, storageDir, request = fetch, curl, progress = () => {} }) {
-	const id = runtimeId();
-	const dir = path.join(storageDir, "runtime", id);
-	const ready = path.join(dir, ".ready");
-	if ((await readText(ready))?.trim() === id && (await verifyRuntime(dir))) return runtimePaths(dir, id);
-	await fsp.rm(ready, { force: true });
-	await fsp.mkdir(dir, { recursive: true });
-	for (const name of ["omp", "model"]) {
-		const asset = runtime.assets[name];
-		progress({ name, size: Math.round(asset.size / 1048576) });
-		await fetchRuntime(path.join(dir, asset.file), asset, request, { curl });
-	}
-	progress({ name: "bun", size: Math.round(runtime.assets.bun.size / 1048576) });
-	const archive = await fetchBytes(runtime.assets.bun, request, { curl });
-	const bun = zipEntry(archive, runtime.assets.bun.entry);
-	if (bun.length !== runtime.assets.bun.unpackedSize || sha256(bun) !== runtime.assets.bun.unpacked) throw new Error(format(messages.checksum, { file: runtime.assets.bun.file }));
-	await writeFileAtomic(path.join(dir, runtime.assets.bun.file), bun);
-	await copyBundle(extensionPath, dir);
-	await writeFileAtomic(ready, id + "\n");
-	return runtimePaths(dir, id);
+	await fsp.rm(legacy, { recursive: true, force: true }).catch(() => {});
+	if ((await sizeOf(paths.model)) !== asset.size) progress({ name: "model", size: Math.round(asset.size / 1048576) });
+	// The model is checked by content on every start: a damaged file is downloaded again.
+	await fetchRuntime(paths.model, asset, request, { curl }).catch(error => {
+		throw new Error(format(messages.asset, { name: asset.file, reason: error.message }));
+	});
+	return paths;
 }
 
 // Harness installation: explicit manifest, leaf config merge, journaled replacement.
@@ -747,6 +671,7 @@ function memoryArgs({ model, port }) {
 
 function createMemory(options = {}) {
 	const runtimeDir = options.runtimeDir;
+	const model = options.model;
 	const request = options.request ?? fetch;
 	const spawnProcess = options.spawnProcess ?? spawn;
 	const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
@@ -783,7 +708,7 @@ function createMemory(options = {}) {
 		const port = await acquire();
 		if (id !== generation) throw new Error(messages.memoryStopped);
 		const key = randomBytes(32).toString("hex");
-		const child = spawnProcess(path.join(runtimeDir, "llama", "llama-server.exe"), memoryArgs({ model: path.join(runtimeDir, runtime.assets.model.file), port }), {
+		const child = spawnProcess(path.join(runtimeDir, "llama", "llama-server.exe"), memoryArgs({ model, port }), {
 			cwd: path.join(runtimeDir, "llama"),
 			env: { ...process.env, LLAMA_API_KEY: key },
 			windowsHide: true,
@@ -1228,6 +1153,7 @@ function createCli(host) {
 		});
 		memory ??= (host.memory ?? createMemory)({
 			runtimeDir: paths.dir,
+			model: paths.model,
 			request: host.request ?? fetch,
 			onExit: () => {
 				memory = null;
@@ -1444,15 +1370,11 @@ module.exports = {
 	payloadRevision,
 	proxiedRequest,
 	resolveAgentDir,
-	runtimeId,
 	selectPayload,
 	sha256,
 	tabLeases,
-	verifyRuntime,
 	withInstallLease,
 	writeOverlay,
-	zipEntry,
-	canonicalJson,
 	messages,
 	runtime,
 };
