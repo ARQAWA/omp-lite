@@ -78,7 +78,7 @@ test("pins are read from the product resource named by the install manifest", ()
 	expect(resourcePath("runtime.json")).toBe(join(root, entry.from));
 	const values = pins();
 	expect(values.version).toBe("18.18.8");
-	for (const name of ["omp", "bun", "model"]) {
+	for (const name of ["omp", "model"]) {
 		for (const field of ["url", "sha256", "size", "file"]) expect(values.assets[name][field]).toBeDefined();
 	}
 	expect(statSync(resourcePath("runtime.json")).isFile()).toBe(true);

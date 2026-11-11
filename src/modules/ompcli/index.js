@@ -1,6 +1,7 @@
 "use strict";
 
-// OMP CLI for Windows VDI: VS Code extension plus the harness installer it runs under Bun.
+// OMP CLI for Windows VDI: a VS Code extension. Installing and updating the harness happen inside
+// the extension host; the only programs it starts are omp.exe and the memory server.
 // Documentation: omp://cli-reference.md, omp://config-usage.md, omp://mnemosyne-memory-backend.md.
 
 const { createHash, randomBytes, randomUUID } = require("node:crypto");
@@ -13,6 +14,7 @@ const { spawn } = require("node:child_process");
 const { EventEmitter } = require("node:events");
 const { Readable } = require("node:stream");
 const { pipeline } = require("node:stream/promises");
+const { gunzipSync } = require("node:zlib");
 const messages = require("./messages.json");
 const runtime = require("./runtime.json");
 
@@ -22,51 +24,6 @@ const MEMORY_DIM = 768;
 const PROXY_VARS = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "PI_PROXY", "NODE_USE_ENV_PROXY", "NODE_TLS_REJECT_UNAUTHORIZED"];
 const REVISION = /^[a-f0-9]{40}$/;
 const BACKUP_DIR = ".ompcli-backups";
-const EXTRACT_SCRIPT = String.raw`
-const { gunzipSync } = require("node:zlib");
-const fs = require("node:fs");
-const path = require("node:path");
-const [archive, output, revision] = process.argv.slice(2);
-try {
-const bytes = gunzipSync(fs.readFileSync(archive), { maxOutputLength: 67108864 });
-const files = await new Bun.Archive(bytes).files();
-const roots = new Set([...files.keys()].map((name) => name.split("/")[0]));
-if (roots.size !== 1) throw new Error("OMP archive has an unexpected root");
-const root = [...roots][0];
-const read = async (name) => Buffer.from(await files.get(name).arrayBuffer());
-const safe = (value) => typeof value === "string" && /^[^\\:\0]+$/.test(value) && value.split("/").every((part) => part && part !== "." && part !== "..");
-const write = (target, data) => { fs.mkdirSync(path.dirname(target), { recursive: true }); fs.writeFileSync(target, data); };
-const manifestName = root + "/install.manifest.json";
-if (!files.has(manifestName)) throw new Error("OMP archive has no install manifest");
-const manifest = JSON.parse(await files.get(manifestName).text());
-if (manifest.version !== 1 || !Array.isArray(manifest.files) || !Array.isArray(manifest.config)) throw new Error("OMP archive manifest is invalid");
-const configs = new Set(manifest.config.map((entry) => entry.from));
-const strip = (data) => {
-  const value = Bun.YAML.parse(data.toString("utf8")) ?? {};
-  for (const key of ["memory", "mnemopi"]) delete value[key];
-  return Buffer.from(Bun.YAML.stringify(value, null, 2) + "\n");
-};
-const seen = new Set();
-for (const entry of [...manifest.files, ...manifest.config]) {
-  if (!safe(entry.from) || seen.has(entry.from)) throw new Error("Unsafe OMP manifest path");
-  seen.add(entry.from);
-  if (!files.has(root + "/" + entry.from)) throw new Error("OMP archive is missing " + entry.from);
-  const data = await read(root + "/" + entry.from);
-  write(path.join(output, entry.from), configs.has(entry.from) ? strip(data) : data);
-}
-for (const entry of manifest.vscode?.files ?? []) {
-  if (!safe(entry.from) || !safe(entry.to)) throw new Error("Unsafe OMP bootstrap path");
-  if (!files.has(root + "/" + entry.from)) throw new Error("OMP archive is missing " + entry.from);
-  write(path.join(output, ".bootstrap", entry.to), await read(root + "/" + entry.from));
-}
-write(path.join(output, "install.manifest.json"), await read(manifestName));
-write(path.join(output, ".revision"), revision + "\n");
-} catch (error) {
-  fs.mkdirSync(output, { recursive: true });
-  fs.writeFileSync(path.join(output, ".error"), error.message);
-}
-`;
-
 function format(template, values = {}) {
 	return template.replace(/\{(\w+)\}/g, (all, key) => (key in values ? String(values[key]) : all));
 }
@@ -99,10 +56,28 @@ async function readText(file) {
 	}
 }
 
+// Windows antivirus may hold a fresh file for a moment, and the rename then fails as busy.
+// The action is repeated for about a second, the way npm does it.
+async function retryBusy(action, sleep = ms => new Promise(resolve => setTimeout(resolve, ms))) {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			return await action();
+		} catch (error) {
+			if (attempt === 20 || !["EPERM", "EACCES", "EBUSY"].includes(error.code)) throw error;
+			await sleep(50);
+		}
+	}
+}
+
 async function writeFileAtomic(target, data) {
 	const temp = target + "." + randomUUID() + ".tmp";
 	await fsp.writeFile(temp, data);
-	await fsp.rename(temp, target);
+	try {
+		await retryBusy(() => fsp.rename(temp, target));
+	} catch (error) {
+		await fsp.rm(temp, { force: true });
+		throw error;
+	}
 }
 
 function bashQuote(value) {
@@ -135,7 +110,6 @@ function runtimePaths(extensionPath, storageDir, assets = runtime.assets) {
 	return {
 		dir,
 		omp: path.join(dir, assets.omp.file),
-		bun: path.join(dir, assets.bun.file),
 		llama: path.join(dir, "llama"),
 		model: path.join(storageDir, "model", assets.model.file),
 	};
@@ -234,9 +208,34 @@ async function fetchRuntime(file, asset, request = fetch, options = {}) {
 	}
 }
 
-async function ensureRuntime({ extensionPath, storageDir, request = fetch, curl, progress = () => {}, assets = runtime.assets }) {
+// What earlier versions and crashed runs left in the extension storage. Files another window may
+// still be writing are removed only when they are a day old.
+async function sweep(storageDir, version, now = Date.now()) {
+	const drop = file => fsp.rm(file, { recursive: true, force: true }).catch(() => {});
+	const stale = async file => now - ((await fsp.stat(file).catch(() => null))?.mtimeMs ?? now) > 86400000;
+	const dead = name => !isAlive(Number(/^\D*(\d+)/.exec(name)[1]));
+	for (const name of await fsp.readdir(storageDir).catch(() => [])) {
+		const file = path.join(storageDir, name);
+		if (name === "extract.js" || /^chat-\d+\.sh$/.test(name)) await drop(file);
+		else if (/^shell-\d+\.sh$/.test(name) && dead(name)) await drop(file);
+		else if (/^install-.*\.json(\.out)?$|\.tar\.gz$|\.tmp$/.test(name) && (await stale(file))) await drop(file);
+	}
+	for (const name of await fsp.readdir(path.join(storageDir, "model")).catch(() => [])) {
+		if (name.endsWith(".tmp") && (await stale(path.join(storageDir, "model", name)))) await drop(path.join(storageDir, "model", name));
+	}
+	for (const name of await fsp.readdir(path.join(storageDir, "runs")).catch(() => [])) {
+		if (/^\d+-/.test(name) && dead(name)) await drop(path.join(storageDir, "runs", name));
+	}
+	// Payloads of other extension versions go once no window holds a tab.
+	if (version && !(await tabLeases(storageDir)).length) {
+		for (const name of await fsp.readdir(path.join(storageDir, "payload")).catch(() => [])) if (name !== version) await drop(path.join(storageDir, "payload", name));
+	}
+}
+
+async function ensureRuntime({ extensionPath, storageDir, version, request = fetch, curl, progress = () => {}, assets = runtime.assets }) {
 	const paths = runtimePaths(extensionPath, storageDir, assets);
-	for (const [file, size] of [[paths.omp, assets.omp.size], [paths.bun, assets.bun.unpackedSize], [path.join(paths.llama, "llama-server.exe")]]) {
+	await sweep(storageDir, version);
+	for (const [file, size] of [[paths.omp, assets.omp.size], [path.join(paths.llama, "llama-server.exe")]]) {
 		const actual = await sizeOf(file);
 		if (actual < 0 || (size !== undefined && actual !== size)) throw new Error(format(messages.bundle, { file: path.basename(file) }));
 	}
@@ -254,8 +253,6 @@ async function ensureRuntime({ extensionPath, storageDir, request = fetch, curl,
 		break;
 	}
 	await fsp.rm(legacy, { recursive: true, force: true }).catch(() => {});
-	// Until 0.0.5 the OMP tab started from a wrapper file of its own.
-	for (const name of await fsp.readdir(storageDir).catch(() => [])) if (/^chat-\d+\.sh$/.test(name)) await fsp.rm(path.join(storageDir, name), { force: true });
 	if ((await sizeOf(paths.model)) !== asset.size) progress({ name: "model", size: Math.round(asset.size / 1048576) });
 	// The model is checked by content on every start: a damaged file is downloaded again.
 	await fetchRuntime(paths.model, asset, request, { curl }).catch(error => {
@@ -264,7 +261,8 @@ async function ensureRuntime({ extensionPath, storageDir, request = fetch, curl,
 	return paths;
 }
 
-// Harness installation: explicit manifest, leaf config merge, journaled replacement.
+// Harness installation: explicit manifest, journaled replacement. The user's config.yml is never
+// written: the config fragments of the manifest reach OMP as overlay files (omp://config-usage.md).
 
 function assertRelative(value) {
 	if (typeof value !== "string" || !value) throw new Error(format(messages.path, { value: String(value) }));
@@ -282,25 +280,6 @@ function inside(root, relative) {
 	return target;
 }
 
-function yamlApi() {
-	const api = globalThis.Bun?.YAML;
-	if (!api) throw new Error(format(messages.manifest, { reason: "Bun YAML is required" }));
-	return api;
-}
-
-function mergeLeaf(base, patch, missingOnly) {
-	if (!patch || typeof patch !== "object" || Array.isArray(patch)) return patch;
-	const result = base && typeof base === "object" && !Array.isArray(base) ? { ...base } : {};
-	for (const [key, value] of Object.entries(patch)) {
-		if (value && typeof value === "object" && !Array.isArray(value)) {
-			result[key] = mergeLeaf(result[key], value, missingOnly);
-		} else if (!missingOnly || result[key] === undefined) {
-			result[key] = value;
-		}
-	}
-	return result;
-}
-
 async function readManifest(sourceDir) {
 	let manifest;
 	try {
@@ -314,15 +293,7 @@ async function readManifest(sourceDir) {
 	return manifest;
 }
 
-async function configTarget(agentDir) {
-	for (const name of ["config.yml", "config.yaml"]) {
-		const file = path.join(agentDir, name);
-		if (await readText(file) !== null) return file;
-	}
-	return path.join(agentDir, "config.yml");
-}
-
-async function planInstall(manifest, sourceDir, agentDir, configFile) {
+async function planInstall(manifest, sourceDir, agentDir) {
 	const writes = [];
 	const targets = new Set();
 	for (const entry of manifest.files) {
@@ -336,15 +307,19 @@ async function planInstall(manifest, sourceDir, agentDir, configFile) {
 		writes.push({ source, target });
 	}
 	for (const relative of manifest.remove ?? []) writes.push({ remove: true, target: inside(agentDir, relative) });
-	if (manifest.config.length) {
-		for (const entry of manifest.config) {
-			assertRelative(entry.from);
-			if (entry.to !== "config.yml" && entry.to !== "config.yaml") throw new Error(format(messages.manifest, { reason: entry.to }));
-			if (entry.mode !== "merge" && entry.mode !== "merge-missing") throw new Error(format(messages.manifest, { reason: String(entry.mode) }));
-		}
-		writes.push({ config: manifest.config, target: configFile });
-	}
+	await configOverlays(sourceDir, manifest);
 	return writes;
+}
+
+// Config fragments of a payload, in manifest order: later files override earlier ones in OMP.
+async function configOverlays(sourceDir, manifest) {
+	const files = [];
+	for (const entry of (manifest ?? (await readManifest(sourceDir))).config) {
+		const file = inside(sourceDir, entry.from);
+		if (!(await fsp.lstat(file).catch(() => null))?.isFile()) throw new Error(format(messages.manifest, { reason: String(entry.from) }));
+		files.push(file);
+	}
+	return files;
 }
 
 async function assertPlain(root, target) {
@@ -362,39 +337,10 @@ async function assertPlain(root, target) {
 	if (stat?.isSymbolicLink()) throw new Error(format(messages.path, { value: target }));
 }
 
-async function mergeConfig(manifest, sourceDir, target) {
-	const api = yamlApi();
-	let base = {};
-	try {
-		const text = await fsp.readFile(target, "utf8");
-		base = api.parse(text) ?? {};
-	} catch (error) {
-		if (error.code !== "ENOENT") throw new Error(format(messages.config, { path: target }));
-	}
-	if (!base || typeof base !== "object" || Array.isArray(base)) throw new Error(format(messages.config, { path: target }));
-	let next = base;
-	for (const entry of manifest.config) {
-		const source = inside(sourceDir, entry.from);
-		let patch;
-		try {
-			patch = api.parse(await fsp.readFile(source, "utf8"));
-		} catch {
-			throw new Error(format(messages.config, { path: source }));
-		}
-		if (!patch || typeof patch !== "object" || Array.isArray(patch)) throw new Error(format(messages.config, { path: source }));
-		next = mergeLeaf(next, patch, entry.mode === "merge-missing");
-	}
-	return api.stringify(next, null, 2);
-}
-
-async function pendingChanges(writes, manifest, sourceDir, pointer) {
+async function pendingChanges(writes, pointer) {
 	const files = [];
-	let config = null;
 	for (const write of writes) {
-		if (write.config) {
-			const text = await mergeConfig(manifest, sourceDir, write.target);
-			if ((await readText(write.target)) !== text) config = { target: write.target, text };
-		} else if (write.remove) {
+		if (write.remove) {
 			if ((await fsp.lstat(write.target).catch(() => null))?.isFile()) files.push(write);
 		} else {
 			const [next, current] = await Promise.all([fsp.readFile(write.source), fsp.readFile(write.target).catch(() => null)]);
@@ -402,7 +348,7 @@ async function pendingChanges(writes, manifest, sourceDir, pointer) {
 		}
 	}
 	if (pointer && (await readText(pointer.target)) !== pointer.text) files.push({ target: pointer.target, text: pointer.text });
-	return { files, config };
+	return { files };
 }
 
 function planPointer(pointer) {
@@ -481,10 +427,13 @@ async function assertNoLinks(base, target) {
 
 async function planHarness({ sourceDir, agentDir }) {
 	const root = path.resolve(agentDir);
-	const manifest = await readManifest(sourceDir);
-	const configFile = await configTarget(root);
-	const writes = await planInstall(manifest, sourceDir, root, configFile);
-	return pendingChanges(writes, manifest, sourceDir);
+	return pendingChanges(await planInstall(await readManifest(sourceDir), sourceDir, root));
+}
+
+// The installer of a tab and of Update. A window with live tabs may only confirm what is installed.
+async function installHarness(input) {
+	if (input.guard && (await planHarness(input)).files.length) throw new Error(messages.closeTabs);
+	return applyHarness(input);
 }
 
 async function applyHarness({ sourceDir, agentDir, revision, pointer, payloadRoot }) {
@@ -493,20 +442,16 @@ async function applyHarness({ sourceDir, agentDir, revision, pointer, payloadRoo
 	await fsp.mkdir(root, { recursive: true });
 	if ((await fsp.lstat(root)).isSymbolicLink()) throw new Error(format(messages.path, { value: root }));
 	await rollback(root, payloadRoot ?? path.dirname(pointer?.file ?? ""));
-	const manifest = await readManifest(sourceDir);
-	const configFile = await configTarget(root);
-	const writes = await planInstall(manifest, sourceDir, root, configFile);
+	const writes = await planInstall(await readManifest(sourceDir), sourceDir, root);
 	for (const write of writes) await assertPlain(root, write.target);
-	const pointerTarget = planPointer(pointer);
-	const changes = await pendingChanges(writes, manifest, sourceDir, pointerTarget);
-	if (!changes.files.length && !changes.config) return { revision, changed: false };
+	const changes = await pendingChanges(writes, planPointer(pointer));
+	if (!changes.files.length) return { revision, changed: false };
 	const base = path.join(root, BACKUP_DIR);
 	const id = randomUUID();
 	const backupDir = path.join(base, id);
 	await fsp.mkdir(backupDir, { recursive: true });
 	const entries = [];
-	const all = [...changes.files, ...(changes.config ? [{ target: changes.config.target }] : [])];
-	for (const [index, change] of all.entries()) {
+	for (const [index, change] of changes.files.entries()) {
 		const backup = path.join(backupDir, String(index));
 		let existed = true;
 		try {
@@ -535,7 +480,6 @@ async function applyHarness({ sourceDir, agentDir, revision, pointer, payloadRoo
 			else if ((await fsp.lstat(file.target).catch(() => null))?.isSymbolicLink()) throw new Error(format(messages.path, { value: file.target }));
 			await writeFileAtomic(file.target, file.text === undefined ? await fsp.readFile(file.source) : file.text);
 		}
-		if (changes.config) await writeFileAtomic(changes.config.target, changes.config.text);
 	} catch (error) {
 		await rollback(root, payloadRoot ?? path.dirname(pointer?.file ?? ""));
 		throw error;
@@ -733,7 +677,7 @@ function createMemory(options = {}) {
 			failure ??= error;
 			fail(error);
 		};
-		child.once("exit", code => die(new Error(format(messages.memoryExit, { code }))));
+		child.once("exit", (code, reason) => die(new Error(format(messages.memoryExit, { code, reason: reason ?? "" }).trim())));
 		child.once("error", die);
 		const stop = () => {
 			if (failure) throw failure;
@@ -825,6 +769,8 @@ function createMemory(options = {}) {
 }
 
 function overlayYaml({ port, key }) {
+	// No server: OMP runs without memory instead of calling an address nobody listens on.
+	if (!key) return 'memory:\n  backend: "off"\n';
 	return [
 		"memory:",
 		"  backend: mnemopi",
@@ -842,17 +788,18 @@ async function writeOverlay({ storageDir, pid = process.pid, id = randomUUID(), 
 	await fsp.mkdir(dir, { recursive: true });
 	const file = path.join(dir, "memory.yml");
 	await writeFileAtomic(file, overlayYaml({ port, key }));
-	return { dir, file, key };
+	return { dir, file, key: key ?? null };
 }
 
 // Child environment: proxy, bundled tools, overlay, embedding dimensions.
 
-function configFiles(overlay, base) {
-	const previous = envGet(base, "PI_CONFIG_FILES");
-	return [previous, overlay].filter(Boolean).join(";");
+// OMP reads the list left to right and the last file wins: the user's own overlays, then the
+// harness fragments, then the memory overlay of this window.
+function configFiles(overlay, base, layers = []) {
+	return [envGet(base, "PI_CONFIG_FILES"), ...layers, overlay].filter(Boolean).join(";");
 }
 
-function createEnv({ base = process.env, proxy, proxyStrictSSL, paths, overlay }) {
+function createEnv({ base = process.env, proxy, proxyStrictSSL, paths, overlay, layers }) {
 	const env = { ...base };
 	const value = typeof proxy === "string" ? proxy.trim() : "";
 	if (value) {
@@ -866,7 +813,7 @@ function createEnv({ base = process.env, proxy, proxyStrictSSL, paths, overlay }
 	env.MNEMOPI_EMBEDDING_DIM = String(MEMORY_DIM);
 	env.MNEMOPI_EMBEDDING_BATCH_SIZE = "1";
 	env.MNEMOPI_EMBEDDING_MODEL = MEMORY_MODEL;
-	const files = configFiles(overlay.file, base);
+	const files = configFiles(overlay.file, base, layers);
 	envSet(env, "PI_CONFIG_FILES", files);
 	envSet(env, "OMPCLI_CONFIG_FILES", files);
 	return env;
@@ -922,77 +869,86 @@ function bundledStarter(nodePty, bash) {
 		});
 }
 
-// One finished run: exit code and the tail of what the terminal showed, without colour codes.
-function runBundled(start, file, args, { timeoutMs = 180000, ...options } = {}) {
-	return new Promise((resolve, reject) => {
-		let output = "";
-		const done = code => {
-			clearTimeout(timer);
-			resolve({ code, output: output.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07/g, "").trim() });
-		};
-		let proc;
-		try {
-			proc = start(file, args, options);
-		} catch (error) {
-			reject(error);
-			return;
-		}
-		// A shell profile that waits for input must not hang the tab for ever.
-		const timer = setTimeout(() => {
-			output += "\n" + format(messages.silent, { seconds: Math.round(timeoutMs / 1000) });
-			try {
-				proc.kill();
-			} catch {}
-			done(-1);
-		}, timeoutMs);
-		proc.onData(data => {
-			output = (output + data).slice(-4000);
-		});
-		proc.onExit(({ exitCode }) => done(exitCode));
-	});
-}
-
-// A long-lived bundled program with the two things its owner needs: the exit event and kill.
+// A long-lived bundled program with what its owner needs: the exit event, kill, and the last lines
+// its hidden terminal showed, without colour codes: they say why a program did not start.
 function bundledChild(start) {
 	return (file, args, options) => {
 		const proc = start(file, args, options);
 		const child = new EventEmitter();
-		proc.onData(() => {});
-		proc.onExit(({ exitCode }) => child.emit("exit", exitCode));
+		let output = "";
+		proc.onData(data => {
+			output = (output + data).slice(-4000);
+		});
+		const tail = () => output.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07/g, "").split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(-3).join(" | ");
+		proc.onExit(({ exitCode }) => child.emit("exit", exitCode, tail()));
 		child.kill = () => proc.kill();
 		return child;
 	};
 }
 
-// The last lines of a hidden terminal: enough to see why a program did not start.
-const lastLine = output => output.split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(-3).join(" | ") || "no output";
-
-// The installer runs under bundled Bun. Its input and its answer travel as files: a terminal carries neither cleanly.
-async function spawnInstaller({ run, storageDir, bun, sourceDir, agentDir, revision, lease, guard, pointer, payloadRoot }) {
-	const file = path.join(storageDir, "install-" + randomUUID() + ".json");
-	await fsp.mkdir(storageDir, { recursive: true });
-	await fsp.writeFile(file, JSON.stringify({ sourceDir, agentDir, revision, lease, guard, pointer, payloadRoot }));
-	try {
-		const { output } = await run(bun, [__filename, "--install", file]);
-		const text = await readText(file + ".out");
-		if (text === null) throw new Error(format(messages.installFailed, { reason: lastLine(output) }));
-		const answer = JSON.parse(text);
-		if (answer.error !== undefined) throw new Error(answer.error);
-		return answer.value;
-	} finally {
-		await fsp.rm(file, { force: true });
-		await fsp.rm(file + ".out", { force: true });
-	}
-}
-
 // Update: pinned commit of this repository, payload selected once per run.
 
-async function extractArchive({ bun, archive, stage, revision, script, run }) {
-	await writeFileAtomic(script, EXTRACT_SCRIPT);
-	const { output } = await run(bun, [script, archive, stage, revision]);
-	const failure = await readText(path.join(stage, ".error"));
-	if (failure !== null) throw new Error(failure);
-	if ((await readText(path.join(stage, ".revision"))) === null) throw new Error(format(messages.extract, { reason: lastLine(output) }));
+// A tar stream as GitHub and git archive write it: ustar headers, pax records for long paths.
+function readTar(bytes) {
+	const files = new Map();
+	let long = null;
+	for (let offset = 0; offset + 512 <= bytes.length; ) {
+		const header = bytes.subarray(offset, offset + 512);
+		if (header.every(byte => byte === 0)) break;
+		const text = (start, length) => header.subarray(start, start + length).toString("utf8").replace(/\0.*$/s, "");
+		const size = parseInt(text(124, 12).trim() || "0", 8);
+		let sum = 0;
+		for (let index = 0; index < 512; index++) sum += index >= 148 && index < 156 ? 32 : header[index];
+		const data = bytes.subarray(offset + 512, offset + 512 + size);
+		if (sum !== parseInt(text(148, 8).trim(), 8) || data.length !== size) throw new Error("damaged archive");
+		const type = text(156, 1) || "0";
+		if (type === "x") long = /(?:^|\n)\d+ path=([^\n]*)\n/.exec(data.toString("utf8"))?.[1] ?? null;
+		else if (type === "L") long = data.toString("utf8").replace(/\0.*$/s, "");
+		else {
+			const prefix = text(345, 155);
+			if (type === "0") files.set(long ?? (prefix ? prefix + "/" : "") + text(0, 100), data);
+			if (type !== "g") long = null;
+		}
+		offset += 512 + Math.ceil(size / 512) * 512;
+	}
+	return files;
+}
+
+// Unpacks the files the manifest names, here in the extension host: no program is started for it.
+async function extractArchive({ archive, stage, revision }) {
+	const fail = reason => new Error(format(messages.extract, { reason }));
+	let files;
+	try {
+		files = readTar(gunzipSync(await fsp.readFile(archive), { maxOutputLength: 67108864 }));
+	} catch (error) {
+		throw fail(error.message);
+	}
+	const roots = new Set([...files.keys()].map(name => name.split("/")[0]));
+	if (roots.size !== 1) throw fail("unexpected root");
+	const root = [...roots][0] + "/";
+	let manifest;
+	try {
+		manifest = JSON.parse(files.get(root + "install.manifest.json").toString("utf8"));
+	} catch {
+		throw fail("no install manifest");
+	}
+	if (manifest.version !== 1 || !Array.isArray(manifest.files) || !Array.isArray(manifest.config)) throw fail("invalid manifest");
+	const write = async (relative, from) => {
+		const data = files.get(root + assertRelative(from));
+		if (!data) throw fail("missing " + from);
+		const target = inside(stage, relative);
+		await fsp.mkdir(path.dirname(target), { recursive: true });
+		await fsp.writeFile(target, data);
+	};
+	const seen = new Set();
+	for (const entry of [...manifest.files, ...manifest.config]) {
+		if (seen.has(entry.from)) throw fail("repeated " + entry.from);
+		seen.add(entry.from);
+		await write(entry.from, entry.from);
+	}
+	for (const entry of manifest.vscode?.files ?? []) await write(".bootstrap/" + assertRelative(entry.to), entry.from);
+	await write("install.manifest.json", "install.manifest.json");
+	await fsp.writeFile(path.join(stage, ".revision"), revision + "\n");
 	return revision;
 }
 
@@ -1001,9 +957,8 @@ function createUpdater(deps) {
 	const storageDir = deps.storageDir;
 	const version = deps.version;
 	const builtIn = deps.builtIn;
-	const script = path.join(storageDir, "extract.js");
-	const extract = deps.extract ?? (args => extractArchive({ ...args, bun: deps.bun, script, run: deps.run }));
-	const apply = deps.apply;
+	const extract = deps.extract ?? extractArchive;
+	const apply = deps.apply ?? installHarness;
 	const lease = deps.lease ?? withInstallLease;
 	const tabs = deps.tabs ?? tabLeases;
 	let pending = null;
@@ -1049,7 +1004,7 @@ function createUpdater(deps) {
 			if (!sourceDir) return null;
 			const live = await tabs(storageDir);
 			if (live.some(entry => entry.revision !== sha)) throw new Error(messages.closeTabs);
-			const result = await apply({ bun: deps.bun, sourceDir, agentDir: deps.agentDir, revision: sha, lease: false, guard: live.length > 0, payloadRoot: path.dirname(base) });
+			const result = await apply({ sourceDir, agentDir: deps.agentDir, revision: sha, guard: live.length > 0, payloadRoot: path.dirname(base) });
 			return { revision: sha, changed: result?.changed === true };
 		};
 		const done = await lease(deps.agentDir, present);
@@ -1072,11 +1027,9 @@ function createUpdater(deps) {
 				const revision = await payloadRevision(stage);
 				if ((await tabs(storageDir)).length) throw new Error(messages.closeTabs);
 				const result = await apply({
-					bun: deps.bun,
 					sourceDir: stage,
 					agentDir: deps.agentDir,
 					revision,
-					lease: false,
 					pointer: { file: path.join(base, "current.json"), text: JSON.stringify(revision) },
 					payloadRoot: path.dirname(base),
 				});
@@ -1211,11 +1164,6 @@ function createCli(host) {
 		return bundledStarter((host.loadPty ?? loadNodePty)(vscode), host.gitBash ?? GIT_BASH);
 	}
 
-	function installer() {
-		const start = starter();
-		return input => spawnInstaller({ ...input, storageDir: host.storageDir, run: (file, args, options) => runBundled(start, file, args, options) });
-	}
-
 	function transport() {
 		if (host.request) return { request: host.request };
 		const { proxy, proxyStrictSSL } = httpSettings();
@@ -1231,11 +1179,13 @@ function createCli(host) {
 		const paths = await (control.ensureRuntime ?? ensureRuntime)({
 			extensionPath: host.extensionPath,
 			storageDir: host.storageDir,
+			version: host.version,
 			request,
 			curl,
 			progress: value => write(format(messages.preparing, value)),
 		});
-		const install = control.install ?? installer();
+		const install = control.install ?? installHarness;
+		let layers;
 		const payloadRoot = path.join(host.storageDir, "payload");
 		const agentDir = resolveAgentDir(host.env, host.homedir);
 		await leased(async () => {
@@ -1245,7 +1195,8 @@ function createCli(host) {
 			const revision = await (control.payloadRevision ?? payloadRevision)(sourceDir);
 			const live = await (control.tabLeases ?? tabLeases)(host.storageDir);
 			if (live.some(entry => entry.revision !== revision)) throw new Error(messages.closeTabs);
-			await install({ bun: paths.bun, sourceDir, agentDir, revision, lease: false, guard: live.length > 0, payloadRoot });
+			await install({ sourceDir, agentDir, revision, guard: live.length > 0, payloadRoot });
+			layers = await (control.configOverlays ?? configOverlays)(sourceDir);
 			await openTabLease(host.storageDir, revision);
 		});
 		memory ??= (host.memory ?? createMemory)({
@@ -1258,12 +1209,21 @@ function createCli(host) {
 				void vscode.window.showErrorMessage(messages.memoryStopped);
 			},
 		});
-		const started = await memory.ensure();
+		// The memory server is one more program the VDI may refuse: OMP then opens without memory
+		// and the tab says why. The next tab tries the server again.
+		const started = await memory.ensure().catch(error => {
+			memory?.stop();
+			memory = null;
+			const text = format(messages.memoryOff, { reason: error.message });
+			write(text);
+			void vscode.window.showWarningMessage(text);
+			return {};
+		});
 		// A restarted server has a new key, even on the same port.
-		if (!overlay || overlay.key !== started.key) {
+		if (!overlay || overlay.key !== (started.key ?? null)) {
 			overlay = await writeOverlay({ storageDir: host.storageDir, port: started.port, key: started.key });
 		}
-		return { paths, overlay };
+		return { paths, overlay, layers };
 	}
 
 	async function runTab(name, kind) {
@@ -1285,7 +1245,7 @@ function createCli(host) {
 				return prepared;
 			},
 			build: prepared => {
-				const env = createEnv({ base: host.env, proxy: settings.proxy, proxyStrictSSL: settings.proxyStrictSSL, paths: prepared.paths, overlay: prepared.overlay });
+				const env = createEnv({ base: host.env, proxy: settings.proxy, proxyStrictSSL: settings.proxyStrictSSL, ...prepared });
 				for (const proxy of PROXY_VARS.filter(candidate => envGet(env, candidate))) envSet(env, "OMPCLI_" + proxy, envGet(env, proxy));
 				const inner = kind === "chat" ? chatCommand({ ...prepared, home: workDir() === host.homedir }) : "exec bash --rcfile " + bashQuote(slashes(rcFile)) + " -i";
 				return { command: bashCommand(host.gitBash ?? GIT_BASH, inner), env, cwd: workDir() };
@@ -1341,7 +1301,7 @@ function createCli(host) {
 	async function update() {
 		assertReady();
 		const { request, curl } = transport();
-		const paths = await ensureRuntime({ extensionPath: host.extensionPath, storageDir: host.storageDir, request, curl });
+		await ensureRuntime({ extensionPath: host.extensionPath, storageDir: host.storageDir, version: host.version, request, curl });
 		const agentDir = resolveAgentDir(host.env, host.homedir);
 		const updater = createUpdater({
 			request,
@@ -1351,9 +1311,7 @@ function createCli(host) {
 			extensionPath: host.extensionPath,
 			builtIn: path.join(host.extensionPath, "payload"),
 			agentDir,
-			bun: paths.bun,
-			apply: host.install ?? installer(),
-			run: (file, args, options) => runBundled(starter(), file, args, options),
+			apply: host.install ?? installHarness,
 			lease: (dir, action) => leased(action),
 		});
 		const result = await updater.run();
@@ -1422,36 +1380,16 @@ function deactivate() {
 	active = null;
 }
 
-async function installMain(file) {
-	const input = JSON.parse(await fsp.readFile(file, "utf8"));
-	const run = async () => {
-		if (input.guard) {
-			const changes = await planHarness(input);
-			if (changes.files.length || changes.config) throw new Error(messages.closeTabs);
-		}
-		return applyHarness(input);
-	};
-	const result = input.lease === false ? await run() : await withInstallLease(input.agentDir, run);
-	await fsp.writeFile(file + ".out", JSON.stringify({ value: result }));
-}
-
-if (require.main === module && process.argv.includes("--install")) {
-	const file = process.argv[process.argv.indexOf("--install") + 1];
-	installMain(file)
-		.catch(error => fsp.writeFile(file + ".out", JSON.stringify({ error: error.message })))
-		.catch(() => {
-			process.exitCode = 1;
-		});
-}
-
 module.exports = {
 	activate,
 	deactivate,
 	applyHarness,
+	retryBusy,
+	configOverlays,
+	installHarness,
+	sweep,
 	bundledChild,
 	bundledStarter,
-	runBundled,
-	spawnInstaller,
 	createCli,
 	createEnv,
 	curlTransport,
@@ -1461,7 +1399,6 @@ module.exports = {
 	ensureRuntime,
 	extractArchive,
 	fetchRuntime,
-	installMain,
 	isInside,
 	recover,
 	leaseName,

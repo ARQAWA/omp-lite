@@ -78,16 +78,12 @@ test("staging copies only the manifest entries", async () => {
 	expect(readFileSync(join(dist, "payload/.revision"), "utf8").trim()).toBe("f".repeat(40));
 });
 
-test("the staged payload drops the persistent memory block", async () => {
+test("the staged payload keeps config fragments byte for byte", async () => {
 	const root = fixture();
 	const dist = join(temporary(), "dist");
 	const manifest = JSON.parse(readFileSync(join(root, "install.manifest.json"), "utf8"));
 	await stage(root, dist, manifest, "a".repeat(40));
-	const config = readFileSync(join(dist, "payload/src/modules/a/config.yml"), "utf8");
-	expect(config).toContain("dark: x");
-	expect(config).not.toContain("memory:");
-	expect(config).not.toContain("mnemopi");
-	expect(config).not.toContain("backend");
+	expect(readFileSync(join(dist, "payload/src/modules/a/config.yml"), "utf8")).toBe(readFileSync(join(root, "src/modules/a/config.yml"), "utf8"));
 });
 
 test("the staged extension manifest keeps the three commands", async () => {

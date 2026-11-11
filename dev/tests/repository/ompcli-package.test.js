@@ -48,7 +48,7 @@ test("the harness payload holds only declared product sources", () => {
 test("the runtime pins cover every shipped Windows component", () => {
 	const pins = JSON.parse(readFileSync(join(root, "src/modules/ompcli/runtime.json"), "utf8"));
 	expect(pins.version).toBe("18.18.8");
-	expect(Object.keys(pins.assets).sort()).toEqual(["bun", "model", "omp"]);
+	expect(Object.keys(pins.assets).sort()).toEqual(["model", "omp"]);
 	const files = { ...pins.llama.files, ...pins.vc.files };
 	expect(files["llama-server.exe"]).toMatch(/^[a-f0-9]{64}$/);
 	expect(files["libomp.dll"]).toMatch(/^[a-f0-9]{64}$/);

@@ -7,15 +7,6 @@
       "size": 250181120,
       "file": "omp.exe"
     },
-    "bun": {
-      "url": "https://github.com/oven-sh/bun/releases/download/bun-v1.4.4/bun-windows-x64-baseline.zip",
-      "sha256": "0f20ce6674d4f2dbcc8c5d59fdf99f7ba45f8c3b367e0f5781cbfa30a1c78d99",
-      "size": 54731686,
-      "file": "bun.exe",
-      "entry": "bun-windows-x64-baseline/bun.exe",
-      "unpacked": "cb1d8e6564e655e49d30cead359750a1cbbd12f42651caa4b62244d7bd93c244",
-      "unpackedSize": 115281496
-    },
     "model": {
       "url": "https://huggingface.co/ggml-org/embeddinggemma-2-GGUF/resolve/6ea3e3a309d12a4779cfda98b8c19800d2d5da71/embeddinggemma-2-Q8_0.gguf",
       "sha256": "2188ac1deca4b77dffefd603c2776a9d76d9d74ec01841392982ebb840b09135",

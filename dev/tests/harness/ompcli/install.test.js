@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSyn
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import path from "node:path";
-import { applyHarness, isInside, planHarness, recover } from "../../../../src/modules/ompcli/index.js";
+import { applyHarness, configOverlays, installHarness, isInside, planHarness, recover, retryBusy } from "../../../../src/modules/ompcli/index.js";
 
 const revision = "b".repeat(40);
 const dirs = [];
@@ -47,8 +47,7 @@ test("a clean install writes only the declared files", async () => {
 		{ "src/a.js": "a", "src/nested/b.md": "b", "src/config.yml": "memory:\n  backend: mnemopi\n" },
 	);
 	expect(await applyHarness({ sourceDir: source, agentDir: agent, revision })).toEqual({ revision, changed: true });
-	expect(tree(agent)).toEqual(["config.yml", "extensions/a.js", "skills/b/SKILL.md"]);
-	expect(readFileSync(join(agent, "config.yml"), "utf8")).toBe("memory:\n  backend: mnemopi");
+	expect(tree(agent)).toEqual(["extensions/a.js", "skills/b/SKILL.md"]);
 	expect(existsSync(join(agent, ".ompcli-backups"))).toBe(false);
 });
 
@@ -75,48 +74,33 @@ test("files listed for removal disappear and a second run changes nothing", asyn
 	expect(await applyHarness({ sourceDir: source, agentDir: agent, revision })).toEqual({ revision, changed: false });
 });
 
-test("an existing YAML keeps foreign keys and replaces only declared leaves", async () => {
+test("config fragments are handed to OMP as overlay files and config.yml is never written", async () => {
 	const { source, agent } = workspace(
-		[],
-		[
-			{ from: "src/base.yml", to: "config.yml", mode: "merge-missing" },
-			{ from: "src/thresholds.yml", to: "config.yml", mode: "merge" },
-		],
-		{
-			"src/base.yml": "memory:\n  backend: mnemopi\nmnemopi:\n  embeddingModel: local\n  autoRecall: false\n",
-			"src/thresholds.yml": "compaction:\n  modelThresholds:\n    a: f100\n    b: f200\n",
-		},
+		[{ from: "src/a.js", to: "extensions/a.js" }],
+		[{ from: "src/base.yml", to: "config.yml", mode: "merge" }, { from: "src/more.yml", to: "config.yml", mode: "merge" }],
+		{ "src/a.js": "a", "src/base.yml": "theme:\n  dark: ours\n", "src/more.yml": "a: 1\n" },
 	);
-	writeFileSync(join(agent, "config.yml"), "theme:\n  dark: x\nmemory:\n  backend: off\ncompaction:\n  other: true\nmnemopi:\n  autoRecall: true\n");
+	writeFileSync(join(agent, "config.yml"), "theme:\n  dark: mine\n# my comment\n");
 	await applyHarness({ sourceDir: source, agentDir: agent, revision });
-	const text = readFileSync(join(agent, "config.yml"), "utf8");
-	expect(text).toContain("theme:");
-	expect(text).toContain("dark: x");
-	expect(text).toContain("other: true");
-	expect(text).toContain('backend: "off"');
-	expect(text).toContain("embeddingModel: local");
-	expect(text).toContain("modelThresholds:");
-	expect(text).toContain("a: f100");
-	expect(text).toContain("autoRecall: true");
+	expect(readFileSync(join(agent, "config.yml"), "utf8")).toBe("theme:\n  dark: mine\n# my comment\n");
+	expect(await configOverlays(source)).toEqual([join(source, "src/base.yml"), join(source, "src/more.yml")]);
+	expect(await applyHarness({ sourceDir: source, agentDir: agent, revision })).toEqual({ revision, changed: false });
 });
 
-test("an existing config.yaml is reused instead of creating config.yml", async () => {
-	const { source, agent } = workspace([], [{ from: "src/c.yml", to: "config.yml", mode: "merge" }], { "src/c.yml": "a: 1\n" });
-	writeFileSync(join(agent, "config.yaml"), "b: 2\n");
-	await applyHarness({ sourceDir: source, agentDir: agent, revision });
-	expect(tree(agent)).toEqual(["config.yaml"]);
-	expect(readFileSync(join(agent, "config.yaml"), "utf8")).toContain("b: 2");
+test("a declared config fragment that is absent or unsafe blocks the installation", async () => {
+	const absent = workspace([{ from: "src/a.js", to: "extensions/a.js" }], [{ from: "src/c.yml", to: "config.yml", mode: "merge" }], { "src/a.js": "a" });
+	await expect(applyHarness({ sourceDir: absent.source, agentDir: absent.agent, revision })).rejects.toThrow("Invalid install manifest");
+	expect(tree(absent.agent)).toEqual([]);
+	const unsafe = workspace([], [{ from: "../c.yml", to: "config.yml", mode: "merge" }], {});
+	await expect(configOverlays(unsafe.source)).rejects.toThrow("Unsafe path");
 });
 
-test("broken YAML and unknown modes block the installation", async () => {
-	const broken = workspace([], [{ from: "src/c.yml", to: "config.yml", mode: "merge" }], { "src/c.yml": "a: 1\n" });
-	writeFileSync(join(broken.agent, "config.yml"), "a: [unclosed\n");
-	await expect(applyHarness({ sourceDir: broken.source, agentDir: broken.agent, revision })).rejects.toThrow();
-	expect(readFileSync(join(broken.agent, "config.yml"), "utf8")).toBe("a: [unclosed\n");
-
-	const unknown = workspace([], [{ from: "src/c.yml", to: "config.yml", mode: "override" }], { "src/c.yml": "a: 1\n" });
-	await expect(applyHarness({ sourceDir: unknown.source, agentDir: unknown.agent, revision })).rejects.toThrow("Invalid install manifest");
-	expect(tree(unknown.agent)).toEqual([]);
+test("a window with live tabs only confirms what is installed", async () => {
+	const { source, agent } = workspace([{ from: "src/a.js", to: "extensions/a.js" }], [], { "src/a.js": "a" });
+	await expect(installHarness({ sourceDir: source, agentDir: agent, revision, guard: true })).rejects.toThrow("Close OMP CLI tabs before updating.");
+	expect(tree(agent)).toEqual([]);
+	expect(await installHarness({ sourceDir: source, agentDir: agent, revision, guard: false })).toEqual({ revision, changed: true });
+	expect(await installHarness({ sourceDir: source, agentDir: agent, revision, guard: true })).toEqual({ revision, changed: false });
 });
 
 test("a failed write restores the previous state", async () => {
@@ -182,7 +166,7 @@ test("a dry plan reports the same change the install would make", async () => {
 	const { source, agent } = workspace([{ from: "src/a.js", to: "extensions/a.js" }], [], { "src/a.js": "a" });
 	expect((await planHarness({ sourceDir: source, agentDir: agent })).files.length).toBe(1);
 	await applyHarness({ sourceDir: source, agentDir: agent, revision });
-	expect(await planHarness({ sourceDir: source, agentDir: agent })).toEqual({ files: [], config: null });
+	expect(await planHarness({ sourceDir: source, agentDir: agent })).toEqual({ files: [] });
 	writeFileSync(join(agent, "extensions/a.js"), "edited by hand");
 	expect((await planHarness({ sourceDir: source, agentDir: agent })).files.length).toBe(1);
 });
@@ -328,4 +312,19 @@ test("recovery refuses a linked agent root and leaves the journal", async () => 
 	await expect(recover(link, join(dir, "payload"))).rejects.toThrow("Unsafe path");
 	expect(readFileSync(target, "utf8")).toBe("new");
 	expect(existsSync(join(real, ".ompcli-backups/journal.json"))).toBe(true);
+});
+
+test("a rename refused as busy is repeated, any other failure is not", async () => {
+	const busy = code => Object.assign(new Error(code), { code });
+	let calls = 0;
+	const sleeps = [];
+	const sleep = async ms => void sleeps.push(ms);
+	expect(await retryBusy(async () => { if (++calls < 3) throw busy("EBUSY"); return "done"; }, sleep)).toBe("done");
+	expect(sleeps).toEqual([50, 50]);
+	calls = 0;
+	await expect(retryBusy(async () => { calls++; throw busy("ENOSPC"); }, sleep)).rejects.toThrow("ENOSPC");
+	expect(calls).toBe(1);
+	calls = 0;
+	await expect(retryBusy(async () => { calls++; throw busy("EPERM"); }, sleep)).rejects.toThrow("EPERM");
+	expect(calls).toBe(20);
 });

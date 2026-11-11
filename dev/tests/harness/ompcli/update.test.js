@@ -4,12 +4,6 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { applyHarness, createUpdater, extractArchive } from "../../../../src/modules/ompcli/index.js";
 
-// The test machine starts Bun itself; the product starts it through the terminal chain.
-const direct = async (file, args) => {
-	const result = Bun.spawnSync([file, ...args]);
-	return { code: result.exitCode, output: result.stderr.toString() };
-};
-
 const oldSha = "1".repeat(40);
 const newSha = "2".repeat(40);
 const version = "0.0.1";
@@ -42,7 +36,8 @@ function archive(entries) {
 	const root = join(dir, "repo-" + newSha);
 	for (const [name, content] of Object.entries(entries)) write(join(root, name), content);
 	const file = join(dir, "repo.tar.gz");
-	const result = Bun.spawnSync(["tar", "-czf", file, "-C", dir, "repo-" + newSha]);
+	// macOS tar would add its own "._" entries; GitHub archives have none.
+	const result = Bun.spawnSync(["tar", "-czf", file, "-C", dir, "repo-" + newSha], { env: { ...process.env, COPYFILE_DISABLE: "1" } });
 	if (result.exitCode !== 0) throw new Error(result.stderr.toString());
 	return file;
 }
@@ -90,9 +85,8 @@ function environment({ bootstrap = "bootstrap", pointer = null, tarball } = {}) 
 		extensionPath,
 		builtIn: join(extensionPath, "payload"),
 		agentDir,
-		bun: process.execPath,
 		tabs: async () => [],
-		extract: args => extractArchive({ ...args, bun: process.execPath, script: join(storageDir, "extract.js"), run: direct }),
+		extract: extractArchive,
 		apply: async args => {
 			calls.apply.push({ ...args, pointerBefore: existsSync(join(storageDir, "payload", version, "current.json")) });
 			return applyHarness(args);
@@ -270,13 +264,13 @@ test("a new revision installs the harness and keeps personal state", async () =>
 	expect(result).toEqual({ revision: newSha, changed: true, applied: true });
 	expect(JSON.parse(readFileSync(env.pointer, "utf8"))).toBe(newSha);
 	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
-	expect(readFileSync(join(env.agentDir, "config.yml"), "utf8")).toContain("dark: keep");
+	expect(readFileSync(join(env.agentDir, "config.yml"), "utf8")).toBe("theme:\n  dark: keep\n");
 	for (const [name, content] of [["auth.json", "auth"], ["sessions/s.json", "session"], ["memories/m.db", "memory"]]) {
 		expect(readFileSync(join(env.agentDir, name), "utf8")).toBe(content);
 	}
-	expect(readFileSync(join(env.agentDir, "config.yml"), "utf8")).not.toContain("backend");
+	// The fragment arrives as it is: OMP reads it as an overlay, the window's memory overlay comes after it.
+	expect(readFileSync(join(env.calls.apply[0].sourceDir, "src/modules/a/memory.yml"), "utf8")).toBe("memory:\n  backend: mnemopi\n");
 	expect(env.calls.apply[0].revision).toBe(newSha);
-	expect(env.calls.apply[0].lease).toBe(false);
 	expect(env.calls.apply[0].pointerBefore).toBe(false);
 	expect(env.calls.apply[0].sourceDir).toBe(join(env.storageDir, "payload", version, newSha));
 	expect(existsSync(join(env.calls.apply[0].sourceDir, ".bootstrap"))).toBe(false);
@@ -348,9 +342,29 @@ test("a bad upstream revision is refused", async () => {
 	expect(env.calls.apply.length).toBe(0);
 });
 
-test("an extraction that leaves nothing behind reports what the terminal showed", async () => {
-	const storageDir = temporary();
-	const stage = join(storageDir, "stage");
-	const run = async () => ({ code: 126, output: "hello\nbash: bun.exe: Permission denied" });
-	await expect(extractArchive({ bun: "bun.exe", archive: "a.tar.gz", stage, revision: "d".repeat(40), script: join(storageDir, "extract.js"), run })).rejects.toThrow("OMP extraction failed: hello | bash: bun.exe: Permission denied");
+test("a real git archive with a long path and a global header is unpacked in process", async () => {
+	const repo = temporary("ompcli-git-");
+	const long = "src/modules/" + "deep-directory-name/".repeat(9) + "a-file-with-a-very-long-name-that-needs-a-pax-record.js";
+	const files = { "install.manifest.json": JSON.stringify({ version: 1, files: [{ from: long, to: "extensions/long.js" }], config: [], vscode: { files: [{ from: "boot.js", to: "index.js" }] } }), [long]: "long content", "boot.js": "boot", "not-listed.txt": "skip" };
+	for (const [name, content] of Object.entries(files)) write(join(repo, name), content);
+	const git = (...args) => Bun.spawnSync(["git", "-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: repo });
+	git("init", "-q");
+	git("add", "-A");
+	git("commit", "-q", "-m", "x");
+	const tarball = join(temporary(), "a.tar.gz");
+	expect(git("archive", "--format=tar.gz", "--prefix=omp-lite-abc/", "-o", tarball, "HEAD").exitCode).toBe(0);
+	const stage = join(temporary(), "stage");
+	expect(await extractArchive({ archive: tarball, stage, revision: newSha })).toBe(newSha);
+	expect(readFileSync(join(stage, long), "utf8")).toBe("long content");
+	expect(readFileSync(join(stage, ".bootstrap/index.js"), "utf8")).toBe("boot");
+	expect(readFileSync(join(stage, ".revision"), "utf8")).toBe(newSha + "\n");
+	expect(existsSync(join(stage, "not-listed.txt"))).toBe(false);
+});
+
+test("a manifest path that leaves the stage is refused", async () => {
+	const entries = upstream();
+	entries["install.manifest.json"] = JSON.stringify({ ...manifest("bootstrap"), files: [{ from: "../outside.js", to: "extensions/a.js" }] });
+	const stage = join(temporary(), "stage");
+	await expect(extractArchive({ archive: archive(entries), stage, revision: newSha })).rejects.toThrow("Unsafe path");
+	expect(existsSync(join(stage, ".revision"))).toBe(false);
 });

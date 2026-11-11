@@ -39,6 +39,7 @@ function vscode(settings = {}) {
 		},
 		showErrorMessage: message => state.messages.push(message),
 		showInformationMessage: message => state.messages.push(message),
+		showWarningMessage: message => state.messages.push(message),
 		withProgress: async (options, action) => action(),
 	};
 	const change = emitter();
@@ -142,12 +143,13 @@ function deferred() {
 }
 
 function control(overrides = {}) {
-	const paths = { dir: "/runtime/deadbeef", omp: "/runtime/deadbeef/omp.exe", bun: "/runtime/deadbeef/bun.exe", model: "/runtime/deadbeef/model.gguf", llama: "/runtime/deadbeef/llama" };
+	const paths = { dir: "/runtime/deadbeef", omp: "/runtime/deadbeef/omp.exe", model: "/runtime/deadbeef/model.gguf", llama: "/runtime/deadbeef/llama" };
 	return {
 		ensureRuntime: async () => paths,
 		selectPayload: async () => "/extension/payload",
 		payloadRevision: async () => revision,
 		install: async () => ({ revision, changed: false }),
+		configOverlays: async () => ["C:\\payload\\one.yml", "C:\\payload\\two.yml"],
 		...overrides,
 	};
 }
@@ -403,7 +405,7 @@ test("a live tab with the same payload opens under a write guard", async () => {
 	expect(pty.spawned.length).toBe(1);
 });
 
-test("the installer runs under the lease the extension already holds", async () => {
+test("the installer runs inside the extension host with the tab's revision", async () => {
 	let seen = null;
 	const { instance } = cli({
 		control: {
@@ -415,7 +417,7 @@ test("the installer runs under the lease the extension already holds", async () 
 	});
 	await instance.newTab();
 	await until(() => seen !== null);
-	expect(seen.lease).toBe(false);
+	expect(seen.guard).toBe(false);
 	expect(seen.revision).toBe(revision);
 });
 
@@ -440,8 +442,10 @@ test("previous overlays stay before the window overlay", async () => {
 	await instance.newTab();
 	await until(() => pty.spawned.length === 1);
 	const files = pty.spawned[0].options.env.PI_CONFIG_FILES.split(";");
-	expect(files[0]).toBe("C:\\before\\one.yml");
-	expect(files[1]).toContain("memory.yml");
+	// The last file wins in OMP: the user's overlays, the harness fragments, the memory overlay of the window.
+	expect(files.slice(0, 3)).toEqual(["C:\\before\\one.yml", "C:\\payload\\one.yml", "C:\\payload\\two.yml"]);
+	expect(files[3]).toContain("memory.yml");
+	expect(files.length).toBe(4);
 	expect(pty.spawned[0].options.env.OMPCLI_CONFIG_FILES).toBe(pty.spawned[0].options.env.PI_CONFIG_FILES);
 });
 
@@ -499,8 +503,8 @@ test("a tab closed while loading leaves no lease when the memory then fails", as
 	// Closed before the lease record exists, so closing has nothing to remove.
 	api.state.terminals[0].pty.close();
 	await instance.closeTerminal(api.state.terminals[0]);
-	runtime.resolve({ dir: "/runtime/deadbeef", omp: "/runtime/deadbeef/omp.exe", bun: "/runtime/deadbeef/bun.exe" });
-	await until(() => api.state.messages.includes("memory failed"));
+	runtime.resolve({ dir: "/runtime/deadbeef", omp: "/runtime/deadbeef/omp.exe" });
+	await until(() => api.state.messages.includes("OMP CLI: memory is off. memory failed"));
 	await until(() => !existsSync(join(storageDir, "leases", process.pid + ".json")));
 });
 
@@ -548,24 +552,51 @@ function recovered() {
 	return { agent, storageDir, oldSha, newSha };
 }
 
-test("Bun and the memory server start through the terminal chain, never from the extension host itself", async () => {
+test("only the memory server and OMP are started, both through the terminal chain", async () => {
 	let options;
-	const { pty, storageDir, instance } = cli({
-		control: { install: undefined },
+	const source = temporary();
+	mkdirSync(join(source, "src"), { recursive: true });
+	writeFileSync(join(source, "src", "a.js"), "a");
+	writeFileSync(join(source, "src", "c.yml"), "a: 1\n");
+	writeFileSync(join(source, "install.manifest.json"), JSON.stringify({ version: 1, files: [{ from: "src/a.js", to: "extensions/a.js" }], config: [{ from: "src/c.yml", to: "config.yml", mode: "merge" }] }));
+	const agent = temporary();
+	const { pty, instance } = cli({
+		control: { install: undefined, configOverlays: undefined, selectPayload: async () => source },
 		memory: given => ((options = given), { ensure: async () => ({ port: 5020, key: "k" }), stop: () => {} }),
+		extra: { env: { PATH: "/usr/bin", PI_CODING_AGENT_DIR: agent } },
 	});
 	void instance.newTab();
 	await until(() => pty.spawned.length === 1);
-	const bun = pty.spawned[0];
-	expect(bun.file).toBe("powershell.exe");
-	expect(bun.args[3]).toStartWith("& 'C:\\Program Files\\Git\\bin\\bash.exe' --login -i -c '''/runtime/deadbeef/bun.exe'' ''");
-	expect(bun.args[3]).toContain("--install");
-	const job = join(storageDir, bun.args[3].match(/install-[0-9a-f-]+\.json/)[0]);
-	writeFileSync(job + ".out", JSON.stringify({ value: { revision, changed: false } }));
-	bun.exit(0);
-	await until(() => pty.spawned.length === 2);
-	expect(pty.spawned[1].args[3]).toContain("''/runtime/deadbeef/omp.exe'' ''--config''");
+	// The harness was installed without any process: the only start so far is the tab itself.
+	expect(readFileSync(join(agent, "extensions", "a.js"), "utf8")).toBe("a");
+	expect(pty.spawned[0].args[3]).toContain("''/runtime/deadbeef/omp.exe'' ''--config''");
+	expect(pty.spawned[0].options.env.PI_CONFIG_FILES.split(";")[0]).toBe(join(source, "src", "c.yml"));
 	options.spawnProcess("C:\\ext\\runtime\\llama\\llama-server.exe", ["--port", "5020"], { env: {} });
-	expect(pty.spawned[2].file).toBe("powershell.exe");
-	expect(pty.spawned[2].args[3]).toEndWith("-c '''C:/ext/runtime/llama/llama-server.exe'' ''--port'' ''5020'''");
+	expect(pty.spawned[1].file).toBe("powershell.exe");
+	expect(pty.spawned[1].args[3]).toEndWith("-c '''C:/ext/runtime/llama/llama-server.exe'' ''--port'' ''5020'''");
+});
+
+test("a memory server that cannot start opens OMP without memory and says why", async () => {
+	let starts = 0;
+	const { api, pty, instance } = cli({
+		memory: () => ({
+			ensure: async () => {
+				if (++starts === 1) throw new Error("Local memory exited: 1 bash: c:/ext/runtime/llama/llama-server.exe: Permission denied");
+				return { port: 5030, key: "live" };
+			},
+			stop: () => {},
+		}),
+	});
+	const lines = [];
+	await instance.newTab();
+	api.state.terminals[0].pty.onDidWrite(line => lines.push(line));
+	await until(() => pty.spawned.length === 1);
+	expect(api.state.messages).toEqual(["OMP CLI: memory is off. Local memory exited: 1 bash: c:/ext/runtime/llama/llama-server.exe: Permission denied"]);
+	const overlayOf = proc => readFileSync(proc.options.env.PI_CONFIG_FILES.split(";").at(-1), "utf8");
+	expect(overlayOf(pty.spawned[0])).toBe('memory:\n  backend: "off"\n');
+	expect(pty.spawned[0].args[3]).toContain("omp.exe");
+	// The next tab tries the server again and gets working memory.
+	await instance.newTab();
+	await until(() => pty.spawned.length === 2);
+	expect(overlayOf(pty.spawned[1])).toContain("embeddingApiKey: live");
 });

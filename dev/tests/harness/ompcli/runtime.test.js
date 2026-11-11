@@ -1,8 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { bundledChild, bundledStarter, curlTransport, ensureRuntime, installMain, pickProxy, proxiedRequest, runBundled, sha256, spawnInstaller } from "../../../../src/modules/ompcli/index.js";
+import { bundledChild, bundledStarter, curlTransport, ensureRuntime, pickProxy, proxiedRequest, sha256, sweep } from "../../../../src/modules/ompcli/index.js";
 
 const dirs = [];
 
@@ -18,14 +18,13 @@ afterEach(() => {
 
 const assets = {
 	omp: { file: "omp.exe", size: 3 },
-	bun: { file: "bun.exe", unpackedSize: 3 },
 	model: { file: "model.gguf", size: 5, sha256: sha256("model"), url: "https://example.invalid/model.gguf" },
 };
 
 function installed() {
 	const extensionPath = temporary();
 	mkdirSync(join(extensionPath, "runtime", "llama"), { recursive: true });
-	for (const name of ["omp.exe", "bun.exe", "llama/llama-server.exe"]) writeFileSync(join(extensionPath, "runtime", name), "exe");
+	for (const name of ["omp.exe", "llama/llama-server.exe"]) writeFileSync(join(extensionPath, "runtime", name), "exe");
 	return extensionPath;
 }
 
@@ -36,7 +35,7 @@ test("programs run from the extension directory and only the model is downloaded
 	const request = async url => (urls.push(url), new Response("model"));
 	const paths = await ensureRuntime({ extensionPath, storageDir, request, assets });
 	expect(paths.omp).toBe(join(extensionPath, "runtime", "omp.exe"));
-	expect(paths.bun).toBe(join(extensionPath, "runtime", "bun.exe"));
+	expect(paths.bun).toBeUndefined();
 	expect(paths.llama).toBe(join(extensionPath, "runtime", "llama"));
 	expect(paths.model).toBe(join(storageDir, "model", "model.gguf"));
 	expect(readFileSync(paths.model, "utf8")).toBe("model");
@@ -51,8 +50,11 @@ test("programs run from the extension directory and only the model is downloaded
 
 test("a missing or cut program stops the tab and names the file", async () => {
 	const extensionPath = installed();
-	writeFileSync(join(extensionPath, "runtime", "bun.exe"), "cut!");
-	await expect(ensureRuntime({ extensionPath, storageDir: temporary(), request: async () => new Response("model"), assets })).rejects.toThrow("bun.exe");
+	writeFileSync(join(extensionPath, "runtime", "omp.exe"), "cut!");
+	await expect(ensureRuntime({ extensionPath, storageDir: temporary(), request: async () => new Response("model"), assets })).rejects.toThrow("omp.exe");
+	rmSync(join(extensionPath, "runtime", "llama", "llama-server.exe"));
+	writeFileSync(join(extensionPath, "runtime", "omp.exe"), "exe");
+	await expect(ensureRuntime({ extensionPath, storageDir: temporary(), request: async () => new Response("model"), assets })).rejects.toThrow("llama-server.exe");
 	rmSync(join(extensionPath, "runtime", "omp.exe"));
 	await expect(ensureRuntime({ extensionPath, storageDir: temporary(), request: async () => new Response("model"), assets })).rejects.toThrow("omp.exe");
 });
@@ -62,16 +64,14 @@ test("the old storage runtime is removed and its model is kept without a downloa
 	const storageDir = temporary();
 	const old = join(storageDir, "runtime", "deadbeef");
 	mkdirSync(join(old, "llama"), { recursive: true });
-	for (const name of ["omp.exe", "bun.exe", "llama/llama-server.exe"]) writeFileSync(join(old, name), "old");
+	for (const name of ["omp.exe", "llama/llama-server.exe"]) writeFileSync(join(old, name), "old");
 	writeFileSync(join(old, "model.gguf"), "model");
 	writeFileSync(join(storageDir, "chat-4242.sh"), "old wrapper");
-	writeFileSync(join(storageDir, "shell-4242.sh"), "terminal wrapper");
 	const request = async () => { throw new Error("no network expected"); };
 	const paths = await ensureRuntime({ extensionPath, storageDir, request, assets });
 	expect(readFileSync(paths.model, "utf8")).toBe("model");
 	expect(existsSync(join(storageDir, "runtime"))).toBe(false);
 	expect(existsSync(join(storageDir, "chat-4242.sh"))).toBe(false);
-	expect(existsSync(join(storageDir, "shell-4242.sh"))).toBe(true);
 });
 
 test("Update and a tab starting together both get the old model", async () => {
@@ -155,59 +155,57 @@ function fakePty() {
 test("a bundled program starts through PowerShell and Git Bash, never by itself", async () => {
 	const pty = fakePty();
 	const start = bundledStarter(pty, "C:\\Program Files\\Git\\bin\\bash.exe");
-	const done = runBundled(start, "C:\\ext\\runtime\\bun.exe", ["C:\\ext\\index.js", "--install", "it's.json"], { env: { LLAMA_API_KEY: "secret" } });
+	start("C:\\ext\\runtime\\llama\\llama-server.exe", ["--model", "C:\\data\\it's.gguf", "--port", "5001"], { env: { LLAMA_API_KEY: "secret" } });
 	const proc = pty.spawned[0];
 	expect(proc.file).toBe("powershell.exe");
 	expect(proc.args.slice(0, 3)).toEqual(["-NoLogo", "-NoProfile", "-Command"]);
 	expect(proc.args[3]).toStartWith("& 'C:\\Program Files\\Git\\bin\\bash.exe' --login -i -c '");
 	// PCLI form: no backslash and no double quote reaches the command line.
-	expect(proc.args[3].match(/ -c '(.*)'$/s)[1].replaceAll("''", "'")).toBe("'C:/ext/runtime/bun.exe' 'C:/ext/index.js' '--install' 'it'\\''s.json'");
+	expect(proc.args[3].match(/ -c '(.*)'$/s)[1].replaceAll("''", "'")).toBe("'C:/ext/runtime/llama/llama-server.exe' '--model' 'C:/data/it'\\''s.gguf' '--port' '5001'");
 	expect(proc.args[3]).not.toContain("secret");
 	expect(proc.options.env.LLAMA_API_KEY).toBe("secret");
 	expect(proc.options.env.MSYS_NO_PATHCONV).toBe("1");
-	proc.data("\x1b[31mbash: Permission denied\x1b[0m\r\n");
-	proc.exit({ exitCode: 126 });
-	expect(await done).toEqual({ code: 126, output: "bash: Permission denied" });
 });
 
 test("a long-lived bundled program reports its exit and can be killed", () => {
 	const pty = fakePty();
 	const child = bundledChild(bundledStarter(pty, "bash.exe"))("C:\\ext\\runtime\\llama\\llama-server.exe", ["--port", "5001"], { cwd: "C:\\ext" });
 	let code;
-	child.once("exit", value => (code = value));
+	let reason;
+	child.once("exit", (value, tail) => ((code = value), (reason = tail)));
 	child.kill();
 	expect(pty.spawned[0].killed).toBe(true);
 	expect(pty.spawned[0].options.cwd).toBe("C:\\ext");
+	pty.spawned[0].data("hello\r\n\x1b[31mbash: c:/ext/runtime/llama/llama-server.exe: Permission denied\x1b[0m\r\n");
 	pty.spawned[0].exit({ exitCode: 3 });
 	expect(code).toBe(3);
+	expect(reason).toBe("hello | bash: c:/ext/runtime/llama/llama-server.exe: Permission denied");
 });
 
-test("the installer gets its input and returns its answer through files", async () => {
+test("a new version removes what older versions and crashed runs left behind", async () => {
 	const storageDir = temporary();
-	const agentDir = temporary();
-	const sourceDir = temporary();
-	mkdirSync(join(sourceDir, "src"), { recursive: true });
-	writeFileSync(join(sourceDir, "src", "a.js"), "a");
-	writeFileSync(join(sourceDir, "install.manifest.json"), JSON.stringify({ version: 1, files: [{ from: "src/a.js", to: "extensions/a.js" }], config: [] }));
-	const seen = [];
-	const run = async (file, args) => {
-		seen.push([file, ...args.slice(0, 2)]);
-		await installMain(args[2]);
-		return { code: 0, output: "" };
+	const put = (name, old) => {
+		mkdirSync(join(storageDir, name, ".."), { recursive: true });
+		writeFileSync(join(storageDir, name), "x");
+		if (old) utimesSync(join(storageDir, name), new Date(0), new Date(0));
 	};
-	const input = { run, storageDir, bun: "bun.exe", sourceDir, agentDir, revision: "c".repeat(40), lease: false };
-	expect(await spawnInstaller(input)).toEqual({ revision: "c".repeat(40), changed: true });
-	expect(readFileSync(join(agentDir, "extensions", "a.js"), "utf8")).toBe("a");
-	expect(seen[0][0]).toBe("bun.exe");
-	expect(seen[0][2]).toBe("--install");
-	await expect(spawnInstaller({ ...input, run: async () => ({ code: 126, output: "x\nbash: bun.exe: Permission denied" }) })).rejects.toThrow("Permission denied");
-	expect(existsSync(join(storageDir, "runtime"))).toBe(false);
-	expect(require("node:fs").readdirSync(storageDir)).toEqual([]);
+	const gone = 2 ** 22 - 3;
+	for (const name of ["extract.js", "chat-1.sh", "shell-" + gone + ".sh", "runs/" + gone + "-a/memory.yml", "payload/0.0.3/current.json"]) put(name, false);
+	for (const name of ["install-a.json", "install-a.json.out", "omp-lite-x.tar.gz", "model/m.gguf.1.tmp"]) put(name, true);
+	const keep = ["shell-" + process.pid + ".sh", "runs/" + process.pid + "-b/memory.yml", "payload/0.0.6/current.json", "model/m.gguf", "model/m.gguf.2.tmp", "install-b.json", "leases/note.txt"];
+	for (const name of keep) put(name, false);
+	await sweep(storageDir, "0.0.6");
+	const left = [];
+	const walk = dir => { for (const entry of readdirSync(join(storageDir, dir), { withFileTypes: true })) entry.isDirectory() ? walk(join(dir, entry.name)) : left.push(join(dir, entry.name)); };
+	walk("");
+	expect(left.sort()).toEqual(keep.map(name => join(name)).sort());
 });
 
-test("a hidden run that never answers is killed and says so", async () => {
-	const pty = fakePty();
-	const result = await runBundled(bundledStarter(pty, "bash.exe"), "bun.exe", [], { timeoutMs: 20 });
-	expect(pty.spawned[0].killed).toBe(true);
-	expect(result).toEqual({ code: -1, output: "no answer in 0s" });
+test("payloads of other versions stay while another window holds a tab", async () => {
+	const storageDir = temporary();
+	mkdirSync(join(storageDir, "payload", "0.0.3"), { recursive: true });
+	mkdirSync(join(storageDir, "leases"), { recursive: true });
+	writeFileSync(join(storageDir, "leases", process.pid + ".json"), JSON.stringify({ pid: process.pid, revision: "a".repeat(40) }));
+	await sweep(storageDir, "0.0.6");
+	expect(existsSync(join(storageDir, "payload", "0.0.3"))).toBe(true);
 });
