@@ -1045,3 +1045,5 @@ URL и архивы остаются у родных `grep` и `read`.
 **Граница:** на VDI не проверено. Что именно владелец видел про AWS, не уточнено. Последовательность Shift+Enter взята по образцу Ctrl+Enter из PCLI; разбор её в OMP на macOS не проверен.
 
 **Носители правила:** `src/modules/ompcli/package.json`, `src/modules/runtime-config/config.yml`, `dev/tests/repository/ompcli-package.test.js`.
+
+**Выпуск D-055:** `0.0.8`, ревизия `33b1c00738fb0b65f1ccaa6fad6ca127140ae593`, 153521172 байт, sha256 `1e510b2619d0ad5c69d24c704bfe8fdcf12af0d5737eb8a4465cdf5e76c7a60b`, Marketplace `win32-x64 validated`, 2026-11-11 08:06 UTC. На VDI не проверено.
