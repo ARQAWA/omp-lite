@@ -424,6 +424,10 @@ export function install(pi, options = {}) {
 		rewritePayload(event.payload);
 		return event.payload;
 	});
+	pi.on?.("tool_result", event => {
+		const content = wholeFileContent(event);
+		if (content) return { content };
+	});
 }
 
 const TEXT_NAMES = new Set(["grep", "glob", "read", "bash", "edit", "write"]);
@@ -501,6 +505,32 @@ function rewriteRecord(record, hasFiles) {
 	if (!TEXT_NAMES.has(name)) return;
 	const text = toolTexts[name];
 	record.description = typeof text === "string" ? text : hasFiles ? text.withFiles : text.withoutFiles;
+}
+
+/** Adds the whole-file marker only to a complete ordinary text read. */
+const marked = new WeakSet();
+
+export function wholeFileContent(event) {
+	if (typeof event !== "object" || event === null || event.toolName !== "read" || event.isError === true) return;
+	const details = event.details;
+	if (typeof details !== "object" || details === null || details.isDirectory === true) return;
+	if (!Number.isInteger(details.totalLines) || details.truncation?.truncated === true) return;
+	if (details.summary !== undefined || details.meta?.source?.type === "url") return;
+	if (!Array.isArray(event.content) || event.content.some(block => block?.type === "image")) return;
+	if (marked.has(details)) return;
+	const index = event.content.findLastIndex(block => block?.type === "text" && typeof block.text === "string");
+	if (index < 0) return;
+	const text = event.content[index].text;
+	const shown = details.displayContent?.lineNumbers;
+	if (!Array.isArray(shown)) return;
+	if (shown.includes(null) || shown[0] !== 1 || shown.at(-1) < details.totalLines) return;
+	const lines = details.fileSize === 0 ? 0 : details.totalLines;
+	const marker = `[whole file: ${lines} lines]`;
+	const content = [...event.content];
+	const prefix = text === "" ? "" : text.endsWith("\n") ? text : `${text}\n`;
+	content[index] = { ...content[index], text: `${prefix}${marker}` };
+	marked.add(details);
+	return content;
 }
 
 /** Rewrites the six native tool descriptions in one provider payload. */
