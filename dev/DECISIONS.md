@@ -1014,6 +1014,8 @@ URL и архивы остаются у родных `grep` и `read`.
 
 **Источник:** исходник OMP `18.18.8`, `packages/coding-agent/src/prompts/tools/bash.md`: строка стоит под условием `isWindows`, в `tools/bash.ts` это `process.platform === "win32"`. Эталон снят на macOS.
 
-**Граница:** на VDI не проверено. Наш текст `bash` эту строку модели не передаёт.
+**Дополнение от 11.11:** наш текст `bash` на Windows сохраняет эту родную строку на её месте; на macOS текст не меняется. Слова владельца: «чтобы на винде была нормальная строка и на маке была нормальная строка». Носитель: `rewriteRecord`.
+
+**Граница:** на VDI не проверено.
 
 **Носители правила:** `src/modules/base-tools/index.js` (`nativeText`), `dev/tests/harness/base-tools/reference.test.js`.

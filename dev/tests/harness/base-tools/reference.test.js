@@ -119,3 +119,23 @@ test("the Windows line of native bash is not a mismatch", () => {
 	bash.description = bash.description.replace("Windows host", "Linux host");
 	expect(checkReference(payload, reference.settings)).toBe("base-tools: native bash changed description");
 });
+
+test("our bash text keeps the native Windows line and is unchanged without it", () => {
+	const windows = "Windows host, emulated bash environment: write bash, NEVER cmd/PowerShell syntax; paths `C:/x` or `/c/x`.";
+	const shell = "Persistent shell: one fact command/pipeline; dependencies use `&&`.\n";
+	for (const hasFiles of [true, false]) {
+		const ours = hasFiles ? texts.bash.withFiles : texts.bash.withoutFiles;
+		const mac = mainPayload();
+		rewritePayload(mac, hasFiles);
+		expect(mac.tools.find(tool => tool.name === "bash").description).toBe(ours);
+		const win = mainPayload();
+		const bash = win.tools.find(tool => tool.name === "bash");
+		bash.description = bash.description.replace("\n\n", "\n" + windows + "\n");
+		rewritePayload(win, hasFiles);
+		expect(bash.description).toBe(ours.replace(shell, shell + windows + "\n"));
+		expect(bash.description).toContain(shell + windows + "\nScripts/heredocs");
+		// A second pass over the same payload does not add the line twice.
+		rewritePayload(win, hasFiles);
+		expect(bash.description.split(windows).length).toBe(2);
+	}
+});

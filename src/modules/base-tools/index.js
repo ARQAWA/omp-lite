@@ -447,8 +447,10 @@ function detectFiles(payload) {
 const fieldsOf = tool =>
 	Object.keys(tool?.parameters?.properties ?? tool?.input_schema?.properties ?? tool?.inputSchema?.properties ?? tool?.format ?? {}).sort();
 // On Windows OMP adds one line to bash (prompts/tools/bash.md, isWindows): not a change.
+const WINDOWS_LINE = /^Windows host, emulated bash environment: .*$/m;
+const SHELL_LINE = "Persistent shell: one fact command/pipeline; dependencies use `&&`.\n";
 const nativeText = text =>
-	text.replace(/^Windows host, emulated bash environment: .*$/m, "").replace(
+	text.replace(WINDOWS_LINE, "").replace(
 		"Scripts/heredocs/`$(…)`/complex pipelines → `eval`.",
 		"Scripts/heredocs/`$(…)`/complex flow → dedicated tool or checked-in script.",
 	);
@@ -512,7 +514,10 @@ function rewriteRecord(record, hasFiles) {
 	const name = canonicalName(record?.name);
 	if (!TEXT_NAMES.has(name)) return;
 	const text = toolTexts[name];
-	record.description = typeof text === "string" ? text : hasFiles ? text.withFiles : text.withoutFiles;
+	// The native Windows line stays in our bash text, at its native place.
+	const windows = name === "bash" && typeof record.description === "string" ? record.description.match(WINDOWS_LINE)?.[0] : undefined;
+	const ours = typeof text === "string" ? text : hasFiles ? text.withFiles : text.withoutFiles;
+	record.description = windows ? ours.replace(SHELL_LINE, () => SHELL_LINE + windows + "\n") : ours;
 }
 
 /** Adds the whole-file marker only to a complete ordinary text read. */
