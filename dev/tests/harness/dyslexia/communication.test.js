@@ -25,6 +25,10 @@ test("the compressed rule keeps short steps and numbered lists", () => {
 	expect(BLOCK).toContain("Numbered lists for many items, one line each.");
 });
 
+test("the rule ends with the mixed message line", () => {
+	expect(BLOCK.endsWith("do only the read-only part, change nothing, then ask one yes/no question about the change.")).toBe(true);
+});
+
 test("keeps image messages and appends a text block", () => {
 	const messages = [user([{ type: "image", data: "x", mimeType: "image/png" }])];
 	const result = handler()({ messages }, main);
