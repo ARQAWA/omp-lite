@@ -461,8 +461,7 @@ export function checkReference(payload, settings, kind = "main", expected = refe
 			if (kind === "child") continue;
 			return `base-tools: native ${name} is missing`;
 		}
-		const suffix = expected.suffixes?.[name] ?? "";
-		if (nativeText(tool.description) !== nativeText(want.description) && nativeText(tool.description) !== nativeText(`${want.description}${suffix}`)) {
+		if (nativeText(tool.description) !== nativeText(want.description)) {
 			return `base-tools: native ${name} changed description`;
 		}
 		const fields = fieldsOf(tool);

@@ -1,10 +1,10 @@
 {
-  "version": "18.18.0",
+  "version": "18.18.8",
   "assets": {
     "omp": {
-      "url": "https://github.com/can1357/oh-my-pi/releases/download/v18.18.0/omp-windows-x64.exe",
-      "sha256": "20267b4914dca40306c71e824216e0f79061869d9e9d4780fc0c255b7a3e5339",
-      "size": 248622592,
+      "url": "https://github.com/can1357/oh-my-pi/releases/download/v18.18.8/omp-windows-x64.exe",
+      "sha256": "88fe3410b3daefd7435a5915805563f3f9058ad1841de622f40bd4247601072a",
+      "size": 250181120,
       "file": "omp.exe"
     },
     "bun": {

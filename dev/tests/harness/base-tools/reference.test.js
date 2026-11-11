@@ -20,15 +20,6 @@ test("native main and child tools equal the reference", () => {
 	expect(checkReference(childPayload(), reference.settings, "child")).toBeUndefined();
 });
 
-test("the scout suffix is accepted", () => {
-	const payload = { tools: flat(structuredClone(mainNoTask)) };
-	for (const name of ["glob", "grep"]) {
-		const tool = payload.tools.find(tool => tool.name === name);
-		expect(tool.description.endsWith(reference.suffixes[name])).toBe(true);
-	}
-	expect(checkReference(payload, reference.settings)).toBeUndefined();
-});
-
 test("both edit schemas are accepted", () => {
 	const payload = mainPayload();
 	const edit = payload.tools.find(tool => ["edit", "apply_patch"].includes(tool.name));

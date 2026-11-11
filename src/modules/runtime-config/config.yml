@@ -154,4 +154,5 @@ bashInterceptor:
       tool: read
       message: "Use the `read` tool for directory listings instead of ls/tree."
 claudeResets:
-  autoRedeem: "no"
+  autoRedeem5h: "no"
+  autoRedeemWeekly: "no"
