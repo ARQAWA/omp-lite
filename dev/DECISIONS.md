@@ -1031,3 +1031,5 @@ URL и архивы остаются у родных `grep` и `read`.
 **Граница:** на VDI не проверено.
 
 **Носители правила:** `src/modules/ompcli/index.js` (`sameBootstrap`), `dev/tests/harness/ompcli/update.test.js`.
+
+**Выпуск D-054:** `0.0.7`, ревизия `c0d008edb1b97255425413513d28401ea6d9b151`, 153520606 байт, sha256 `72bd613458e425a042205768af07d7de2ec055ac5638894697fbe1f0848bbff9`, Marketplace `win32-x64 validated`, 2026-11-11 07:33 UTC. На VDI не проверено.
