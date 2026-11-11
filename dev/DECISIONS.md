@@ -1019,3 +1019,15 @@ URL и архивы остаются у родных `grep` и `read`.
 **Граница:** на VDI не проверено.
 
 **Носители правила:** `src/modules/base-tools/index.js` (`nativeText`), `dev/tests/harness/base-tools/reference.test.js`.
+
+## D-054 — Update не считает `__metadata` VS Code изменением bootstrap
+
+**Решение:** `package.json` расширения сверяется по содержимому без блока `__metadata`. Остальные файлы bootstrap сверяются побайтно. Версия расширения `0.0.7`.
+
+**Основание:** скрин владельца с VDI от 11.11 на `0.0.6`: `OMP CLI update failed: OMP CLI bootstrap changed. Update OMP CLI in Marketplace.` Слова владельца: «update не сработал».
+
+**Причина:** VS Code при установке дописывает `__metadata` в `package.json` расширения. Побайтная сверка не сходилась никогда. Тесты брали bootstrap из одного файла `index.js` и этого не видели.
+
+**Граница:** на VDI не проверено.
+
+**Носители правила:** `src/modules/ompcli/index.js` (`sameBootstrap`), `dev/tests/harness/ompcli/update.test.js`.

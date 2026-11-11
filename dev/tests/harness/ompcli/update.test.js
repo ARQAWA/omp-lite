@@ -2,7 +2,8 @@ import { afterEach, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { applyHarness, createUpdater, extractArchive } from "../../../../src/modules/ompcli/index.js";
+import { applyHarness, createUpdater,
+	sameBootstrap, extractArchive } from "../../../../src/modules/ompcli/index.js";
 
 const oldSha = "1".repeat(40);
 const newSha = "2".repeat(40);
@@ -367,4 +368,14 @@ test("a manifest path that leaves the stage is refused", async () => {
 	const stage = join(temporary(), "stage");
 	await expect(extractArchive({ archive: archive(entries), stage, revision: newSha })).rejects.toThrow("Unsafe path");
 	expect(existsSync(join(stage, ".revision"))).toBe(false);
+});
+
+test("the metadata VS Code adds to an installed package.json is not a bootstrap change", () => {
+	const source = Buffer.from('{\n\t"name": "ompcli",\n\t"version": "0.0.7"\n}\n');
+	const installed = Buffer.from('{"name":"ompcli","version":"0.0.7","__metadata":{"installedTimestamp":1,"size":2}}');
+	expect(sameBootstrap("package.json", source, installed)).toBe(true);
+	expect(sameBootstrap("package.json", source, Buffer.from('{"name":"ompcli","version":"0.0.8","__metadata":{}}'))).toBe(false);
+	expect(sameBootstrap("package.json", source, Buffer.from("not json"))).toBe(false);
+	expect(sameBootstrap("index.js", source, installed)).toBe(false);
+	expect(sameBootstrap("index.js", source, Buffer.from(source))).toBe(true);
 });

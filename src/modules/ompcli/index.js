@@ -952,6 +952,17 @@ async function extractArchive({ archive, stage, revision }) {
 	return revision;
 }
 
+// VS Code adds its own `__metadata` block to the installed package.json: that is not a change.
+function sameBootstrap(name, next, current) {
+	if (name !== "package.json") return Buffer.compare(next, current) === 0;
+	try {
+		const plain = data => JSON.stringify({ ...JSON.parse(data.toString("utf8")), __metadata: undefined });
+		return plain(next) === plain(current);
+	} catch {
+		return false;
+	}
+}
+
 function createUpdater(deps) {
 	const request = deps.request ?? fetch;
 	const storageDir = deps.storageDir;
@@ -967,7 +978,7 @@ function createUpdater(deps) {
 		for (const entry of manifest.vscode?.files ?? []) {
 			const next = await fsp.readFile(inside(stage, ".bootstrap/" + entry.to));
 			const current = await fsp.readFile(inside(extensionPath, entry.to)).catch(() => null);
-			if (!current || Buffer.compare(next, current) !== 0) throw new Error(format(messages.rewritten, { marketplace: messages.marketplace }));
+			if (!current || !sameBootstrap(entry.to, next, current)) throw new Error(format(messages.rewritten, { marketplace: messages.marketplace }));
 		}
 	}
 
@@ -1384,6 +1395,7 @@ module.exports = {
 	activate,
 	deactivate,
 	applyHarness,
+	sameBootstrap,
 	retryBusy,
 	configOverlays,
 	installHarness,
