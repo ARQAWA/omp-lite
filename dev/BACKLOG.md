@@ -8,14 +8,11 @@
 
 Порядок строгий, одна задача одновременно. Ветка и worktree на задачу: `../omp-lite-worktrees/<task>`.
 
-Сделано: T0, T1, T2, T3. Журнал: `omp-lite-audit/cursor-hints/RUN-LOG.md`.
+Сделано: T0-T6. T7: замер сделан, отчёт `omp-lite-audit/cursor-hints/bench/REPORT.md`. Журнал: `omp-lite-audit/cursor-hints/RUN-LOG.md`.
 
 Остаток:
-- T4. тексты тулов и хук. 2 sp. Blocked by: T3.
-- T5. сторож. 2 sp. Blocked by: T4.
-- T6. строка «файл целый». 1 sp. Blocked by: T4.
-- T7. замер «после» и установка. 1 sp. Blocked by: T0, T5, T6.
+- T7. установка в рантайм. 1 sp. Ждёт слова владельца.
 
-Стоп-точки владельца: тексты промптов диффами по пять (T4); установка в рантайм (T7). Журнал: `omp-lite-audit/cursor-hints/RUN-LOG.md`.
+Стоп-точка владельца: установка в рантайм (T7). Журнал: `omp-lite-audit/cursor-hints/RUN-LOG.md`.
 
 Уже сделано и лежит в [src/modules/](../src/modules/README.md): 19 модулей, список в README каталога.
