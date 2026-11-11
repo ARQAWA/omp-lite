@@ -37,7 +37,9 @@ PowerShell, затем Git Bash `--login -i -c`, затем `ffmpeg`. Правк
 - Mac: `export PI_STT_CONFIG=~/.omp/agent/extensions/pi-voice-stt/stt.json` и `SONIOX_API_KEY`
   в профиле оболочки, `ffmpeg` в `PATH` (`brew install ffmpeg`).
 - VDI: всё ставит `ompcli`. Ключ лежит в файле `%APPDATA%\Code\User\globalStorage\arqawa.ompcli\ad591530-694c-42f1-9f01-f03bee4cca1c.txt`.
-  Вкладка читает файл и отдаёт ключ OMP через окружение.
+  Плагин читает этот файл при каждой записи. Путь знает конфиг окна, его пишет вкладка.
+
+Проверено 11.11 на Mac: живая запись с микрофона дала текст в поле ввода.
 
 ## Проверка
 

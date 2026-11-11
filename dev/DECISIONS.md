@@ -1087,3 +1087,17 @@ URL и архивы остаются у родных `grep` и `read`.
 **Документация OMP:** `omp://skills.md`: native-скиллы `<agentDir>/skills/<name>/SKILL.md` требуют `description`; managed-скилл всегда уступает одноимённому авторскому.
 
 **Носители правила:** `src/modules/short-task/SKILL.md`, `install.manifest.json`.
+
+## D-059 — ключ диктовки на VDI читается при каждой записи
+
+**Решение:** вкладка `ompcli` пишет конфиг окна `globalStorage/stt.json`: `stt.windows.json` из харнеса плюс `provider.apiKeyFile` с путём к `globalStorage/ad591530-694c-42f1-9f01-f03bee4cca1c.txt`. `PI_STT_CONFIG` указывает на него. Ключ через окружение вкладка больше не передаёт. `SONIOX_API_KEY` из окружения Windows по-прежнему главнее файла: так решает сам плагин. Версия расширения `0.0.10`.
+
+**Основание:** скрин владельца с VDI от 11.11 на `0.0.9`: `Error: Pi Voice STT: Missing Soniox API key`. Слова владельца: «надо убедиться в том, что у нас диктовка работает на винде, на маке».
+
+**Отменяет:** в D-056 чтение ключа из файла при открытии вкладки и передачу его через `SONIOX_API_KEY`.
+
+**Проверка:** настоящий OMP `18.18.8` на Mac, без `SONIOX_API_KEY` в окружении: до файла `/stt doctor` ответил `API key file does not exist: <путь>`; файл записан при работающем OMP, следующий `/stt doctor` ответил `ready`. Отдельно на Mac с установленным харнесом: `/stt start`, фраза в микрофон, `/stt stop` вставили в поле ввода «Dictation test, one two three, the quick brown fox.» за 3,5 с.
+
+**Граница:** на VDI не проверено. Точная причина ошибки на 0.0.9 не установлена: файл записан после открытия вкладки или лежит не там. Новая ошибка назовёт путь.
+
+**Носители правила:** `src/modules/ompcli/index.js` (`writeSttConfig`), `dev/tests/harness/ompcli/tabs.test.js`.

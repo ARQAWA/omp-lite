@@ -602,27 +602,29 @@ test("a memory server that cannot start opens OMP without memory and says why", 
 	expect(overlayOf(pty.spawned[1])).toContain("embeddingApiKey: live");
 });
 
-test("a tab hands dictation its Windows config, Git Bash and the key from the storage file", async () => {
+test("a tab hands dictation a window config whose key file the plugin reads on every use", async () => {
 	const agentDir = temporary();
+	mkdirSync(join(agentDir, "extensions", "pi-voice-stt"), { recursive: true });
+	writeFileSync(join(agentDir, "extensions", "pi-voice-stt", "stt.windows.json"), JSON.stringify({ keybind: "alt+w", provider: { type: "soniox", apiKeyEnv: "SONIOX_API_KEY" }, capture: { inputFormat: "dshow" } }));
 	const { pty, storageDir, instance } = cli({ extra: { env: { PATH: "/usr/bin", PI_CODING_AGENT_DIR: agentDir } } });
-	writeFileSync(join(storageDir, "ad591530-694c-42f1-9f01-f03bee4cca1c.txt"), "  soniox-secret\r\n");
 	await instance.newTab();
 	await until(() => pty.spawned.length === 1);
 	const { env } = pty.spawned[0].options;
-	expect(env.PI_STT_CONFIG).toBe(join(agentDir, "extensions", "pi-voice-stt", "stt.windows.json"));
+	expect(env.PI_STT_CONFIG).toBe(join(storageDir, "stt.json"));
 	expect(env.OMPCLI_GIT_BASH).toBe("C:\\Program Files\\Git\\bin\\bash.exe");
-	expect(env.SONIOX_API_KEY).toBe("soniox-secret");
-	expect(pty.spawned[0].args.join(" ")).not.toContain("soniox-secret");
+	expect(JSON.parse(readFileSync(env.PI_STT_CONFIG, "utf8"))).toEqual({
+		keybind: "alt+w",
+		provider: { type: "soniox", apiKeyEnv: "SONIOX_API_KEY", apiKeyFile: join(storageDir, "ad591530-694c-42f1-9f01-f03bee4cca1c.txt") },
+		capture: { inputFormat: "dshow" },
+	});
+	// The key itself never travels through the tab: no file is read and nothing is set.
+	expect("SONIOX_API_KEY" in env).toBe(false);
 });
 
-test("a key already in the environment wins, and no file means no key", async () => {
-	const own = cli({ extra: { env: { PATH: "/usr/bin", PI_CODING_AGENT_DIR: temporary(), SONIOX_API_KEY: "own" } } });
-	writeFileSync(join(own.storageDir, "ad591530-694c-42f1-9f01-f03bee4cca1c.txt"), "from-file");
-	await own.instance.newTab();
-	await until(() => own.pty.spawned.length === 1);
-	expect(own.pty.spawned[0].options.env.SONIOX_API_KEY).toBe("own");
-	const none = cli({ extra: { env: { PATH: "/usr/bin", PI_CODING_AGENT_DIR: temporary() } } });
-	await none.instance.newTab();
-	await until(() => none.pty.spawned.length === 1);
-	expect("SONIOX_API_KEY" in none.pty.spawned[0].options.env).toBe(false);
+test("without the dictation config the tab opens with no dictation variables", async () => {
+	const { pty, instance } = cli({ extra: { env: { PATH: "/usr/bin", PI_CODING_AGENT_DIR: temporary() } } });
+	await instance.newTab();
+	await until(() => pty.spawned.length === 1);
+	expect("PI_STT_CONFIG" in pty.spawned[0].options.env).toBe(false);
+	expect("OMPCLI_GIT_BASH" in pty.spawned[0].options.env).toBe(false);
 });

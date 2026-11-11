@@ -801,6 +801,18 @@ function configFiles(overlay, base, layers = []) {
 	return [envGet(base, "PI_CONFIG_FILES"), ...layers, overlay].filter(Boolean).join(";");
 }
 
+// Dictation config of this window: the harness file plus the key file, which the plugin reads on every use.
+// A key written after the tab opened works, and a missing key names this path.
+async function writeSttConfig(agentDir, storageDir) {
+	const text = await readText(path.join(agentDir, "extensions", "pi-voice-stt", "stt.windows.json"));
+	if (text === null) return undefined;
+	const config = JSON.parse(text);
+	config.provider = { ...config.provider, apiKeyFile: path.join(storageDir, STT_KEY_FILE) };
+	const file = path.join(storageDir, "stt.json");
+	await writeFileAtomic(file, JSON.stringify(config, null, 2) + "\n");
+	return { config: file };
+}
+
 function createEnv({ base = process.env, proxy, proxyStrictSSL, paths, overlay, layers, stt, gitBash = GIT_BASH }) {
 	const env = { ...base };
 	const value = typeof proxy === "string" ? proxy.trim() : "";
@@ -818,11 +830,10 @@ function createEnv({ base = process.env, proxy, proxyStrictSSL, paths, overlay, 
 	const files = configFiles(overlay.file, base, layers);
 	envSet(env, "PI_CONFIG_FILES", files);
 	envSet(env, "OMPCLI_CONFIG_FILES", files);
-	// Dictation (pi-voice-stt): its Windows config, the key from the storage file, and Git Bash for its ffmpeg chain.
+	// Dictation (pi-voice-stt): the window config and Git Bash for its ffmpeg chain.
 	if (stt) {
 		envSet(env, "PI_STT_CONFIG", stt.config);
 		envSet(env, "OMPCLI_GIT_BASH", gitBash);
-		if (stt.key && !envGet(env, "SONIOX_API_KEY")) envSet(env, "SONIOX_API_KEY", stt.key);
 	}
 	return env;
 }
@@ -1242,7 +1253,8 @@ function createCli(host) {
 		if (!overlay || overlay.key !== (started.key ?? null)) {
 			overlay = await writeOverlay({ storageDir: host.storageDir, port: started.port, key: started.key });
 		}
-		const stt = { config: path.join(agentDir, "extensions", "pi-voice-stt", "stt.windows.json"), key: (await readText(path.join(host.storageDir, STT_KEY_FILE)))?.trim() };
+		await fsp.mkdir(host.storageDir, { recursive: true });
+		const stt = await writeSttConfig(agentDir, host.storageDir);
 		return { paths, overlay, layers, stt };
 	}
 

@@ -107,10 +107,11 @@ Ctrl+Enter ставит сообщение в очередь (`omp://keybindings
 
 ## Диктовка
 
-Плагин `pi-voice-stt` ставится с харнесом (модуль `voice-stt`). Вкладка даёт OMP три переменные:
-`PI_STT_CONFIG` (`stt.windows.json` из каталога плагина), `OMPCLI_GIT_BASH` (путь к Git Bash) и
-`SONIOX_API_KEY` из файла `globalStorage/ad591530-694c-42f1-9f01-f03bee4cca1c.txt`. Ключ, который уже есть в окружении,
-главнее файла. Файла нет: диктовка ответит, что ключа нет, остальное работает.
+Плагин `pi-voice-stt` ставится с харнесом (модуль `voice-stt`). Вкладка пишет конфиг окна
+`globalStorage/stt.json`: это `stt.windows.json` из каталога плагина плюс `provider.apiKeyFile` с путём
+`globalStorage/ad591530-694c-42f1-9f01-f03bee4cca1c.txt`. OMP получает `PI_STT_CONFIG` на этот файл и `OMPCLI_GIT_BASH`.
+Плагин читает файл ключа при каждой записи: ключ, записанный при открытой вкладке, тоже работает.
+`SONIOX_API_KEY` в окружении Windows главнее файла. Ключа нет нигде: `/stt doctor` называет путь файла.
 
 ffmpeg запускает сам OMP, цепочкой PowerShell -> Git Bash -> `ffmpeg.exe`. `ffmpeg.exe` лежит рядом
 с `omp.exe`, а этот каталог вкладка ставит в `PATH`.
