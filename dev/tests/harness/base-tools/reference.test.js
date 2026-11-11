@@ -108,3 +108,14 @@ test("the hook warns once through the module entry", async () => {
 	await handlers.before_provider_request({ payload: next }, { ...ctx, sessionManager: { getSessionId: () => "new" } });
 	expect(seen).toHaveLength(2);
 });
+
+test("the Windows line of native bash is not a mismatch", () => {
+	const windows = "Windows host, emulated bash environment: write bash, NEVER cmd/PowerShell syntax (run PowerShell as `powershell -c '…'`): `$TEMP` not `%TEMP%`, `&&`/`;` not `&` (it backgrounds), no `dir`/`copy`/`set X=`; paths `C:/x` or `/c/x`; `find`/`sort`/`timeout` are GNU.";
+	const payload = mainPayload();
+	const bash = payload.tools.find(tool => tool.name === "bash");
+	bash.description = bash.description.replace("\n\n", "\n" + windows + "\n");
+	expect(bash.description).toContain(windows);
+	expect(checkReference(payload, reference.settings)).toBeUndefined();
+	bash.description = bash.description.replace("Windows host", "Linux host");
+	expect(checkReference(payload, reference.settings)).toBe("base-tools: native bash changed description");
+});

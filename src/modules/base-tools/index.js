@@ -446,8 +446,9 @@ function detectFiles(payload) {
 
 const fieldsOf = tool =>
 	Object.keys(tool?.parameters?.properties ?? tool?.input_schema?.properties ?? tool?.inputSchema?.properties ?? tool?.format ?? {}).sort();
+// On Windows OMP adds one line to bash (prompts/tools/bash.md, isWindows): not a change.
 const nativeText = text =>
-	text.replace(
+	text.replace(/^Windows host, emulated bash environment: .*$/m, "").replace(
 		"Scripts/heredocs/`$(…)`/complex pipelines → `eval`.",
 		"Scripts/heredocs/`$(…)`/complex flow → dedicated tool or checked-in script.",
 	);

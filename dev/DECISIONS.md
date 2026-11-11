@@ -1005,3 +1005,15 @@ URL и архивы остаются у родных `grep` и `read`.
 **Носители правила:** `src/modules/ompcli/index.js` (`installHarness`, `configOverlays`, `extractArchive`, `readTar`, `sweep`, `configFiles`), `dev/scripts/ompcli-build/`, `dev/tests/harness/ompcli/`.
 
 **Выпуск D-052:** `0.0.6`, ревизия `7a3124692949150a356105666d26bb2f2e22433c`, 153520208 байт, sha256 `1ffff315dff207584ed967f9d13c651d878a23f76abfa603ff42e822a4d802b4`, Marketplace `win32-x64 validated`, 2026-11-11 06:54 UTC. На VDI не проверено.
+
+## D-053 — сторож base-tools пропускает строку Windows в описании bash
+
+**Решение:** сторож эталона не считает изменением строку `Windows host, emulated bash environment: ...` в родном описании `bash`.
+
+**Основание:** скрин владельца с VDI от 11.11: `Warning: base-tools: native bash changed description`. Слова владельца: «по исходникам ты не можешь сам это сделать».
+
+**Источник:** исходник OMP `18.18.8`, `packages/coding-agent/src/prompts/tools/bash.md`: строка стоит под условием `isWindows`, в `tools/bash.ts` это `process.platform === "win32"`. Эталон снят на macOS.
+
+**Граница:** на VDI не проверено. Наш текст `bash` эту строку модели не передаёт.
+
+**Носители правила:** `src/modules/base-tools/index.js` (`nativeText`), `dev/tests/harness/base-tools/reference.test.js`.
