@@ -28,7 +28,7 @@
 |---|---|
 |`index.js`|весь код расширения VS Code: вкладки, установка харнеса, обновление, память|
 |`package.json`|манифест расширения: три команды, Ctrl+Enter и Shift+Enter, `main: ./index.js`|
-|`runtime.json`|пины OMP, модели, llama.cpp и CRT: `url`, `sha256`, `size`, `file`; программы по ним кладёт в VSIX сборщик|
+|`runtime.json`|пины OMP, модели, llama.cpp, CRT и ffmpeg: `url`, `sha256`, `size`, `file`; программы по ним кладёт в VSIX сборщик|
 |`messages.json`|видимые сообщения, английский|
 |`licenses/`|лицензии OMP, llama.cpp, LLVM OpenMP, модели, Bun и условия MSVC runtime|
 
@@ -37,10 +37,10 @@
 
 ## Установка
 
-Программ в VSIX две: `runtime/omp.exe` (OMP 18.18.8) и `runtime/llama/` с сервером
-памяти. `bun.exe` в поставке нет: VDI запрещает сам этот файл (`Permission denied`).
+Программ в VSIX три: `runtime/omp.exe` (OMP 18.18.8), `runtime/llama/` с сервером
+памяти и `runtime/ffmpeg.exe` для диктовки (сборка LGPL `n8.1.3`, FFmpeg-Builds). `bun.exe` в поставке нет: VDI запрещает сам этот файл (`Permission denied`).
 
-Запуск у обеих программ один, как у PCLI: `node-pty` из VS Code -> `powershell.exe` ->
+Запуск у всех программ один, как у PCLI: `node-pty` из VS Code -> `powershell.exe` ->
 Git Bash `--login -i -c` -> программа. Второго bash и файла-обёртки между ними нет.
 Пути в команде идут с прямыми слешами, двойных кавычек в ней нет. Сам extension host
 запускает только `curl.exe` из `System32`: им качаются модель и обновление.
@@ -104,6 +104,16 @@ Git Bash `--login -i -c` -> программа. Второго bash и файл�
 Терминал VS Code шлёт на Shift+Enter и Ctrl+Enter обычный Enter. Во вкладке расширения
 они уходят в OMP как `ESC[13;2u` и `ESC[13;5u`: Shift+Enter переносит строку,
 Ctrl+Enter ставит сообщение в очередь (`omp://keybindings.md`).
+
+## Диктовка
+
+Плагин `pi-voice-stt` ставится с харнесом (модуль `voice-stt`). Вкладка даёт OMP три переменные:
+`PI_STT_CONFIG` (`stt.windows.json` из каталога плагина), `OMPCLI_GIT_BASH` (путь к Git Bash) и
+`SONIOX_API_KEY` из файла `globalStorage/ad591530-694c-42f1-9f01-f03bee4cca1c.txt`. Ключ, который уже есть в окружении,
+главнее файла. Файла нет: диктовка ответит, что ключа нет, остальное работает.
+
+ffmpeg запускает сам OMP, цепочкой PowerShell -> Git Bash -> `ffmpeg.exe`. `ffmpeg.exe` лежит рядом
+с `omp.exe`, а этот каталог вкладка ставит в `PATH`.
 
 ## Память
 

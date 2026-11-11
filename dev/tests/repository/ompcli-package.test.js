@@ -60,4 +60,8 @@ test("the runtime pins cover every shipped Windows component", () => {
 	for (const name of ["msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll"]) expect(files[name]).toMatch(/^[a-f0-9]{64}$/);
 	expect(pins.llama.url).toContain("b12211");
 	expect(pins.vc.version).toBe("14.51.36247");
+	// ffmpeg for dictation: one pinned LGPL build, one checked file out of it.
+	expect(pins.ffmpeg.url).toContain("win64-lgpl");
+	expect(pins.ffmpeg.member.endsWith("/bin/ffmpeg.exe")).toBe(true);
+	for (const field of ["sha256", "fileSha256"]) expect(pins.ffmpeg[field]).toMatch(/^[a-f0-9]{64}$/);
 });

@@ -24,6 +24,8 @@ const MEMORY_DIM = 768;
 const PROXY_VARS = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "PI_PROXY", "NODE_USE_ENV_PROXY", "NODE_TLS_REJECT_UNAUTHORIZED"];
 const REVISION = /^[a-f0-9]{40}$/;
 const BACKUP_DIR = ".ompcli-backups";
+// Dictation key (Soniox) lives in this file of the extension storage; the name says nothing on purpose.
+const STT_KEY_FILE = "ad591530-694c-42f1-9f01-f03bee4cca1c.txt";
 function format(template, values = {}) {
 	return template.replace(/\{(\w+)\}/g, (all, key) => (key in values ? String(values[key]) : all));
 }
@@ -799,7 +801,7 @@ function configFiles(overlay, base, layers = []) {
 	return [envGet(base, "PI_CONFIG_FILES"), ...layers, overlay].filter(Boolean).join(";");
 }
 
-function createEnv({ base = process.env, proxy, proxyStrictSSL, paths, overlay, layers }) {
+function createEnv({ base = process.env, proxy, proxyStrictSSL, paths, overlay, layers, stt, gitBash = GIT_BASH }) {
 	const env = { ...base };
 	const value = typeof proxy === "string" ? proxy.trim() : "";
 	if (value) {
@@ -816,6 +818,12 @@ function createEnv({ base = process.env, proxy, proxyStrictSSL, paths, overlay, 
 	const files = configFiles(overlay.file, base, layers);
 	envSet(env, "PI_CONFIG_FILES", files);
 	envSet(env, "OMPCLI_CONFIG_FILES", files);
+	// Dictation (pi-voice-stt): its Windows config, the key from the storage file, and Git Bash for its ffmpeg chain.
+	if (stt) {
+		envSet(env, "PI_STT_CONFIG", stt.config);
+		envSet(env, "OMPCLI_GIT_BASH", gitBash);
+		if (stt.key && !envGet(env, "SONIOX_API_KEY")) envSet(env, "SONIOX_API_KEY", stt.key);
+	}
 	return env;
 }
 
@@ -1234,7 +1242,8 @@ function createCli(host) {
 		if (!overlay || overlay.key !== (started.key ?? null)) {
 			overlay = await writeOverlay({ storageDir: host.storageDir, port: started.port, key: started.key });
 		}
-		return { paths, overlay, layers };
+		const stt = { config: path.join(agentDir, "extensions", "pi-voice-stt", "stt.windows.json"), key: (await readText(path.join(host.storageDir, STT_KEY_FILE)))?.trim() };
+		return { paths, overlay, layers, stt };
 	}
 
 	async function runTab(name, kind) {
@@ -1256,7 +1265,7 @@ function createCli(host) {
 				return prepared;
 			},
 			build: prepared => {
-				const env = createEnv({ base: host.env, proxy: settings.proxy, proxyStrictSSL: settings.proxyStrictSSL, ...prepared });
+				const env = createEnv({ base: host.env, proxy: settings.proxy, proxyStrictSSL: settings.proxyStrictSSL, gitBash: host.gitBash ?? GIT_BASH, ...prepared });
 				for (const proxy of PROXY_VARS.filter(candidate => envGet(env, candidate))) envSet(env, "OMPCLI_" + proxy, envGet(env, proxy));
 				const inner = kind === "chat" ? chatCommand({ ...prepared, home: workDir() === host.homedir }) : "exec bash --rcfile " + bashQuote(slashes(rcFile)) + " -i";
 				return { command: bashCommand(host.gitBash ?? GIT_BASH, inner), env, cwd: workDir() };

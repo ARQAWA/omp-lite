@@ -119,6 +119,7 @@ cp "<from>" "$HOME/.omp/agent/<to>"
 - `<to>` — путь от `~/.omp/agent`; выходить за его пределы нельзя.
 - Каталог `extensions/codex-web-run/` создаётся как каталог: расширение грузит `index.js` рядом с ресурсами.
 - `skills/reviewer/` хранит скилл, его скрипт, промпты и оверлеи рядом.
+- `extensions/pi-voice-stt/` хранит плагин диктовки с его `package.json`: OMP грузит его по `pi.extensions`.
 - Одинаковые имена и структура каталогов обязательны: код читает ресурсы относительно себя.
 - Не копируй каталог целиком и не используй `cp -r` по `src/`.
 
@@ -182,6 +183,7 @@ Python остаётся доступен для специальных библ�
 Он должен вернуть первые пять строк без `Unknown topic`.
 13. Каталога `~/.omp/agent/extensions/cursor-tools/` нет.
 14. Файлов `memory-tool-prompts*` в `~/.omp/agent/extensions/` нет. Новая сессия не пишет `memory patch stale`.
+15. Диктовка. Установщик окружение не меняет. Владельцу нужны `ffmpeg` в `PATH`, `PI_STT_CONFIG=~/.omp/agent/extensions/pi-voice-stt/stt.json` и `SONIOX_API_KEY`. Тогда `/stt doctor` отвечает `Pi Voice STT ready`. Без них остальной харнес работает.
 
 ## 6. Откат
 

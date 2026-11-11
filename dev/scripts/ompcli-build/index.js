@@ -15,6 +15,8 @@ const { fetchRuntime, root } = require("../ompcli-runtime/index.js");
 const dist = path.join(root, "dist/ompcli");
 const cache = path.join(root, "dist/.cache");
 const SYSTEM_DLLS = new Set([
+	// ffmpeg.exe also links these Windows system libraries.
+	"avicap32.dll", "avrt.dll", "d2d1.dll", "dnsapi.dll", "dwrite.dll", "ncrypt.dll", "usp10.dll",
 	"advapi32.dll", "bcrypt.dll", "bcryptprimitives.dll", "cfgmgr32.dll", "comctl32.dll", "comdlg32.dll",
 	"crypt32.dll", "cryptbase.dll", "dbghelp.dll", "dwmapi.dll", "gdi32.dll", "hid.dll", "imm32.dll",
 	"iphlpapi.dll", "kernel32.dll", "mpr.dll", "msimg32.dll", "msvcrt.dll", "netapi32.dll", "normaliz.dll",
@@ -97,6 +99,14 @@ async function stageRuntime() {
 	const omp = path.join(cache, "omp.exe");
 	await fetchRuntime(omp, resources.assets.omp);
 	await fsp.copyFile(omp, path.join(dist, "runtime", resources.assets.omp.file));
+	// ffmpeg for dictation sits next to omp.exe, which is on PATH in every tab.
+	const ffmpeg = path.join(cache, "ffmpeg.zip");
+	await fetchRuntime(ffmpeg, resources.ffmpeg);
+	run("tar", ["-xf", ffmpeg, "-C", temporary, resources.ffmpeg.member]);
+	const ffmpegData = await fsp.readFile(path.join(temporary, resources.ffmpeg.member));
+	if (shasum(ffmpegData) !== resources.ffmpeg.fileSha256) throw new Error("ffmpeg checksum mismatch");
+	if (peImports(ffmpegData).some(name => !SYSTEM_DLLS.has(name.toLowerCase()) && !/^(api|ext)-ms-/i.test(name))) throw new Error("ffmpeg.exe needs a DLL that does not ship");
+	await fsp.writeFile(path.join(dist, "runtime", resources.ffmpeg.file), ffmpegData);
 	const names = Object.keys(resources.llama.files);
 	run("tar", ["-xf", llama, "-C", temporary, ...names]);
 	for (const [name, expected] of Object.entries(resources.llama.files)) {

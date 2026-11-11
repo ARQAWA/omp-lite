@@ -1047,3 +1047,17 @@ URL и архивы остаются у родных `grep` и `read`.
 **Носители правила:** `src/modules/ompcli/package.json`, `src/modules/runtime-config/config.yml`, `dev/tests/repository/ompcli-package.test.js`.
 
 **Выпуск D-055:** `0.0.8`, ревизия `33b1c00738fb0b65f1ccaa6fad6ca127140ae593`, 153521172 байт, sha256 `1e510b2619d0ad5c69d24c704bfe8fdcf12af0d5737eb8a4465cdf5e76c7a60b`, Marketplace `win32-x64 validated`, 2026-11-11 08:06 UTC. На VDI не проверено.
+
+## D-056 — диктовка pi-voice-stt на Mac и VDI
+
+**Решение:** модуль `voice-stt` несёт копию плагина `pi-voice-stt` `v0.11.0` (коммит `1e134b9`, MIT) и два конфига: `stt.json` для Mac и `stt.windows.json` для VDI. Харнес ставит их в `~/.omp/agent/extensions/pi-voice-stt/`. Клавиши `alt+w` и `alt+shift+s`. Расширение `ompcli` `0.0.9` несёт `ffmpeg.exe` (LGPL `n8.1.3`, FFmpeg-Builds) и даёт вкладке `PI_STT_CONFIG`, `OMPCLI_GIT_BASH` и `SONIOX_API_KEY` из файла `globalStorage/ad591530-694c-42f1-9f01-f03bee4cca1c.txt`. Ключ в окружении главнее файла.
+
+**Основание:** задание владельца от 11.11: «добавь в мой пакет OMP диктовку через плагин pi-voice-stt, она должна работать и на VDI», «зафиксируй версию плагина, не тяни main», «не меняй код плагина без нужды». Ответы в форме: копия в пакете; ffmpeg в VSIX и запуск «абсолютно так же, как OMP и сервер памяти»; ключ из неприметного файла с именем-UUID.
+
+**Документация OMP:** `omp://extension-loading.md`: каталог в `extensions/` с `package.json` и `pi.extensions` грузится как расширение. `omp://extensions.md`: `getShortcutConflict`, `pi.exec`. `omp://plugin-manager-installer-plumbing.md`: штатный `omp plugin install` отклонён, на VDI он требует git, сеть и запуск `omp.exe` как Bun.
+
+**Правка плагина:** одна, `src/audio/launch.ts` и строки запуска ffmpeg. С `OMPCLI_GIT_BASH` на Windows ffmpeg идёт PowerShell -> Git Bash `--login -i -c` -> `ffmpeg`, остановка снимает дерево `taskkill /T`. Без переменной плагин равен оригиналу. Нужда: правило запуска программ на VDI (`dev/VDI.md`).
+
+**Граница:** на Mac проверено: OMP грузит плагин из каталога, `/stt doctor` отвечает `ready`, клавиши свободны. На VDI не проверено ничего: запуск `ffmpeg.exe`, звук, имя микрофона. В `stt.windows.json` пока стоит `audio=Microphone`; настоящее имя придёт со скрина владельца и уйдёт через `Update`.
+
+**Носители правила:** `src/modules/voice-stt/`, `src/modules/ompcli/index.js` (`createEnv`, `STT_KEY_FILE`), `src/modules/ompcli/runtime.json` (`ffmpeg`), `dev/scripts/ompcli-build/index.js`, `dev/tests/harness/voice-stt/`.

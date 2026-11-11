@@ -1,0 +1,12 @@
+{
+  "keybind": "alt+w",
+  "profileKeybind": "alt+shift+s",
+  "provider": {
+    "type": "soniox",
+    "model": "stt-async-v5",
+    "apiKeyEnv": "SONIOX_API_KEY"
+  },
+  "capture": {
+    "input": ":MacBook Air Microphone"
+  }
+}

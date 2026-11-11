@@ -601,3 +601,28 @@ test("a memory server that cannot start opens OMP without memory and says why", 
 	await until(() => pty.spawned.length === 2);
 	expect(overlayOf(pty.spawned[1])).toContain("embeddingApiKey: live");
 });
+
+test("a tab hands dictation its Windows config, Git Bash and the key from the storage file", async () => {
+	const agentDir = temporary();
+	const { pty, storageDir, instance } = cli({ extra: { env: { PATH: "/usr/bin", PI_CODING_AGENT_DIR: agentDir } } });
+	writeFileSync(join(storageDir, "ad591530-694c-42f1-9f01-f03bee4cca1c.txt"), "  soniox-secret\r\n");
+	await instance.newTab();
+	await until(() => pty.spawned.length === 1);
+	const { env } = pty.spawned[0].options;
+	expect(env.PI_STT_CONFIG).toBe(join(agentDir, "extensions", "pi-voice-stt", "stt.windows.json"));
+	expect(env.OMPCLI_GIT_BASH).toBe("C:\\Program Files\\Git\\bin\\bash.exe");
+	expect(env.SONIOX_API_KEY).toBe("soniox-secret");
+	expect(pty.spawned[0].args.join(" ")).not.toContain("soniox-secret");
+});
+
+test("a key already in the environment wins, and no file means no key", async () => {
+	const own = cli({ extra: { env: { PATH: "/usr/bin", PI_CODING_AGENT_DIR: temporary(), SONIOX_API_KEY: "own" } } });
+	writeFileSync(join(own.storageDir, "ad591530-694c-42f1-9f01-f03bee4cca1c.txt"), "from-file");
+	await own.instance.newTab();
+	await until(() => own.pty.spawned.length === 1);
+	expect(own.pty.spawned[0].options.env.SONIOX_API_KEY).toBe("own");
+	const none = cli({ extra: { env: { PATH: "/usr/bin", PI_CODING_AGENT_DIR: temporary() } } });
+	await none.instance.newTab();
+	await until(() => none.pty.spawned.length === 1);
+	expect("SONIOX_API_KEY" in none.pty.spawned[0].options.env).toBe(false);
+});

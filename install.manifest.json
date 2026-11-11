@@ -141,6 +141,218 @@
 		{
 			"from": "src/modules/web-search/web-run.schema.json",
 			"to": "extensions/codex-web-run/web-run.schema.json"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/LICENSE",
+			"to": "extensions/pi-voice-stt/LICENSE"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/package.json",
+			"to": "extensions/pi-voice-stt/package.json"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/bridge-recorder.ts",
+			"to": "extensions/pi-voice-stt/src/audio/bridge-recorder.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/factory.ts",
+			"to": "extensions/pi-voice-stt/src/audio/factory.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/ffmpeg-recorder.ts",
+			"to": "extensions/pi-voice-stt/src/audio/ffmpeg-recorder.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/file.ts",
+			"to": "extensions/pi-voice-stt/src/audio/file.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/launch.ts",
+			"to": "extensions/pi-voice-stt/src/audio/launch.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/stream-recorder.ts",
+			"to": "extensions/pi-voice-stt/src/audio/stream-recorder.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/types.ts",
+			"to": "extensions/pi-voice-stt/src/audio/types.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/wav.ts",
+			"to": "extensions/pi-voice-stt/src/audio/wav.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/cleanup/factory.ts",
+			"to": "extensions/pi-voice-stt/src/cleanup/factory.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/cleanup/openai-compatible.ts",
+			"to": "extensions/pi-voice-stt/src/cleanup/openai-compatible.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/cleanup/prompt.ts",
+			"to": "extensions/pi-voice-stt/src/cleanup/prompt.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/cleanup/repo-context.ts",
+			"to": "extensions/pi-voice-stt/src/cleanup/repo-context.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/cleanup/types.ts",
+			"to": "extensions/pi-voice-stt/src/cleanup/types.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/config/defaults.ts",
+			"to": "extensions/pi-voice-stt/src/config/defaults.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/config/endpoint.ts",
+			"to": "extensions/pi-voice-stt/src/config/endpoint.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/config/load-config.ts",
+			"to": "extensions/pi-voice-stt/src/config/load-config.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/config/profiles.ts",
+			"to": "extensions/pi-voice-stt/src/config/profiles.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/config/startup.ts",
+			"to": "extensions/pi-voice-stt/src/config/startup.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/config/types.ts",
+			"to": "extensions/pi-voice-stt/src/config/types.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/core/dictation-controller.ts",
+			"to": "extensions/pi-voice-stt/src/core/dictation-controller.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/core/modes.ts",
+			"to": "extensions/pi-voice-stt/src/core/modes.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/core/output.ts",
+			"to": "extensions/pi-voice-stt/src/core/output.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/core/realtime-controller.ts",
+			"to": "extensions/pi-voice-stt/src/core/realtime-controller.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/core/replacements.ts",
+			"to": "extensions/pi-voice-stt/src/core/replacements.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/core/transcribe.ts",
+			"to": "extensions/pi-voice-stt/src/core/transcribe.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/core/voice-commands.ts",
+			"to": "extensions/pi-voice-stt/src/core/voice-commands.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/i18n/strings.ts",
+			"to": "extensions/pi-voice-stt/src/i18n/strings.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/index.ts",
+			"to": "extensions/pi-voice-stt/src/index.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/assemblyai-stream.ts",
+			"to": "extensions/pi-voice-stt/src/providers/assemblyai-stream.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/assemblyai.ts",
+			"to": "extensions/pi-voice-stt/src/providers/assemblyai.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/deepgram.ts",
+			"to": "extensions/pi-voice-stt/src/providers/deepgram.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/elevenlabs.ts",
+			"to": "extensions/pi-voice-stt/src/providers/elevenlabs.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/factory.ts",
+			"to": "extensions/pi-voice-stt/src/providers/factory.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/gladia.ts",
+			"to": "extensions/pi-voice-stt/src/providers/gladia.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/helpers.ts",
+			"to": "extensions/pi-voice-stt/src/providers/helpers.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/mistral.ts",
+			"to": "extensions/pi-voice-stt/src/providers/mistral.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/multipart.ts",
+			"to": "extensions/pi-voice-stt/src/providers/multipart.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/openai-compatible.ts",
+			"to": "extensions/pi-voice-stt/src/providers/openai-compatible.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/readiness.ts",
+			"to": "extensions/pi-voice-stt/src/providers/readiness.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/soniox.ts",
+			"to": "extensions/pi-voice-stt/src/providers/soniox.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/types.ts",
+			"to": "extensions/pi-voice-stt/src/providers/types.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/secrets/keychain.ts",
+			"to": "extensions/pi-voice-stt/src/secrets/keychain.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/secrets/resolve-api-key.ts",
+			"to": "extensions/pi-voice-stt/src/secrets/resolve-api-key.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/ui/input-indicator.ts",
+			"to": "extensions/pi-voice-stt/src/ui/input-indicator.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/utils/coerce.ts",
+			"to": "extensions/pi-voice-stt/src/utils/coerce.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/utils/keybind.ts",
+			"to": "extensions/pi-voice-stt/src/utils/keybind.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/utils/merge.ts",
+			"to": "extensions/pi-voice-stt/src/utils/merge.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/utils/path.ts",
+			"to": "extensions/pi-voice-stt/src/utils/path.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/pi-voice-stt/src/utils/text.ts",
+			"to": "extensions/pi-voice-stt/src/utils/text.ts"
+		},
+		{
+			"from": "src/modules/voice-stt/stt.json",
+			"to": "extensions/pi-voice-stt/stt.json"
+		},
+		{
+			"from": "src/modules/voice-stt/stt.windows.json",
+			"to": "extensions/pi-voice-stt/stt.windows.json"
 		}
 	],
 	"vscode": {
@@ -185,6 +397,10 @@
 			{
 				"from": "src/modules/ompcli/licenses/LICENSE-msvc-runtime.txt",
 				"to": "licenses/LICENSE-msvc-runtime.txt"
+			},
+			{
+				"from": "src/modules/ompcli/licenses/LICENSE-ffmpeg.txt",
+				"to": "licenses/LICENSE-ffmpeg.txt"
 			}
 		]
 	},

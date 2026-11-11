@@ -34,7 +34,7 @@ node-pty из VS Code
 7. Второго bash и файла-обёртки перед программой нет.
 
 **Запрещено:** `child_process.spawn`, `exec`, `execFile` для программ из поставки (`omp.exe`, `bun.exe`, `llama-server.exe` и любых новых).
-С 0.0.6 в ompcli таких программ две: `omp.exe` и `llama-server.exe`. Установка харнеса и распаковка обновления идут внутри extension host, без программ.
+С 0.0.6 в ompcli таких программ две: `omp.exe` и `llama-server.exe`. С 0.0.9 третья: `ffmpeg.exe` для диктовки. Её запускает не extension host, а сам OMP, той же цепочкой PowerShell -> Git Bash. Установка харнеса и распаковка обновления идут внутри extension host, без программ.
 Extension host сам запускает только две вещи: `curl.exe` из `System32` (видел: работает) и сам VS Code как Node (так делает CCLI; код).
 
 Так запускают все три расширения: PCLI `pi.exe`, CCLI `codex.exe`, ompcli `omp.exe` и `llama-server.exe`.
@@ -64,6 +64,7 @@ Extension host сам запускает только две вещи: `curl.exe
 1. **Почему запрещён именно `bun.exe`.** Версия 0.0.5 назвала файл: отказ даёт сам `bun.exe`, и прямым запуском, и цепочкой. `pi.exe` из такого же каталога расширения работает. Правило, которое их различает, неизвестно.
 2. **Какая защита стоит на VDI.** AppLocker, WDAC, Defender ASR, EDR: журналы никто не смотрел.
 3. **Пустит ли VDI `omp.exe` и `llama-server.exe`.** PCLI доказывает цепочку только для `pi.exe`. Отказ `llama-server.exe` вкладку не закрывает: OMP откроется без памяти и назовёт причину.
+5. **Пустит ли VDI `ffmpeg.exe` и микрофон.** Не проверено. Как проброшен звук на VDI, неизвестно. Отказ ffmpeg видно в `/stt doctor`.
 4. **Пустила ли VDI `llama-server.exe`.** OMP в 0.0.6 открылся; была ли строка `memory is off`, неизвестно.
 5. **Версии на VDI:** Windows, VS Code, его `node-pty`, Git for Windows, профиль bash.
 6. **Первый сбой PCLI.** Владелец помнит похожую ошибку и починку. Сессия не найдена. Первая версия PCLI в git уже шла цепочкой.
