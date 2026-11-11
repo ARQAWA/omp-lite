@@ -83,6 +83,10 @@
 			"to": "skills/reviewer/reviewer.yml"
 		},
 		{
+			"from": "src/modules/short-task/SKILL.md",
+			"to": "skills/short-task/SKILL.md"
+		},
+		{
 			"from": "src/modules/skill-alias/index.js",
 			"to": "extensions/skill-alias.js"
 		},
