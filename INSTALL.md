@@ -81,11 +81,11 @@ omp --version
 Ожидается `omp/18.18.0`. Вывод другой: остановись и сообщи версию. Ничего не копируй и не меняй настройки. Обновлять OMP не надо.
 3. Закрой активные сессии OMP: расширения читаются при старте.
 4. Проверь, что рабочее дерево репозитория чистое. Ставь файлы из коммита, а не из чужих незакоммиченных правок.
-5. Найди личный конфиг. OMP читает существующий `config.yaml` на месте; иначе используется `config.yml`.
+5. Найди конфиг. OMP читает первый существующий файл из `config.yml` и `config.yaml`. Нет ни одного — создаётся `config.yml`.
 
 ```bash
 config=$HOME/.omp/agent/config.yml
-if [ -f "$HOME/.omp/agent/config.yaml" ]; then config=$HOME/.omp/agent/config.yaml; fi
+if [ ! -f "$config" ] && [ -f "$HOME/.omp/agent/config.yaml" ]; then config=$HOME/.omp/agent/config.yaml; fi
 if [ -f "$config" ]; then had_config=1; else had_config=0; fi
 ```
 
@@ -124,12 +124,11 @@ cp "<from>" "$HOME/.omp/agent/<to>"
 
 ## 4. Настройки
 
-`config` сливается в найденный личный конфиг по правилам записи:
+`config` — слепок настроек владельца. Установка заменяет им конфиг целиком: прежний конфиг уже лежит в `$backup/config`. Начни с пустого конфига и слей в него фрагменты по порядку. Прежние ключи вне слепка пропадают. Все записи идут в режиме `merge`:
 
 | mode | что делает |
 | --- | --- |
-| `merge-missing` | добавляет только отсутствующие ключи; существующие значения не меняет |
-| `merge` | выставляет ключи из фрагмента; остальные ключи и вложенные значения не трогает |
+| `merge` | выставляет ключи из фрагмента; список заменяется целиком |
 
 Порядок: `runtime-config`, затем `base-tools`, затем `compaction-400k`, затем `status-line`, затем `mnemopi`. Более поздний фрагмент уточняет совпавшие ключи.
 
@@ -144,15 +143,9 @@ mnemopi:
   embeddingApiKey: ollama
 ```
 
-Остальные личные ключи не меняются. Запрещено заменять конфиг целиком.
+После установки в конфиге ровно ключи слепка, других нет. Так сборка на любой машине одинаковая.
 
-**Старое сообщение `sed -n`.** `runtime-config` сливается как `merge-missing`; существующий `bashInterceptor` он не перезаписывает. Найди правило `sed -n` и замени его `message` на:
-
-```text
-Use the `read` tool with a line range in `path` instead of sed -n.
-```
-
-Остальные правила и личные ключи не трогай.
+Секретов в слепке нет. Вход в провайдеров владелец делает сам.
 
 ## 5. Проверка
 
@@ -166,7 +159,11 @@ cmp "$from" "$HOME/.omp/agent/$to"
 Команда молчит — файлы совпадают. Скажи слово — расхождение, установка неполная.
 
 3. В `~/.omp/agent` нет путей из `dev/`, `dev/tests/`, `AGENTS.md`, `INSTALL.md` и README.
-4. В личном конфиге выставлены четыре ключа `mnemopi` и отвечает запрос эмбеддингов.
+4. В конфиге выставлены четыре ключа `mnemopi` и отвечает запрос эмбеддингов. Конфиг равен слепку. Есть `bun` — команда из корня репозитория печатает `0`. Нет `bun` — выполни `omp config list --scope=global` и сверь вывод с фрагментами `config` глазами: ключи и значения те же, лишних ключей нет.
+
+```bash
+bun -e 'const m=JSON.parse(await Bun.file("install.manifest.json").text());const flat=(n,p="",o={})=>{for(const[k,v]of Object.entries(n??{})){const id=p?p+"."+k:k;if(v&&typeof v==="object"&&!Array.isArray(v))flat(v,id,o);else o[id]=JSON.stringify(v)}return o};let want={};for(const c of m.config)Object.assign(want,flat(Bun.YAML.parse(await Bun.file(c.from).text())));const live=flat(Bun.YAML.parse(await Bun.file(process.argv[1]).text()));console.log(new Set([...Object.keys(want),...Object.keys(live)]).values().filter(k=>want[k]!==live[k]).toArray().length)' "$config"
+```
 5. Запусти новую сессию OMP. Расширения не печатают ошибок загрузки.
 6. Убедись, что тул `files` отвечает, а команда `reuse` и навыки `blindreview`, `highreview`, `reviewer` доступны.
 7. Проверь, что работает установленный `SYSTEM.md`. Запусти сессию вне репозитория и спроси, сколько строк максимум в финальном ответе. Наш промпт говорит про 50-70 строк. Промпт OMP по умолчанию такого числа не знает. Свой `SYSTEM.md` или шаблон в проекте главнее установленного: из каталога с `.omp/SYSTEM.md` эта проверка ничего не покажет.
@@ -178,8 +175,7 @@ Python остаётся доступен для специальных библ�
 Прямые `agent()` и `workpool()` блокируются фильтром.
 Это не полное удаление функций из OMP.
 11. Проверь `omp config get bashInterceptor.enabled`.
-На чистой установке ожидается `true`.
-Личный существующий ключ сохраняется режимом `merge-missing`.
+Ожидается `true`.
 `sed -n` должен направляться в `read`.
 `ls` и `tree` также направляются в `read`.
 12. Проверь `read` для `xd://eval/helpers` с диапазоном в `path`: `xd://eval/helpers:1-5`.

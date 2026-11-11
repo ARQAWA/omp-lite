@@ -200,7 +200,7 @@
 		{
 			"from": "src/modules/runtime-config/config.yml",
 			"to": "config.yml",
-			"mode": "merge-missing"
+			"mode": "merge"
 		},
 		{
 			"from": "src/modules/base-tools/base-tools.yml",

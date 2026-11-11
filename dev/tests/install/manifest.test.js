@@ -41,8 +41,28 @@ test("targets stay inside the agent root and are unique", () => {
 	}
 	for (const entry of manifest.config) {
 		expect(entry.to).toBe("config.yml");
-		expect(["merge", "merge-missing"]).toContain(entry.mode);
+		expect(entry.mode).toBe("merge");
 	}
+});
+
+test("config fragments form one snapshot without contradictions", () => {
+	const flat = (node, prefix = "", out = {}) => {
+		for (const [key, value] of Object.entries(node ?? {})) {
+			const id = prefix ? prefix + "." + key : key;
+			if (value && typeof value === "object" && !Array.isArray(value)) flat(value, id, out);
+			else out[id] = JSON.stringify(value);
+		}
+		return out;
+	};
+	const seen = {};
+	for (const entry of manifest.config) {
+		for (const [key, value] of Object.entries(flat(Bun.YAML.parse(readFileSync(join(root, entry.from), "utf8"))))) {
+			if (key in seen) expect([key, value]).toEqual([key, seen[key]]);
+			seen[key] = value;
+		}
+	}
+	expect(seen["claudeResets.autoRedeem"]).toBe('"no"');
+	expect(Object.keys(seen).filter(key => /token$|secret|password/i.test(key))).toEqual([]);
 });
 
 test("mnemopi settings and the local embedding model are part of the contract", () => {
