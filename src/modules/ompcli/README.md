@@ -1,5 +1,7 @@
 # ompcli — OMP для Windows VDI
 
+**До правки запуска прочти [dev/VDI.md](../../../dev/VDI.md): правило запуска и факты о VDI.**
+
 Расширение VS Code `arqawa.ompcli` ставит харнес omp-lite на Windows VDI и открывает
 вкладки OMP без ручной установки. Проверку самой VDI делает владелец.
 

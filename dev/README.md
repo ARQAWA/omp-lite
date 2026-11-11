@@ -5,6 +5,7 @@
 - [PROCESS.md](PROCESS.md) — порядок работы и проверки изменений.
 - [DECISIONS.md](DECISIONS.md) — текущие принятые решения.
 - [BACKLOG.md](BACKLOG.md) — только заказанная незавершённая работа.
+- [VDI.md](VDI.md) — факты о Windows VDI владельца и правило запуска программ в расширениях.
 - [history/](history/README.md) — история решений по каждому модулю.
 - [REVIEW-LOG.md](REVIEW-LOG.md) — журнал кругов High Review по модулям.
 - [WORKFLOW-MANIFEST.md](WORKFLOW-MANIFEST.md) — личные принципы владельца, не процедура выполнения задач.
