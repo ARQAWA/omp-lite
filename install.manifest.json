@@ -35,12 +35,12 @@
 			"to": "extensions/dyslexia.js"
 		},
 		{
-			"from": "src/modules/memory-tool-prompts/index.js",
-			"to": "extensions/memory-tool-prompts.js"
+			"from": "src/modules/memory-guide/index.js",
+			"to": "extensions/memory-guide.js"
 		},
 		{
-			"from": "src/modules/memory-tool-prompts/memory-tool-prompts.descriptions.json",
-			"to": "extensions/memory-tool-prompts.descriptions.json"
+			"from": "src/modules/memory-guide/memory-guide.json",
+			"to": "extensions/memory-guide.json"
 		},
 		{
 			"from": "src/modules/model-picker/index.js",
@@ -188,6 +188,14 @@
 			}
 		]
 	},
+	"remove": [
+		"extensions/cursor-tools/index.js",
+		"extensions/cursor-tools/descriptions.json",
+		"extensions/memory-tool-prompts.js",
+		"extensions/memory-tool-prompts.descriptions.json",
+		"memory-tool-prompts.status.json",
+		"memory-tool-prompts.log"
+	],
 	"config": [
 		{
 			"from": "src/modules/runtime-config/config.yml",

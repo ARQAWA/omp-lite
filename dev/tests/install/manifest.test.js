@@ -24,6 +24,13 @@ test("the removed background counter is not installed", () => {
 	expect(manifest.files.some(entry => entry.to === "extensions/background-jobs.js")).toBe(false);
 });
 
+test("the removed memory description patch is not installed", () => {
+	expect(manifest.files.some(entry => entry.to.includes("memory-tool-prompts"))).toBe(false);
+	expect(manifest.remove).toContain("extensions/memory-tool-prompts.js");
+	const installed = new Set(manifest.files.map(entry => entry.to));
+	for (const target of manifest.remove) expect(installed.has(target)).toBe(false);
+});
+
 test("targets stay inside the agent root and are unique", () => {
 	const targets = new Set();
 	for (const entry of manifest.files) {

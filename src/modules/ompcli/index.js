@@ -398,6 +398,7 @@ async function planInstall(manifest, sourceDir, agentDir, configFile) {
 		if (!stat?.isFile()) throw new Error(format(messages.manifest, { reason: entry.from }));
 		writes.push({ source, target });
 	}
+	for (const relative of manifest.remove ?? []) writes.push({ remove: true, target: inside(agentDir, relative) });
 	if (manifest.config.length) {
 		for (const entry of manifest.config) {
 			assertRelative(entry.from);
@@ -456,6 +457,8 @@ async function pendingChanges(writes, manifest, sourceDir, pointer) {
 		if (write.config) {
 			const text = await mergeConfig(manifest, sourceDir, write.target);
 			if ((await readText(write.target)) !== text) config = { target: write.target, text };
+		} else if (write.remove) {
+			if ((await fsp.lstat(write.target).catch(() => null))?.isFile()) files.push(write);
 		} else {
 			const [next, current] = await Promise.all([fsp.readFile(write.source), fsp.readFile(write.target).catch(() => null)]);
 			if (!current || Buffer.compare(next, current) !== 0) files.push(write);
@@ -582,6 +585,13 @@ async function applyHarness({ sourceDir, agentDir, revision, pointer, payloadRoo
 	await fsp.rename(journalPath + ".tmp", journalPath);
 	try {
 		for (const file of changes.files) {
+			if (file.remove) {
+				await assertPlain(root, file.target);
+				await fsp.rm(file.target);
+				// An emptied extension directory must not stay behind as a broken extension.
+				await fsp.rmdir(path.dirname(file.target)).catch(() => {});
+				continue;
+			}
 			await fsp.mkdir(path.dirname(file.target), { recursive: true });
 			const inside = file.text === undefined;
 			if (inside) await assertPlain(root, file.target);

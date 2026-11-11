@@ -1,0 +1,3 @@
+{
+	"block": "<memory_use>\nRecall from memory before answering about earlier sessions, user preferences or project decisions. Do not recall for general knowledge, current files, or on every turn.\nRetain only durable facts. Never retain secrets, tokens, task state, or content already in the repository. Recall first; update an existing memory rather than storing a duplicate.\n</memory_use>"
+}

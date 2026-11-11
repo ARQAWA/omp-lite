@@ -59,6 +59,22 @@ test("a second run reports no change and writes nothing", async () => {
 	expect(tree(agent)).toEqual(["extensions/a.js"]);
 });
 
+test("files listed for removal disappear and a second run changes nothing", async () => {
+	const { source, agent } = workspace([{ from: "src/a.js", to: "extensions/a.js" }], [], { "src/a.js": "a" });
+	const manifest = JSON.parse(readFileSync(join(source, "install.manifest.json"), "utf8"));
+	manifest.remove = ["extensions/old.js", "extensions/old-dir/index.js", "extensions/absent.js"];
+	writeFileSync(join(source, "install.manifest.json"), JSON.stringify(manifest));
+	mkdirSync(join(agent, "extensions/old-dir"), { recursive: true });
+	writeFileSync(join(agent, "extensions/old.js"), "old");
+	writeFileSync(join(agent, "extensions/old-dir/index.js"), "old");
+	writeFileSync(join(agent, "extensions/mine.js"), "mine");
+	expect((await planHarness({ sourceDir: source, agentDir: agent })).files.length).toBe(3);
+	expect(await applyHarness({ sourceDir: source, agentDir: agent, revision })).toEqual({ revision, changed: true });
+	expect(tree(agent)).toEqual(["extensions/a.js", "extensions/mine.js"]);
+	expect(existsSync(join(agent, "extensions/old-dir"))).toBe(false);
+	expect(await applyHarness({ sourceDir: source, agentDir: agent, revision })).toEqual({ revision, changed: false });
+});
+
 test("an existing YAML keeps foreign keys and replaces only declared leaves", async () => {
 	const { source, agent } = workspace(
 		[],

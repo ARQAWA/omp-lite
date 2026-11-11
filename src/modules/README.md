@@ -24,7 +24,7 @@ README модуля описывает:
 
 - `dyslexia` — правило дислексии в хвосте отправленного сообщения. Тест: `dev/tests/harness/dyslexia/`.
 - `skill-alias` — короткий `/имя` вместо `/skill:имя`. Тест: `dev/tests/harness/skill-alias/`.
-- `memory-tool-prompts` — точная подмена описаний тулов памяти в рантайме. Тест: `dev/tests/harness/memory-tool-prompts/`.
+- `memory-guide` — короткий блок про память в системном промпте, пока включён Mnemopi. Тест: `dev/tests/harness/memory-guide/`.
 - `model-picker` — компактный пикер модели и усилия, Shift+стрелки, фильтр. Тест: `dev/tests/harness/model-picker/`.
 - `tool-summary` — одна строка со счётчиками тулов рядом с карточками. Тест: `dev/tests/harness/tool-summary/`.
 - `review` — скиллы приёмки: сборщик фактуры и ревьюер через `omp -p`, скрипт сверки. Тест: `dev/tests/harness/review/`.

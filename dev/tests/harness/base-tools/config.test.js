@@ -26,7 +26,8 @@ test("runtime config carries the same values", () => {
 test("manifest merges base-tools.yml and has no cursor-tools", () => {
 	const entry = manifest.config.find(item => item.from === "src/modules/base-tools/base-tools.yml");
 	expect(entry).toEqual({ from: "src/modules/base-tools/base-tools.yml", to: "config.yml", mode: "merge" });
-	expect(JSON.stringify(manifest)).not.toContain("cursor-tools");
+	expect(JSON.stringify([manifest.files, manifest.config, manifest.vscode])).not.toContain("cursor-tools");
+	expect(manifest.remove).toContain("extensions/cursor-tools/index.js");
 });
 
 test("sed -n message names a path range, not offset and limit", () => {

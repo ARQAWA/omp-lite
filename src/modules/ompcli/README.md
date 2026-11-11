@@ -46,6 +46,7 @@
 Явный `http.proxyStrictSSL: false` добавляет `--insecure`.
 
 Харнес ставится по `install.manifest.json`: файлы `~/.omp/agent` и слияние `config.yml`.
+Файлы из списка `remove` удаляются; опустевший каталог расширения тоже. Откат возвращает их.
 Личные настройки, `auth`, `sessions` и `memories` не читаются и не копируются.
 Фрагменты конфига в payload теряют блоки `memory` и `mnemopi`: на VDI их даёт overlay
 окна, а постоянный конфиг остаётся личным.
