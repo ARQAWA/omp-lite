@@ -43,8 +43,6 @@ PowerShell, затем Git Bash `--login -i -c`, затем `ffmpeg`. Правк
 
 `/stt doctor`, затем `/stt start` и `/stt stop`. Текст встаёт в поле ввода.
 
-Проверено владельцем 11.11: работает на Mac и на VDI.
-
 **Выключить:** удалить каталог `~/.omp/agent/extensions/pi-voice-stt/`.
 
 **Тесты:** `bun test dev/tests/harness/voice-stt`.

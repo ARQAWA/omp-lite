@@ -1062,6 +1062,4 @@ URL и архивы остаются у родных `grep` и `read`.
 
 **Носители правила:** `src/modules/voice-stt/`, `src/modules/ompcli/index.js` (`createEnv`, `STT_KEY_FILE`), `src/modules/ompcli/runtime.json` (`ffmpeg`), `dev/scripts/ompcli-build/index.js`, `dev/tests/harness/voice-stt/`.
 
-**Проверка D-056:** владелец 11.11 подтвердил: диктовка работает на Mac и на VDI.
-
 **Выпуск D-056:** `0.0.9`, ревизия `0f8f4ff1553572d26117fe5a12ba301922c82445`, 208232296 байт, sha256 `cde99d210cfc03c3fc2add5c38bb340cdf3b966b70b0f8caf840a7386ea34c5c`, Marketplace `win32-x64 validated`, 2026-11-11 09:56 UTC. На VDI не проверено.
