@@ -1,0 +1,680 @@
+{
+	"main": [
+		{
+			"type": "function",
+			"name": "read",
+			"description": "Use `read` for static web; browser only if needed.\n\nPut line ranges in `path`, never a separate range/offset/limit parameter: `{\"path\":\"notes.txt:450-455\"}` reads lines 450-455; `{\"path\":\"notes.txt:-5\"}` reads the last 5. Include the selector on every ranged call; repeating a bare path does not advance through the file.\n\nPath suffixes: :50 or :50- starts at line 50; :50-200 inclusive; :50+150 counts lines; :-60 last 60; commas join ranges (:5-16,960-973) or individual lines (:19,59). A single non-raw range also shows 1 line before and 3 after (e.g. :50-80 shows 49-83); non-raw reads (comma lists too) may add the open/close line of a cut block; only :raw stays exact. :raw verbatim without anchors/prefixes; combine :2-4:raw or :raw:2-4 for exactly those lines; beside :raw a bare number is that one line (:17:raw), :17-:raw runs on. :conflicts lists one line per unresolved merge block. SVG/SVGZ default text; :img rasterizes an SVG/SVGZ into an image, :raw original. Raster images (PNG, JPEG) need no selector; :img rejects them. Video requires ffmpeg/ffprobe: bare preview grid+metadata, :412 frame, :1h5m42s/:90s/:01:23 time.\n\nSources:\n- Bare code: declarations only; re-read ONLY footer-named omissions, NEVER guess `..`/`…`.\n- Directory: complete root; child listings cap at 12 (`… N more`), read child; page via :N-M/:-N.\n- SQLite: file.db tables; :table schema/rows; :table:key by primary key; ?limit=, ?where=, ?q=SELECT.\n- Archives: ZIP/JAR/APK/WHL, compressed TAR, RAR/7z/ISO/CAB/DEB/RPM/CPIO/AR/LZH/ARJ/ASAR, compressed streams; member via archive.ext:member/path.\n- JSON/JSONL/NDJSON: file.json?q=<jq filter>; &raw=true unquoted strings, &compact=true one-line values, &offset=&limit= page results; `&` inside the filter → %26.\n- PDF/documents: extracted text; notebooks: editable cells; images: decoded inline. URLs: reader text/markdown, :raw original HTML; bare host:port needs trailing slash.",
+			"parameters": {
+				"properties": {
+					"i": {
+						"description": "concise intent",
+						"type": "string"
+					},
+					"path": {
+						"description": "Local path, internal URI, or URL; selectors inline.",
+						"type": "string"
+					}
+				},
+				"required": [
+					"i",
+					"path"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"strict": true
+		},
+		{
+			"type": "function",
+			"name": "bash",
+			"description": "Persistent shell: one fact command/pipeline; dependencies use `&&`.\nScripts/heredocs/`$(…)`/complex pipelines → `eval`.\n`cwd`, not `cd`; `pty` only interactive.\nInternal URIs work as paths for builtins/coreutils, redirects, globs.\n`async` defers finite results but keeps the deadline (default 300s); `timeout: 0` for watchers and long jobs.\nNo `head`/`tail`/redirection; output trunc by default, full result at `artifact://<id>`.\nLong-lived services: unique name; ready requires name; no async/timeout; pty defaults true. ready needs log regex or port (both if given); host defaults 127.0.0.1, ready.timeout 30s.\nNon-`pty` calls still running after 60s (or 1s before `timeout`, if sooner) usually move to background job `bg_N` and keep running to `timeout` (not when the client terminal runs the command or the job cap is reached); the result arrives automatically as a follow-up message. NEVER poll.",
+			"parameters": {
+				"properties": {
+					"i": {
+						"description": "concise intent",
+						"type": "string"
+					},
+					"command": {
+						"type": "string"
+					},
+					"timeout": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"description": "timeout in seconds; 0 disables the command deadline; nonzero values are clamped to 1-3600"
+					},
+					"cwd": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"pty": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"async": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"name": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"ready": {
+						"anyOf": [
+							{
+								"properties": {
+									"log": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"port": {
+										"anyOf": [
+											{
+												"type": "number"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"host": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"timeout": {
+										"anyOf": [
+											{
+												"type": "number"
+											},
+											{
+												"type": "null"
+											}
+										]
+									}
+								},
+								"type": "object",
+								"additionalProperties": false,
+								"required": [
+									"log",
+									"port",
+									"host",
+									"timeout"
+								]
+							},
+							{
+								"type": "null"
+							}
+						]
+					}
+				},
+				"required": [
+					"i",
+					"command",
+					"timeout",
+					"cwd",
+					"pty",
+					"async",
+					"name",
+					"ready"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"strict": true
+		},
+		{
+			"type": "custom",
+			"name": "apply_patch",
+			"description": "Edit files: `apply_patch` shell command.\n\n`apply_patch`: stripped-down, file-oriented diff; easy to parse, safe to apply.\n\nEnvelope:\n```\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n```\nContains file operations. Each MUST have an action header:\n\n`*** Add File: <path>`: create file; every following line `+` (initial contents).\n\n`*** Delete File: <path>`: remove existing file; nothing follows.\n\n`*** Update File: <path>`: patch existing file in place; optional immediate `*** Move to: <new path>` renames it; then one or more `@@` hunks (optional hunk header). Omit hunks only for a content-preserving move. Hunk lines start with space, `-`, or `+`.\n\nOld/context lines must match complete file lines, allowing only whitespace and Unicode punctuation normalization, not substrings or similar text.\n\nContext: default 3 code lines immediately before and after each change. Changes within 3 lines: do NOT duplicate first change's context-after lines as second change's context-before lines. If 3 lines do not uniquely identify code in the file, use `@@` with its class/function; if one `@@` plus 3 context lines still cannot uniquely identify repeated code in a class/function, use multiple `@@` lines to reach it:\n```\n@@ class BaseClass\n[3 lines of pre-context]\n- [old_code]\n+ [new_code]\n[3 lines of post-context]\n```\n```\n@@ class BaseClass\n@@ \t def method():\n[3 lines of pre-context]\n- [old_code]\n+ [new_code]\n[3 lines of post-context]\n```\n\nGrammar:\n```\nPatch := Begin { FileOp } End\nBegin := \"*** Begin Patch\" NEWLINE\nEnd := \"*** End Patch\" NEWLINE\nFileOp := AddFile | DeleteFile | UpdateFile\nAddFile := \"*** Add File: \" path NEWLINE { \"+\" line NEWLINE }\nDeleteFile := \"*** Delete File: \" path NEWLINE\nUpdateFile := \"*** Update File: \" path NEWLINE [ MoveTo ] { Hunk }\nMoveTo := \"*** Move to: \" newPath NEWLINE\nHunk := \"@@\" [ header ] NEWLINE { HunkLine } [ \"*** End of File\" NEWLINE ]\nHunkLine := (\" \" | \"-\" | \"+\") text NEWLINE\n```\n\nFull patches may combine operations:\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nMUST use Add/Delete/Update header; new-file lines MUST start `+`; file references relative, NEVER absolute.\n\n<examples>\n# Apply a combined patch file\n<example i=\"…\">\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n\n</example>\n</examples>",
+			"format": {
+				"type": "grammar",
+				"syntax": "lark",
+				"definition": "start: begin_patch hunk+ end_patch\nbegin_patch: \"*** Begin Patch\" LF\nend_patch: \"*** End Patch\" LF?\nhunk: add_hunk | delete_hunk | update_hunk\nadd_hunk: \"*** Add File: \" filename LF add_line+\ndelete_hunk: \"*** Delete File: \" filename LF\nupdate_hunk: \"*** Update File: \" filename LF change_move? change?\nfilename: /(.+)/\nadd_line: \"+\" /(.*)/ LF -> line\nchange_move: \"*** Move to: \" filename LF\nchange: (change_context | change_line)+ eof_line?\nchange_context: (\"@@\" | \"@@ \" /(.+)/) LF\nchange_line: (\"+\" | \"-\" | \" \") /(.*)/ LF\neof_line: \"*** End of File\" LF\n%import common.LF"
+			}
+		},
+		{
+			"type": "function",
+			"name": "glob",
+			"description": "Glob files/dirs: `;`-separated paths or internal URLs (`local://*.md`, `omp://**/*.md`); default workspace root.\n`gitignore` and `hidden` default true; ignored dotfiles need `gitignore: false`. Newest-first by directory; dirs end `/`.",
+			"parameters": {
+				"properties": {
+					"i": {
+						"description": "concise intent",
+						"type": "string"
+					},
+					"path": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"hidden": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"gitignore": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"limit": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					}
+				},
+				"required": [
+					"i",
+					"path",
+					"hidden",
+					"gitignore",
+					"limit"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"strict": true
+		},
+		{
+			"type": "function",
+			"name": "grep",
+			"description": "Regex: Rust, then PCRE2. `path`: `;`-separated file/dir/glob/URL; default `.`. Default case-sensitive, gitignore respected; `skip` paginates files.\nFile-only selector: `src/foo.ts:50-100`. Literal `\\n`/`\\\\n` enables cross-line.\nBare glob `*.ts` matches any depth; `dir/*.ts` only `dir`'s direct children (`dir/**/*.ts` recurses). A `!glob` entry excludes matching files and folders below the searched paths (`src;!**/*.test.ts`).",
+			"parameters": {
+				"properties": {
+					"i": {
+						"description": "concise intent",
+						"type": "string"
+					},
+					"pattern": {
+						"type": "string"
+					},
+					"path": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"case": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"gitignore": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"skip": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					}
+				},
+				"required": [
+					"i",
+					"pattern",
+					"path",
+					"case",
+					"gitignore",
+					"skip"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"strict": true
+		},
+		{
+			"type": "function",
+			"name": "write",
+			"description": "SHOULD `edit` existing files; `write` for required new files or whole-file replacement. NEVER create docs or emojis unless requested.\n`archive.ext:member`: ZIP/tar families and `.asar` writable, others read-only. `db.sqlite:table`: insert; `db.sqlite:table:key`: JSON update, empty content deletes.",
+			"parameters": {
+				"properties": {
+					"i": {
+						"description": "concise intent",
+						"type": "string"
+					},
+					"path": {
+						"type": "string"
+					},
+					"content": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					}
+				},
+				"required": [
+					"i",
+					"path",
+					"content"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"strict": true
+		}
+	],
+	"child": [
+		{
+			"type": "function",
+			"name": "read",
+			"description": "Use `read` for static web; browser only if needed.\n\nPut line ranges in `path`, never a separate range/offset/limit parameter: `{\"path\":\"notes.txt:450-455\"}` reads lines 450-455; `{\"path\":\"notes.txt:-5\"}` reads the last 5. Include the selector on every ranged call; repeating a bare path does not advance through the file.\n\nPath suffixes: :50 or :50- starts at line 50; :50-200 inclusive; :50+150 counts lines; :-60 last 60; commas join ranges (:5-16,960-973) or individual lines (:19,59). A single non-raw range also shows 1 line before and 3 after (e.g. :50-80 shows 49-83); non-raw reads (comma lists too) may add the open/close line of a cut block; only :raw stays exact. :raw verbatim without anchors/prefixes; combine :2-4:raw or :raw:2-4 for exactly those lines; beside :raw a bare number is that one line (:17:raw), :17-:raw runs on. :conflicts lists one line per unresolved merge block. SVG/SVGZ default text; :img rasterizes an SVG/SVGZ into an image, :raw original. Raster images (PNG, JPEG) need no selector; :img rejects them. Video requires ffmpeg/ffprobe: bare preview grid+metadata, :412 frame, :1h5m42s/:90s/:01:23 time.\n\nSources:\n- Bare code: declarations only; re-read ONLY footer-named omissions, NEVER guess `..`/`…`.\n- Directory: complete root; child listings cap at 12 (`… N more`), read child; page via :N-M/:-N.\n- SQLite: file.db tables; :table schema/rows; :table:key by primary key; ?limit=, ?where=, ?q=SELECT.\n- Archives: ZIP/JAR/APK/WHL, compressed TAR, RAR/7z/ISO/CAB/DEB/RPM/CPIO/AR/LZH/ARJ/ASAR, compressed streams; member via archive.ext:member/path.\n- JSON/JSONL/NDJSON: file.json?q=<jq filter>; &raw=true unquoted strings, &compact=true one-line values, &offset=&limit= page results; `&` inside the filter → %26.\n- PDF/documents: extracted text; notebooks: editable cells; images: decoded inline. URLs: reader text/markdown, :raw original HTML; bare host:port needs trailing slash.",
+			"parameters": {
+				"properties": {
+					"i": {
+						"description": "concise intent",
+						"type": "string"
+					},
+					"path": {
+						"description": "Local path, internal URI, or URL; selectors inline.",
+						"type": "string"
+					}
+				},
+				"required": [
+					"i",
+					"path"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"strict": true
+		},
+		{
+			"type": "function",
+			"name": "bash",
+			"description": "Persistent shell: one fact command/pipeline; dependencies use `&&`.\nScripts/heredocs/`$(…)`/complex pipelines → `eval`.\n`cwd`, not `cd`; `pty` only interactive.\nInternal URIs work as paths for builtins/coreutils, redirects, globs.\n`async` defers finite results but keeps the deadline (default 300s); `timeout: 0` for watchers and long jobs.\nNo `head`/`tail`/redirection; output trunc by default, full result at `artifact://<id>`.\nLong-lived services: unique name; ready requires name; no async/timeout; pty defaults true. ready needs log regex or port (both if given); host defaults 127.0.0.1, ready.timeout 30s.\nNon-`pty` calls still running after 60s (or 1s before `timeout`, if sooner) usually move to background job `bg_N` and keep running to `timeout` (not when the client terminal runs the command or the job cap is reached); the result arrives automatically as a follow-up message. NEVER poll.",
+			"parameters": {
+				"properties": {
+					"i": {
+						"description": "concise intent",
+						"type": "string"
+					},
+					"command": {
+						"type": "string"
+					},
+					"timeout": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"description": "timeout in seconds; 0 disables the command deadline; nonzero values are clamped to 1-3600"
+					},
+					"cwd": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"pty": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"async": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"name": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"ready": {
+						"anyOf": [
+							{
+								"properties": {
+									"log": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"port": {
+										"anyOf": [
+											{
+												"type": "number"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"host": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"timeout": {
+										"anyOf": [
+											{
+												"type": "number"
+											},
+											{
+												"type": "null"
+											}
+										]
+									}
+								},
+								"type": "object",
+								"additionalProperties": false,
+								"required": [
+									"log",
+									"port",
+									"host",
+									"timeout"
+								]
+							},
+							{
+								"type": "null"
+							}
+						]
+					}
+				},
+				"required": [
+					"i",
+					"command",
+					"timeout",
+					"cwd",
+					"pty",
+					"async",
+					"name",
+					"ready"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"strict": true
+		},
+		{
+			"type": "custom",
+			"name": "apply_patch",
+			"description": "Edit files: `apply_patch` shell command.\n\n`apply_patch`: stripped-down, file-oriented diff; easy to parse, safe to apply.\n\nEnvelope:\n```\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n```\nContains file operations. Each MUST have an action header:\n\n`*** Add File: <path>`: create file; every following line `+` (initial contents).\n\n`*** Delete File: <path>`: remove existing file; nothing follows.\n\n`*** Update File: <path>`: patch existing file in place; optional immediate `*** Move to: <new path>` renames it; then one or more `@@` hunks (optional hunk header). Omit hunks only for a content-preserving move. Hunk lines start with space, `-`, or `+`.\n\nOld/context lines must match complete file lines, allowing only whitespace and Unicode punctuation normalization, not substrings or similar text.\n\nContext: default 3 code lines immediately before and after each change. Changes within 3 lines: do NOT duplicate first change's context-after lines as second change's context-before lines. If 3 lines do not uniquely identify code in the file, use `@@` with its class/function; if one `@@` plus 3 context lines still cannot uniquely identify repeated code in a class/function, use multiple `@@` lines to reach it:\n```\n@@ class BaseClass\n[3 lines of pre-context]\n- [old_code]\n+ [new_code]\n[3 lines of post-context]\n```\n```\n@@ class BaseClass\n@@ \t def method():\n[3 lines of pre-context]\n- [old_code]\n+ [new_code]\n[3 lines of post-context]\n```\n\nGrammar:\n```\nPatch := Begin { FileOp } End\nBegin := \"*** Begin Patch\" NEWLINE\nEnd := \"*** End Patch\" NEWLINE\nFileOp := AddFile | DeleteFile | UpdateFile\nAddFile := \"*** Add File: \" path NEWLINE { \"+\" line NEWLINE }\nDeleteFile := \"*** Delete File: \" path NEWLINE\nUpdateFile := \"*** Update File: \" path NEWLINE [ MoveTo ] { Hunk }\nMoveTo := \"*** Move to: \" newPath NEWLINE\nHunk := \"@@\" [ header ] NEWLINE { HunkLine } [ \"*** End of File\" NEWLINE ]\nHunkLine := (\" \" | \"-\" | \"+\") text NEWLINE\n```\n\nFull patches may combine operations:\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nMUST use Add/Delete/Update header; new-file lines MUST start `+`; file references relative, NEVER absolute.\n\n<examples>\n# Apply a combined patch file\n<example i=\"…\">\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n\n</example>\n</examples>",
+			"format": {
+				"type": "grammar",
+				"syntax": "lark",
+				"definition": "start: begin_patch hunk+ end_patch\nbegin_patch: \"*** Begin Patch\" LF\nend_patch: \"*** End Patch\" LF?\nhunk: add_hunk | delete_hunk | update_hunk\nadd_hunk: \"*** Add File: \" filename LF add_line+\ndelete_hunk: \"*** Delete File: \" filename LF\nupdate_hunk: \"*** Update File: \" filename LF change_move? change?\nfilename: /(.+)/\nadd_line: \"+\" /(.*)/ LF -> line\nchange_move: \"*** Move to: \" filename LF\nchange: (change_context | change_line)+ eof_line?\nchange_context: (\"@@\" | \"@@ \" /(.+)/) LF\nchange_line: (\"+\" | \"-\" | \" \") /(.*)/ LF\neof_line: \"*** End of File\" LF\n%import common.LF"
+			}
+		},
+		{
+			"type": "function",
+			"name": "glob",
+			"description": "Glob files/dirs: `;`-separated paths or internal URLs (`local://*.md`, `omp://**/*.md`); default workspace root.\n`gitignore` and `hidden` default true; ignored dotfiles need `gitignore: false`. Newest-first by directory; dirs end `/`.",
+			"parameters": {
+				"properties": {
+					"i": {
+						"description": "concise intent",
+						"type": "string"
+					},
+					"path": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"hidden": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"gitignore": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"limit": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					}
+				},
+				"required": [
+					"i",
+					"path",
+					"hidden",
+					"gitignore",
+					"limit"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"strict": true
+		},
+		{
+			"type": "function",
+			"name": "grep",
+			"description": "Regex: Rust, then PCRE2. `path`: `;`-separated file/dir/glob/URL; default `.`. Default case-sensitive, gitignore respected; `skip` paginates files.\nFile-only selector: `src/foo.ts:50-100`. Literal `\\n`/`\\\\n` enables cross-line.\nBare glob `*.ts` matches any depth; `dir/*.ts` only `dir`'s direct children (`dir/**/*.ts` recurses). A `!glob` entry excludes matching files and folders below the searched paths (`src;!**/*.test.ts`).",
+			"parameters": {
+				"properties": {
+					"i": {
+						"description": "concise intent",
+						"type": "string"
+					},
+					"pattern": {
+						"type": "string"
+					},
+					"path": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"case": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"gitignore": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"skip": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					}
+				},
+				"required": [
+					"i",
+					"pattern",
+					"path",
+					"case",
+					"gitignore",
+					"skip"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"strict": true
+		},
+		{
+			"type": "function",
+			"name": "write",
+			"description": "SHOULD `edit` existing files; `write` for required new files or whole-file replacement. NEVER create docs or emojis unless requested.\n`archive.ext:member`: ZIP/tar families and `.asar` writable, others read-only. `db.sqlite:table`: insert; `db.sqlite:table:key`: JSON update, empty content deletes.",
+			"parameters": {
+				"properties": {
+					"i": {
+						"description": "concise intent",
+						"type": "string"
+					},
+					"path": {
+						"type": "string"
+					},
+					"content": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					}
+				},
+				"required": [
+					"i",
+					"path",
+					"content"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"strict": true
+		}
+	]
+}

@@ -8,6 +8,7 @@ import { constants } from "node:fs";
 import { access, lstat, stat } from "node:fs/promises";
 import descriptions from "./base-tools.descriptions.json";
 import toolTexts from "./base-tools.texts.json";
+import reference from "./base-tools.reference.json";
 
 export const TIMEOUT_MS = 30000;
 export const SPILL_RESERVE_KB = 5;
@@ -404,8 +405,22 @@ export function install(pi, options = {}) {
 		execute: (toolCallId, params, signal, onUpdate, ctx) =>
 			(params.pattern === undefined ? runMap : runSearch)(params, ctx, { signal, pi, ...options }),
 	});
-	pi.on?.("before_provider_request", event => {
+	const states = new Map();
+	pi.on?.("before_provider_request", async (event, ctx) => {
 		if (typeof event !== "object" || event === null || !("payload" in event)) return event;
+		const key = ctx?.sessionManager?.getSessionId?.() ?? ctx?.sessionManager?.sessionId ?? "default";
+		let state = states.get(key);
+		if (!state) {
+			state = { warned: false, checked: false };
+			states.set(key, state);
+		}
+		if (!state.checked && toolLists(event.payload).flat().length > 0) {
+			state.checked = true;
+			const kind = ctx?.agent?.kind === "sub" ? "child" : "main";
+			const mismatch =
+				checkReference(event.payload, await settingsSnapshot(pi), kind) ?? (await checkEngine());
+			warnOnce(mismatch, state, message => ctx?.ui?.notify?.(message, "warning"));
+		}
 		rewritePayload(event.payload);
 		return event.payload;
 	});
@@ -413,6 +428,7 @@ export function install(pi, options = {}) {
 
 const TEXT_NAMES = new Set(["grep", "glob", "read", "bash", "edit", "write"]);
 const plainName = name => (typeof name === "string" ? name.replace(/^_/, "") : "");
+const canonicalName = name => plainName(name) === "apply_patch" ? "edit" : plainName(name);
 
 const toolLists = payload => [
 	...(Array.isArray(payload) ? [payload] : []),
@@ -424,8 +440,64 @@ function detectFiles(payload) {
 	return toolLists(payload).flat().some(tool => plainName(tool?.function?.name ?? tool?.name) === "files");
 }
 
+const fieldsOf = tool =>
+	Object.keys(tool?.parameters?.properties ?? tool?.input_schema?.properties ?? tool?.inputSchema?.properties ?? tool?.format ?? {}).sort();
+
+/** Returns the first native tool or setting that moved away from the reference. */
+export function checkReference(payload, settings, kind = "main", expected = reference) {
+	const tools = new Map(toolLists(payload).flat().map(tool => [canonicalName(tool?.function?.name ?? tool?.name), tool?.function ?? tool]));
+	for (const [name, want] of Object.entries(expected[kind] ?? expected.main)) {
+		const tool = tools.get(name);
+		if (!tool) {
+			if (kind === "child") continue;
+			return `base-tools: native ${name} is missing`;
+		}
+		if (tool.description !== want.description) return `base-tools: native ${name} changed description`;
+		const fields = fieldsOf(tool);
+		const aliases = name === "edit" ? [want.fields, ["i", "input"]] : [want.fields];
+		if (!aliases.some(alias => alias.join("\n") === fields.join("\n"))) return `base-tools: native ${name} changed fields`;
+	}
+	if (settings !== undefined) {
+		for (const [key, want] of Object.entries(expected.settings)) {
+			if (JSON.stringify(settings[key]) !== JSON.stringify(want)) return `base-tools: setting ${key} changed`;
+		}
+	}
+	return undefined;
+}
+
+export function warnOnce(mismatch, state, notify) {
+	if (!mismatch || state.warned) return false;
+	state.warned = true;
+	try {
+		notify?.(mismatch);
+	} catch {}
+	return true;
+}
+
+/** Checks the engine functions `files` imports. */
+export async function checkEngine(load = () => import("@oh-my-pi/pi-natives")) {
+	try {
+		const natives = await load();
+		for (const [name, kind] of Object.entries(reference.engine)) {
+			if (typeof natives[name] !== kind) return `base-tools: engine ${name} changed`;
+		}
+		return undefined;
+	} catch {
+		return "base-tools: engine import failed";
+	}
+}
+
+async function settingsSnapshot(pi) {
+	try {
+		const { lookup } = await import("@oh-my-pi/pi-coding-agent/config/registry");
+		return Object.fromEntries(Object.keys(reference.settings).map(key => [key, lookup(key)?.get(pi.pi.settings)]));
+	} catch {
+		return {};
+	}
+}
+
 function rewriteRecord(record, hasFiles) {
-	const name = plainName(record?.name);
+	const name = canonicalName(record?.name);
 	if (!TEXT_NAMES.has(name)) return;
 	const text = toolTexts[name];
 	record.description = typeof text === "string" ? text : hasFiles ? text.withFiles : text.withoutFiles;
@@ -440,7 +512,12 @@ export function rewritePayload(payload, hasFiles = detectFiles(payload)) {
 		if (
 			typeof node.name === "string" &&
 			typeof node.description === "string" &&
-			("parameters" in node || "input_schema" in node || "inputSchema" in node || "strict" in node || node.type === "function")
+			("parameters" in node ||
+				"input_schema" in node ||
+				"inputSchema" in node ||
+				"strict" in node ||
+				node.type === "function" ||
+				node.type === "custom")
 		) {
 			rewriteRecord(node, hasFiles);
 		}
