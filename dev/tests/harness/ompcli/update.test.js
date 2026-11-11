@@ -4,6 +4,12 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { applyHarness, createUpdater, extractArchive } from "../../../../src/modules/ompcli/index.js";
 
+// The test machine starts Bun itself; the product starts it through the terminal chain.
+const direct = async (file, args) => {
+	const result = Bun.spawnSync([file, ...args]);
+	return { code: result.exitCode, output: result.stderr.toString() };
+};
+
 const oldSha = "1".repeat(40);
 const newSha = "2".repeat(40);
 const version = "0.0.1";
@@ -86,7 +92,7 @@ function environment({ bootstrap = "bootstrap", pointer = null, tarball } = {}) 
 		agentDir,
 		bun: process.execPath,
 		tabs: async () => [],
-		extract: args => extractArchive({ ...args, bun: process.execPath, script: join(storageDir, "extract.js") }),
+		extract: args => extractArchive({ ...args, bun: process.execPath, script: join(storageDir, "extract.js"), run: direct }),
 		apply: async args => {
 			calls.apply.push({ ...args, pointerBefore: existsSync(join(storageDir, "payload", version, "current.json")) });
 			return applyHarness(args);
@@ -340,4 +346,11 @@ test("a bad upstream revision is refused", async () => {
 	env.deps.request = async () => Response.json({ sha: "main" });
 	await expect(createUpdater(env.deps).run()).rejects.toThrow("OMP archive has no revision.");
 	expect(env.calls.apply.length).toBe(0);
+});
+
+test("an extraction that leaves nothing behind reports what the terminal showed", async () => {
+	const storageDir = temporary();
+	const stage = join(storageDir, "stage");
+	const run = async () => ({ code: 126, output: "hello\nbash: bun.exe: Permission denied" });
+	await expect(extractArchive({ bun: "bun.exe", archive: "a.tar.gz", stage, revision: "d".repeat(40), script: join(storageDir, "extract.js"), run })).rejects.toThrow("OMP extraction failed: hello | bash: bun.exe: Permission denied");
 });

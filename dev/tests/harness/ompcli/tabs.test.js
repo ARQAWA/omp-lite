@@ -205,12 +205,15 @@ test("a new tab starts OMP only after the local memory is ready", async () => {
 	await opening;
 	await until(() => pty.spawned.length === 1);
 	expect(pty.spawned.length).toBe(1);
-	const command = pty.spawned[0].args.join(" ");
-	expect(command).not.toContain("omp.exe");
-	expect(command).toContain("bash --rcfile");
-	const rc = readFileSync(join(storageDir, "chat-" + process.pid + ".sh"), "utf8");
-	expect(rc).toContain("exec '/runtime/deadbeef/omp.exe' --config ");
-	expect(rc).toContain("--allow-home");
+	// The PCLI form: PowerShell, one login Git Bash, the program. No second bash and no wrapper file.
+	const command = pty.spawned[0].args[3];
+	expect(command).toStartWith("& 'C:\\Program Files\\Git\\bin\\bash.exe' --login -i -c 'unset http_proxy https_proxy all_proxy no_proxy; ");
+	expect(command).not.toContain("rcfile");
+	expect(command).not.toContain('"');
+	const inner = command.match(/ -c '(.*)'$/s)[1].replaceAll("''", "'");
+	expect(inner).toContain("; export PATH=$(cygpath -u '/runtime/deadbeef'):$PATH; export PI_CONFIG_FILES=$OMPCLI_CONFIG_FILES; '/runtime/deadbeef/omp.exe' '--config' '");
+	expect(inner).toEndWith("memory.yml' '--allow-home'");
+	expect(existsSync(join(storageDir, "chat-" + process.pid + ".sh"))).toBe(false);
 	expect(api.state.terminals[0].name).toBe("OMP 1");
 	expect(pty.spawned[0].file).toBe("powershell.exe");
 });
@@ -240,7 +243,6 @@ test("the shell receives OMP, Bun, the overlay and the embedding size", async ()
 	expect(env.MNEMOPI_EMBEDDING_BATCH_SIZE).toBe("1");
 	expect(env.MNEMOPI_EMBEDDING_MODEL).toBe("embeddinggemma-2:270m-q8_0");
 	expect(env.PI_CONFIG_FILES).toContain(join(storageDir, "runs"));
-	expect(env.OMPCLI_RUNTIME).toBe("/runtime/deadbeef");
 	expect(pty.spawned[0].args.join(" ")).toContain("C:\\Program Files\\Git\\bin\\bash.exe");
 });
 
@@ -425,11 +427,10 @@ test("proxy credentials travel in the environment, never in the command line", a
 	expect(proc.options.env.HTTP_PROXY).toBe("http://user:secret@proxy.local:8080");
 	expect(proc.options.env.PI_PROXY).toBe("http://user:secret@proxy.local:8080");
 	expect(proc.args.join(" ")).not.toContain("secret");
-	expect(readFileSync(join(storageDir, "chat-" + process.pid + ".sh"), "utf8")).not.toContain("secret");
 	expect(proc.options.env.OMPCLI_HTTPS_PROXY).toBe("http://user:secret@proxy.local:8080");
 	// The profile may change PI_PROXY too: the wrapper restores it like the other proxy variables.
 	expect(proc.options.env.OMPCLI_PI_PROXY).toBe("http://user:secret@proxy.local:8080");
-	expect(readFileSync(join(storageDir, "chat-" + process.pid + ".sh"), "utf8")).toContain('[ -n "$OMPCLI_PI_PROXY" ] && export PI_PROXY="$OMPCLI_PI_PROXY"');
+	expect(proc.args[3]).toContain("[[ -n $OMPCLI_PI_PROXY ]] && export PI_PROXY=$OMPCLI_PI_PROXY; ");
 });
 
 test("previous overlays stay before the window overlay", async () => {
@@ -546,3 +547,25 @@ function recovered() {
 	}));
 	return { agent, storageDir, oldSha, newSha };
 }
+
+test("Bun and the memory server start through the terminal chain, never from the extension host itself", async () => {
+	let options;
+	const { pty, storageDir, instance } = cli({
+		control: { install: undefined },
+		memory: given => ((options = given), { ensure: async () => ({ port: 5020, key: "k" }), stop: () => {} }),
+	});
+	void instance.newTab();
+	await until(() => pty.spawned.length === 1);
+	const bun = pty.spawned[0];
+	expect(bun.file).toBe("powershell.exe");
+	expect(bun.args[3]).toStartWith("& 'C:\\Program Files\\Git\\bin\\bash.exe' --login -i -c '''/runtime/deadbeef/bun.exe'' ''");
+	expect(bun.args[3]).toContain("--install");
+	const job = join(storageDir, bun.args[3].match(/install-[0-9a-f-]+\.json/)[0]);
+	writeFileSync(job + ".out", JSON.stringify({ value: { revision, changed: false } }));
+	bun.exit(0);
+	await until(() => pty.spawned.length === 2);
+	expect(pty.spawned[1].args[3]).toContain("''/runtime/deadbeef/omp.exe'' ''--config''");
+	options.spawnProcess("C:\\ext\\runtime\\llama\\llama-server.exe", ["--port", "5020"], { env: {} });
+	expect(pty.spawned[2].file).toBe("powershell.exe");
+	expect(pty.spawned[2].args[3]).toEndWith("-c '''C:/ext/runtime/llama/llama-server.exe'' ''--port'' ''5020'''");
+});

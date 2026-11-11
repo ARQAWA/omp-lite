@@ -10,6 +10,7 @@ const net = require("node:net");
 const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
+const { EventEmitter } = require("node:events");
 const { Readable } = require("node:stream");
 const { pipeline } = require("node:stream/promises");
 const messages = require("./messages.json");
@@ -26,6 +27,7 @@ const { gunzipSync } = require("node:zlib");
 const fs = require("node:fs");
 const path = require("node:path");
 const [archive, output, revision] = process.argv.slice(2);
+try {
 const bytes = gunzipSync(fs.readFileSync(archive), { maxOutputLength: 67108864 });
 const files = await new Bun.Archive(bytes).files();
 const roots = new Set([...files.keys()].map((name) => name.split("/")[0]));
@@ -59,7 +61,10 @@ for (const entry of manifest.vscode?.files ?? []) {
 }
 write(path.join(output, "install.manifest.json"), await read(manifestName));
 write(path.join(output, ".revision"), revision + "\n");
-console.log(JSON.stringify({ revision }));
+} catch (error) {
+  fs.mkdirSync(output, { recursive: true });
+  fs.writeFileSync(path.join(output, ".error"), error.message);
+}
 `;
 
 function format(template, values = {}) {
@@ -249,6 +254,8 @@ async function ensureRuntime({ extensionPath, storageDir, request = fetch, curl,
 		break;
 	}
 	await fsp.rm(legacy, { recursive: true, force: true }).catch(() => {});
+	// Until 0.0.5 the OMP tab started from a wrapper file of its own.
+	for (const name of await fsp.readdir(storageDir).catch(() => [])) if (/^chat-\d+\.sh$/.test(name)) await fsp.rm(path.join(storageDir, name), { force: true });
 	if ((await sizeOf(paths.model)) !== asset.size) progress({ name: "model", size: Math.round(asset.size / 1048576) });
 	// The model is checked by content on every start: a damaged file is downloaded again.
 	await fetchRuntime(paths.model, asset, request, { curl }).catch(error => {
@@ -673,7 +680,7 @@ function createMemory(options = {}) {
 	const runtimeDir = options.runtimeDir;
 	const model = options.model;
 	const request = options.request ?? fetch;
-	const spawnProcess = options.spawnProcess ?? spawn;
+	const spawnProcess = options.spawnProcess;
 	const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
 	const attempts = options.attempts ?? 120;
 	const intervalMs = options.intervalMs ?? 500;
@@ -865,26 +872,34 @@ function createEnv({ base = process.env, proxy, proxyStrictSSL, paths, overlay }
 	return env;
 }
 
-// Both tabs restore the managed environment after the user profile, and the
-// chat tab starts OMP from the same wrapper. Proxy values arrive as OMPCLI_*
-// environment variables, never in the command line.
-function shellRc({ overlay, paths, home, chat }) {
-	const lines = [
-		"[ -f ~/.bashrc ] && . ~/.bashrc",
-		"unset http_proxy https_proxy all_proxy no_proxy",
-		...PROXY_VARS.map(name => '[ -n "$OMPCLI_' + name + '" ] && export ' + name + '="$OMPCLI_' + name + '"'),
-		'export PATH="$(cygpath -u "$OMPCLI_RUNTIME"):$PATH"',
-		'export PI_CONFIG_FILES="$OMPCLI_CONFIG_FILES"',
-	];
-	if (chat) {
-		lines.push("exec " + bashQuote(paths.omp.replace(/\\/g, "/")) + " --config " + bashQuote(overlay.file) + (home ? " --allow-home" : ""));
-	}
-	return lines.join("\n") + "\n";
+// Git Bash reads a path with forward slashes as it is; doubled backslashes it would fold.
+const slashes = value => value.replace(/\\/g, "/");
+
+// The one way a program starts here, the same as PCLI starts pi.exe: PowerShell runs Git Bash, Git Bash runs the program.
+function bashCommand(bash, inner) {
+	return "& " + psQuote(bash) + " --login -i -c " + psQuote(inner);
 }
 
-function bashCommand(bash, rcFile) {
-	const inner = "unset http_proxy https_proxy all_proxy no_proxy; exec bash --rcfile " + bashQuote(rcFile.replace(/\\/g, "/")) + " -i";
-	return "& " + bashQuote(bash) + " --login -i -c " + psQuote(inner);
+// The managed environment, restored after the user profile. Proxy values arrive as OMPCLI_*
+// variables, never in the command line. No double quotes: PowerShell does not hand them on.
+function restoreEnv(paths) {
+	return [
+		"unset http_proxy https_proxy all_proxy no_proxy",
+		...PROXY_VARS.map(name => "[[ -n $OMPCLI_" + name + " ]] && export " + name + "=$OMPCLI_" + name),
+		"export PATH=$(cygpath -u " + bashQuote(slashes(path.dirname(paths.omp))) + "):$PATH",
+		"export PI_CONFIG_FILES=$OMPCLI_CONFIG_FILES",
+	];
+}
+
+// The OMP tab: one login Git Bash restores the environment and runs omp.exe, as PCLI runs pi.exe.
+function chatCommand({ paths, overlay, home }) {
+	const program = [paths.omp, "--config", overlay.file, ...(home ? ["--allow-home"] : [])];
+	return [...restoreEnv(paths), program.map(value => bashQuote(slashes(value))).join(" ")].join("; ");
+}
+
+// The terminal tab is Git Bash left open: its rc file restores the same environment.
+function shellRc(paths) {
+	return ["[ -f ~/.bashrc ] && . ~/.bashrc", ...restoreEnv(paths)].join("\n") + "\n";
 }
 
 function resolveAgentDir(env, homedir) {
@@ -893,20 +908,92 @@ function resolveAgentDir(env, homedir) {
 	return envGet(env, "PI_CODING_AGENT_DIR") || path.join(homedir, ".omp", "agent");
 }
 
+// Bundled programs: node-pty -> PowerShell -> Git Bash -> program, as for the tab.
+// The extension host never starts them itself: the VDI answers a direct start with EPERM.
+function bundledStarter(nodePty, bash) {
+	return (file, args, { env = process.env, cwd } = {}) =>
+		nodePty.spawn("powershell.exe", ["-NoLogo", "-NoProfile", "-Command", bashCommand(bash, [file, ...args].map(value => bashQuote(slashes(value))).join(" "))], {
+			name: "xterm-256color",
+			cols: 120,
+			rows: 30,
+			cwd,
+			// Git Bash must hand every argument to the program unchanged.
+			env: { ...env, MSYS_NO_PATHCONV: "1" },
+		});
+}
+
+// One finished run: exit code and the tail of what the terminal showed, without colour codes.
+function runBundled(start, file, args, { timeoutMs = 180000, ...options } = {}) {
+	return new Promise((resolve, reject) => {
+		let output = "";
+		const done = code => {
+			clearTimeout(timer);
+			resolve({ code, output: output.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07/g, "").trim() });
+		};
+		let proc;
+		try {
+			proc = start(file, args, options);
+		} catch (error) {
+			reject(error);
+			return;
+		}
+		// A shell profile that waits for input must not hang the tab for ever.
+		const timer = setTimeout(() => {
+			output += "\n" + format(messages.silent, { seconds: Math.round(timeoutMs / 1000) });
+			try {
+				proc.kill();
+			} catch {}
+			done(-1);
+		}, timeoutMs);
+		proc.onData(data => {
+			output = (output + data).slice(-4000);
+		});
+		proc.onExit(({ exitCode }) => done(exitCode));
+	});
+}
+
+// A long-lived bundled program with the two things its owner needs: the exit event and kill.
+function bundledChild(start) {
+	return (file, args, options) => {
+		const proc = start(file, args, options);
+		const child = new EventEmitter();
+		proc.onData(() => {});
+		proc.onExit(({ exitCode }) => child.emit("exit", exitCode));
+		child.kill = () => proc.kill();
+		return child;
+	};
+}
+
+// The last lines of a hidden terminal: enough to see why a program did not start.
+const lastLine = output => output.split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(-3).join(" | ") || "no output";
+
+// The installer runs under bundled Bun. Its input and its answer travel as files: a terminal carries neither cleanly.
+async function spawnInstaller({ run, storageDir, bun, sourceDir, agentDir, revision, lease, guard, pointer, payloadRoot }) {
+	const file = path.join(storageDir, "install-" + randomUUID() + ".json");
+	await fsp.mkdir(storageDir, { recursive: true });
+	await fsp.writeFile(file, JSON.stringify({ sourceDir, agentDir, revision, lease, guard, pointer, payloadRoot }));
+	try {
+		const { output } = await run(bun, [__filename, "--install", file]);
+		const text = await readText(file + ".out");
+		if (text === null) throw new Error(format(messages.installFailed, { reason: lastLine(output) }));
+		const answer = JSON.parse(text);
+		if (answer.error !== undefined) throw new Error(answer.error);
+		return answer.value;
+	} finally {
+		await fsp.rm(file, { force: true });
+		await fsp.rm(file + ".out", { force: true });
+	}
+}
+
 // Update: pinned commit of this repository, payload selected once per run.
 
-async function runProcess(file, args, input, options) {
-	return (await runProcessBuffered(file, args, input, options)).toString("utf8");
-}
-
-function spawnInstaller({ bun, sourceDir, agentDir, revision, lease, guard, pointer, payloadRoot }) {
-	return runProcess(bun, [__filename, "--install"], JSON.stringify({ sourceDir, agentDir, revision, lease, guard, pointer, payloadRoot })).then(text => JSON.parse(text));
-}
-
-async function extractArchive({ bun, archive, stage, revision, script }) {
+async function extractArchive({ bun, archive, stage, revision, script, run }) {
 	await writeFileAtomic(script, EXTRACT_SCRIPT);
-	const text = await runProcess(bun, [script, archive, stage, revision]);
-	return JSON.parse(text).revision;
+	const { output } = await run(bun, [script, archive, stage, revision]);
+	const failure = await readText(path.join(stage, ".error"));
+	if (failure !== null) throw new Error(failure);
+	if ((await readText(path.join(stage, ".revision"))) === null) throw new Error(format(messages.extract, { reason: lastLine(output) }));
+	return revision;
 }
 
 function createUpdater(deps) {
@@ -915,8 +1002,8 @@ function createUpdater(deps) {
 	const version = deps.version;
 	const builtIn = deps.builtIn;
 	const script = path.join(storageDir, "extract.js");
-	const extract = deps.extract ?? (args => extractArchive({ ...args, bun: deps.bun, script }));
-	const apply = deps.apply ?? spawnInstaller;
+	const extract = deps.extract ?? (args => extractArchive({ ...args, bun: deps.bun, script, run: deps.run }));
+	const apply = deps.apply;
 	const lease = deps.lease ?? withInstallLease;
 	const tabs = deps.tabs ?? tabLeases;
 	let pending = null;
@@ -1119,6 +1206,16 @@ function createCli(host) {
 		resolveAgentDir(host.env, host.homedir);
 	}
 
+	// Every bundled program goes through the terminal chain; see bundledStarter.
+	function starter() {
+		return bundledStarter((host.loadPty ?? loadNodePty)(vscode), host.gitBash ?? GIT_BASH);
+	}
+
+	function installer() {
+		const start = starter();
+		return input => spawnInstaller({ ...input, storageDir: host.storageDir, run: (file, args, options) => runBundled(start, file, args, options) });
+	}
+
 	function transport() {
 		if (host.request) return { request: host.request };
 		const { proxy, proxyStrictSSL } = httpSettings();
@@ -1138,7 +1235,7 @@ function createCli(host) {
 			curl,
 			progress: value => write(format(messages.preparing, value)),
 		});
-		const install = control.install ?? spawnInstaller;
+		const install = control.install ?? installer();
 		const payloadRoot = path.join(host.storageDir, "payload");
 		const agentDir = resolveAgentDir(host.env, host.homedir);
 		await leased(async () => {
@@ -1154,6 +1251,7 @@ function createCli(host) {
 		memory ??= (host.memory ?? createMemory)({
 			runtimeDir: paths.dir,
 			model: paths.model,
+			spawnProcess: bundledChild(starter()),
 			request: host.request ?? fetch,
 			onExit: () => {
 				memory = null;
@@ -1180,16 +1278,17 @@ function createCli(host) {
 			onCancel: () => void releaseTabs(),
 			prepare: async write => {
 				const prepared = await prepare(write);
-				rcFile = path.join(host.storageDir, kind + "-" + process.pid + ".sh");
+				if (kind === "chat") return prepared;
+				rcFile = path.join(host.storageDir, "shell-" + process.pid + ".sh");
 				await fsp.mkdir(host.storageDir, { recursive: true });
-				await writeFileAtomic(rcFile, shellRc({ overlay: prepared.overlay, paths: prepared.paths, home: workDir() === host.homedir, chat: kind === "chat" }));
+				await writeFileAtomic(rcFile, shellRc(prepared.paths));
 				return prepared;
 			},
 			build: prepared => {
 				const env = createEnv({ base: host.env, proxy: settings.proxy, proxyStrictSSL: settings.proxyStrictSSL, paths: prepared.paths, overlay: prepared.overlay });
 				for (const proxy of PROXY_VARS.filter(candidate => envGet(env, candidate))) envSet(env, "OMPCLI_" + proxy, envGet(env, proxy));
-				env.OMPCLI_RUNTIME = path.dirname(prepared.paths.omp);
-				return { command: bashCommand(host.gitBash ?? GIT_BASH, rcFile), env, cwd: workDir() };
+				const inner = kind === "chat" ? chatCommand({ ...prepared, home: workDir() === host.homedir }) : "exec bash --rcfile " + bashQuote(slashes(rcFile)) + " -i";
+				return { command: bashCommand(host.gitBash ?? GIT_BASH, inner), env, cwd: workDir() };
 			},
 		});
 		const terminal = vscode.window.createTerminal({ name, pty, location: { viewColumn: vscode.ViewColumn.Active } });
@@ -1253,7 +1352,8 @@ function createCli(host) {
 			builtIn: path.join(host.extensionPath, "payload"),
 			agentDir,
 			bun: paths.bun,
-			apply: host.install ?? spawnInstaller,
+			apply: host.install ?? installer(),
+			run: (file, args, options) => runBundled(starter(), file, args, options),
 			lease: (dir, action) => leased(action),
 		});
 		const result = await updater.run();
@@ -1322,10 +1422,8 @@ function deactivate() {
 	active = null;
 }
 
-async function installMain() {
-	const chunks = [];
-	for await (const chunk of process.stdin) chunks.push(chunk);
-	const input = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+async function installMain(file) {
+	const input = JSON.parse(await fsp.readFile(file, "utf8"));
 	const run = async () => {
 		if (input.guard) {
 			const changes = await planHarness(input);
@@ -1334,20 +1432,26 @@ async function installMain() {
 		return applyHarness(input);
 	};
 	const result = input.lease === false ? await run() : await withInstallLease(input.agentDir, run);
-	process.stdout.write(JSON.stringify(result) + "\n");
+	await fsp.writeFile(file + ".out", JSON.stringify({ value: result }));
 }
 
 if (require.main === module && process.argv.includes("--install")) {
-	installMain().catch(error => {
-		process.stderr.write(error.message + "\n");
-		process.exitCode = 1;
-	});
+	const file = process.argv[process.argv.indexOf("--install") + 1];
+	installMain(file)
+		.catch(error => fsp.writeFile(file + ".out", JSON.stringify({ error: error.message })))
+		.catch(() => {
+			process.exitCode = 1;
+		});
 }
 
 module.exports = {
 	activate,
 	deactivate,
 	applyHarness,
+	bundledChild,
+	bundledStarter,
+	runBundled,
+	spawnInstaller,
 	createCli,
 	createEnv,
 	curlTransport,

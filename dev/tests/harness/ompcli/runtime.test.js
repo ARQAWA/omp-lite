@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { curlTransport, ensureRuntime, pickProxy, proxiedRequest, sha256 } from "../../../../src/modules/ompcli/index.js";
+import { bundledChild, bundledStarter, curlTransport, ensureRuntime, installMain, pickProxy, proxiedRequest, runBundled, sha256, spawnInstaller } from "../../../../src/modules/ompcli/index.js";
 
 const dirs = [];
 
@@ -64,10 +64,14 @@ test("the old storage runtime is removed and its model is kept without a downloa
 	mkdirSync(join(old, "llama"), { recursive: true });
 	for (const name of ["omp.exe", "bun.exe", "llama/llama-server.exe"]) writeFileSync(join(old, name), "old");
 	writeFileSync(join(old, "model.gguf"), "model");
+	writeFileSync(join(storageDir, "chat-4242.sh"), "old wrapper");
+	writeFileSync(join(storageDir, "shell-4242.sh"), "terminal wrapper");
 	const request = async () => { throw new Error("no network expected"); };
 	const paths = await ensureRuntime({ extensionPath, storageDir, request, assets });
 	expect(readFileSync(paths.model, "utf8")).toBe("model");
 	expect(existsSync(join(storageDir, "runtime"))).toBe(false);
+	expect(existsSync(join(storageDir, "chat-4242.sh"))).toBe(false);
+	expect(existsSync(join(storageDir, "shell-4242.sh"))).toBe(true);
 });
 
 test("Update and a tab starting together both get the old model", async () => {
@@ -134,4 +138,76 @@ test("proxied assets stream to a file instead of memory", async () => {
 	expect(seen[0].args).toContain("--location");
 	expect(seen[0].args.join(" ")).not.toContain("secret");
 	expect(seen[0].options.env.HTTPS_PROXY).toContain("secret");
+});
+
+function fakePty() {
+	const spawned = [];
+	return {
+		spawned,
+		spawn(file, args, options) {
+			const proc = { file, args, options, killed: false, onData: fn => (proc.data = fn), onExit: fn => (proc.exit = fn), kill: () => (proc.killed = true) };
+			spawned.push(proc);
+			return proc;
+		},
+	};
+}
+
+test("a bundled program starts through PowerShell and Git Bash, never by itself", async () => {
+	const pty = fakePty();
+	const start = bundledStarter(pty, "C:\\Program Files\\Git\\bin\\bash.exe");
+	const done = runBundled(start, "C:\\ext\\runtime\\bun.exe", ["C:\\ext\\index.js", "--install", "it's.json"], { env: { LLAMA_API_KEY: "secret" } });
+	const proc = pty.spawned[0];
+	expect(proc.file).toBe("powershell.exe");
+	expect(proc.args.slice(0, 3)).toEqual(["-NoLogo", "-NoProfile", "-Command"]);
+	expect(proc.args[3]).toStartWith("& 'C:\\Program Files\\Git\\bin\\bash.exe' --login -i -c '");
+	// PCLI form: no backslash and no double quote reaches the command line.
+	expect(proc.args[3].match(/ -c '(.*)'$/s)[1].replaceAll("''", "'")).toBe("'C:/ext/runtime/bun.exe' 'C:/ext/index.js' '--install' 'it'\\''s.json'");
+	expect(proc.args[3]).not.toContain("secret");
+	expect(proc.options.env.LLAMA_API_KEY).toBe("secret");
+	expect(proc.options.env.MSYS_NO_PATHCONV).toBe("1");
+	proc.data("\x1b[31mbash: Permission denied\x1b[0m\r\n");
+	proc.exit({ exitCode: 126 });
+	expect(await done).toEqual({ code: 126, output: "bash: Permission denied" });
+});
+
+test("a long-lived bundled program reports its exit and can be killed", () => {
+	const pty = fakePty();
+	const child = bundledChild(bundledStarter(pty, "bash.exe"))("C:\\ext\\runtime\\llama\\llama-server.exe", ["--port", "5001"], { cwd: "C:\\ext" });
+	let code;
+	child.once("exit", value => (code = value));
+	child.kill();
+	expect(pty.spawned[0].killed).toBe(true);
+	expect(pty.spawned[0].options.cwd).toBe("C:\\ext");
+	pty.spawned[0].exit({ exitCode: 3 });
+	expect(code).toBe(3);
+});
+
+test("the installer gets its input and returns its answer through files", async () => {
+	const storageDir = temporary();
+	const agentDir = temporary();
+	const sourceDir = temporary();
+	mkdirSync(join(sourceDir, "src"), { recursive: true });
+	writeFileSync(join(sourceDir, "src", "a.js"), "a");
+	writeFileSync(join(sourceDir, "install.manifest.json"), JSON.stringify({ version: 1, files: [{ from: "src/a.js", to: "extensions/a.js" }], config: [] }));
+	const seen = [];
+	const run = async (file, args) => {
+		seen.push([file, ...args.slice(0, 2)]);
+		await installMain(args[2]);
+		return { code: 0, output: "" };
+	};
+	const input = { run, storageDir, bun: "bun.exe", sourceDir, agentDir, revision: "c".repeat(40), lease: false };
+	expect(await spawnInstaller(input)).toEqual({ revision: "c".repeat(40), changed: true });
+	expect(readFileSync(join(agentDir, "extensions", "a.js"), "utf8")).toBe("a");
+	expect(seen[0][0]).toBe("bun.exe");
+	expect(seen[0][2]).toBe("--install");
+	await expect(spawnInstaller({ ...input, run: async () => ({ code: 126, output: "x\nbash: bun.exe: Permission denied" }) })).rejects.toThrow("Permission denied");
+	expect(existsSync(join(storageDir, "runtime"))).toBe(false);
+	expect(require("node:fs").readdirSync(storageDir)).toEqual([]);
+});
+
+test("a hidden run that never answers is killed and says so", async () => {
+	const pty = fakePty();
+	const result = await runBundled(bundledStarter(pty, "bash.exe"), "bun.exe", [], { timeoutMs: 20 });
+	expect(pty.spawned[0].killed).toBe(true);
+	expect(result).toEqual({ code: -1, output: "no answer in 0s" });
 });

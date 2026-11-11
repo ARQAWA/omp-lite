@@ -950,3 +950,19 @@ URL и архивы остаются у родных `grep` и `read`.
 **Граница:** на VDI не проверено; причина запрета известна по одной пробе. Проверяет владелец.
 
 **Носители правила:** `src/modules/ompcli/index.js` (`runtimePaths`, `ensureRuntime`), `dev/scripts/ompcli-build/index.js`, `dev/tests/harness/ompcli/runtime.test.js`.
+
+## D-050 — ompcli запускает программы только цепочкой PCLI
+
+**Решение:** `omp.exe` во вкладке, `bun.exe` (установщик и распаковка) и `llama-server.exe` запускаются так же, как `pi.exe` в PCLI: `node-pty` из VS Code -> `powershell.exe` -> Git Bash `--login -i -c` -> программа. Второго bash и файла-обёртки перед `omp.exe` больше нет. Пути в команде идут с прямыми слешами, двойных кавычек нет. Extension host сам не запускает ни одну программу из поставки. Задание и ответ установщика идут файлами. Версия расширения `0.0.5`.
+
+**Основание:** слово владельца от 11.11: «надо запускать экзактли так же, как PCLI запускает». Проба владельца на VDI: `0.0.4` с программами в каталоге расширения упала с тем же `spawn EPERM`.
+
+**Документация OMP:** `omp://cli-reference.md`, `omp://environment-variables.md`.
+
+**Отменяет:** причину из D-049. Место файла запрет не снимает: запрещён прямой запуск программы из extension host. Поставка программ в VSIX остаётся.
+
+**Причина:** PCLI на той же VDI работает и запускает `pi.exe` только этой цепочкой. `0.0.3` и `0.0.4` запускали `bun.exe` прямым `child_process.spawn` и падали до открытия вкладки.
+
+**Граница:** на VDI не проверено: доступа к ней отсюда нет. Цепочка прогнана на macOS с настоящими bash и Bun; PowerShell и `node-pty` заменены. Проб от владельца решение не требует: он ставит расширение и открывает вкладку, как обычно.
+
+**Носители правила:** `src/modules/ompcli/index.js` (`bashCommand`, `chatCommand`, `bundledStarter`, `runBundled`, `bundledChild`, `spawnInstaller`, `extractArchive`), `dev/tests/harness/ompcli/runtime.test.js`, `dev/tests/harness/ompcli/tabs.test.js`.

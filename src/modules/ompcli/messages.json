@@ -15,6 +15,7 @@
 	"checksum": "Checksum mismatch: {file}",
 	"bundle": "OMP CLI is damaged: {file}. Reinstall the extension.",
 	"asset": "OMP CLI could not download {name}: {reason}",
+	"silent": "no answer in {seconds}s",
 	"extract": "OMP extraction failed: {reason}",
 	"revision": "OMP archive has no revision.",
 	"path": "Unsafe path: {value}",
