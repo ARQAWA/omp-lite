@@ -1061,3 +1061,5 @@ URL и архивы остаются у родных `grep` и `read`.
 **Граница:** на Mac проверено: OMP грузит плагин из каталога, `/stt doctor` отвечает `ready`, клавиши свободны. На VDI не проверено ничего: запуск `ffmpeg.exe`, звук, имя микрофона. В `stt.windows.json` пока стоит `audio=Microphone`; настоящее имя придёт со скрина владельца и уйдёт через `Update`.
 
 **Носители правила:** `src/modules/voice-stt/`, `src/modules/ompcli/index.js` (`createEnv`, `STT_KEY_FILE`), `src/modules/ompcli/runtime.json` (`ffmpeg`), `dev/scripts/ompcli-build/index.js`, `dev/tests/harness/voice-stt/`.
+
+**Выпуск D-056:** `0.0.9`, ревизия `0f8f4ff1553572d26117fe5a12ba301922c82445`, 208232296 байт, sha256 `cde99d210cfc03c3fc2add5c38bb340cdf3b966b70b0f8caf840a7386ea34c5c`, Marketplace `win32-x64 validated`, 2026-11-11 09:56 UTC. На VDI не проверено.
