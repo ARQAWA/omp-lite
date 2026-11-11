@@ -2,7 +2,7 @@
 	"name": "ompcli",
 	"displayName": "ARQAWA OMPCLI",
 	"publisher": "arqawa",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"engines": {
 		"vscode": "^1.86.0"
 	},
@@ -24,6 +24,12 @@
 				"command": "workbench.action.terminal.sendSequence",
 				"when": "terminalFocus && ompcli.terminalActive",
 				"args": { "text": "\u001b[13;5u" }
+			},
+			{
+				"key": "shift+enter",
+				"command": "workbench.action.terminal.sendSequence",
+				"when": "terminalFocus && ompcli.terminalActive",
+				"args": { "text": "\u001b[13;2u" }
 			}
 		]
 	}

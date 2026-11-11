@@ -6,6 +6,7 @@ enabledModels:
   - anthropic/*
   - openai-codex/*
   - opencode-go/*
+# Only anthropic, openai-codex and opencode-go stay open: every other model provider of OMP 18.18.8.
 disabledProviders:
   - google
   - openrouter
@@ -14,7 +15,89 @@ disabledProviders:
   - cursor
   - ollama
   - deepseek
-  - llama.cpp
+  - "llama.cpp"
+  - amazon-bedrock
+  - bedrock-mantle
+  - abliteration
+  - aiand
+  - aimlapi
+  - alibaba-coding-plan
+  - alibaba-token-plan
+  - apple
+  - azure
+  - baseten
+  - cerebras
+  - charm-hyper
+  - cline-pass
+  - cloudflare-ai-gateway
+  - cloudflare-workers-ai
+  - commandcode
+  - coralbricks
+  - coreweave
+  - deepinfra
+  - devin
+  - factory-droid
+  - firepass
+  - fireworks
+  - github-copilot
+  - gitlab-duo
+  - gitlab-duo-agent
+  - gmi-cloud
+  - google-antigravity
+  - google-gemini-cli
+  - google-vertex
+  - groq
+  - helmcode
+  - huggingface
+  - inception
+  - kilo
+  - kimi-code
+  - litellm
+  - lm-studio
+  - meta
+  - minimax
+  - minimax-code
+  - minimax-code-cn
+  - mistral
+  - modular
+  - moonshot
+  - muse-code
+  - nanogpt
+  - novita
+  - nvidia
+  - ollama-cloud
+  - openai
+  - opencode-zen
+  - otari
+  - qianfan
+  - qwen-portal
+  - sakana
+  - sambanova
+  - scaleway
+  - siliconflow
+  - siliconflow-cn
+  - singularityapi-dev
+  - singularityapi-tech
+  - snowflake
+  - stepfun
+  - synthetic
+  - together
+  - typesafe
+  - umans
+  - venice
+  - vercel-ai-gateway
+  - vllm
+  - wafer-serverless
+  - xai
+  - xai-oauth
+  - xiaomi
+  - xiaomi-token-plan-ams
+  - xiaomi-token-plan-cn
+  - xiaomi-token-plan-sgp
+  - yolo-auto
+  - zai
+  - zenmux
+  - zhipu-coding-plan
 retry:
   fallbackChains:
     web: []

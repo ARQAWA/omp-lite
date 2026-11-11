@@ -27,7 +27,7 @@
 |файл|назначение|
 |---|---|
 |`index.js`|весь код расширения VS Code: вкладки, установка харнеса, обновление, память|
-|`package.json`|манифест расширения: три команды, Ctrl+Enter, `main: ./index.js`|
+|`package.json`|манифест расширения: три команды, Ctrl+Enter и Shift+Enter, `main: ./index.js`|
 |`runtime.json`|пины OMP, модели, llama.cpp и CRT: `url`, `sha256`, `size`, `file`; программы по ним кладёт в VSIX сборщик|
 |`messages.json`|видимые сообщения, английский|
 |`licenses/`|лицензии OMP, llama.cpp, LLVM OpenMP, модели, Bun и условия MSVC runtime|
@@ -98,6 +98,12 @@ Git Bash `--login -i -c` -> программа. Второго bash и файл�
 второе обновление не трогает, а прерванную не принимает за готовую. Изменённый bootstrap требует
 нового VSIX. Блок `__metadata`, который VS Code дописывает в установленный `package.json`,
 изменением не считается.
+
+## Клавиши
+
+Терминал VS Code шлёт на Shift+Enter и Ctrl+Enter обычный Enter. Во вкладке расширения
+они уходят в OMP как `ESC[13;2u` и `ESC[13;5u`: Shift+Enter переносит строку,
+Ctrl+Enter ставит сообщение в очередь (`omp://keybindings.md`).
 
 ## Память
 

@@ -1033,3 +1033,15 @@ URL и архивы остаются у родных `grep` и `read`.
 **Носители правила:** `src/modules/ompcli/index.js` (`sameBootstrap`), `dev/tests/harness/ompcli/update.test.js`.
 
 **Выпуск D-054:** `0.0.7`, ревизия `c0d008edb1b97255425413513d28401ea6d9b151`, 153520606 байт, sha256 `72bd613458e425a042205768af07d7de2ec055ac5638894697fbe1f0848bbff9`, Marketplace `win32-x64 validated`, 2026-11-11 07:33 UTC. На VDI не проверено.
+
+## D-055 — Shift+Enter во вкладке ompcli и только три провайдера в слепке
+
+**Решение:** расширение шлёт на Shift+Enter последовательность `ESC[13;2u`, как уже шлёт `ESC[13;5u` на Ctrl+Enter. В слепке настроек `disabledProviders` перечисляет всех провайдеров моделей OMP `18.18.8`, кроме `anthropic`, `openai-codex` и `opencode-go` (слова владельца: «должны работать только три провайдера, остальные должны быть закрыты»). Список взят из каталога OMP: `packages/catalog/src/compat/rules/providers/*.kdl`. Белого списка провайдеров в OMP нет: новый провайдер в новой версии OMP надо дописать руками. Поисковые службы (`exa`, `tavily` и прочие) в список не входят. Версия расширения `0.0.8`.
+
+**Основание:** слова владельца от 11.11 после запуска `0.0.7` на VDI: «AWS SSO-токен подтягивает в OMP, хотя подписка должна работать только с OpenCode Go, антропиков и ChatGPT-подписки», «Shift+Enter не переносит строки».
+
+**Документация OMP:** `omp://providers.md`, раздел Disabling model providers: `disabledProviders` проверяется до учётных данных, переменные окружения провайдера не включают. `omp://environment-variables.md`, раздел Amazon Bedrock: `AWS_PROFILE` и цепочка SSO делают Bedrock доступным. `omp://keybindings.md`: имена аккордов `Shift+Enter`, `Ctrl+Enter`.
+
+**Граница:** на VDI не проверено. Что именно владелец видел про AWS, не уточнено. Последовательность Shift+Enter взята по образцу Ctrl+Enter из PCLI; разбор её в OMP на macOS не проверен.
+
+**Носители правила:** `src/modules/ompcli/package.json`, `src/modules/runtime-config/config.yml`, `dev/tests/repository/ompcli-package.test.js`.

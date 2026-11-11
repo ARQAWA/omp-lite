@@ -464,7 +464,8 @@ test("a tab closed during preparation releases its lease and memory", async () =
 	api.state.fireClose(api.state.terminals[0]);
 	ready.resolve({ port: 5013, key: "k" });
 	await until(() => !existsSync(join(storageDir, "leases", process.pid + ".json")));
-	expect(spy.stopped).toBeGreaterThan(0);
+	// The server is stopped right after the lease record goes.
+	await until(() => spy.stopped > 0);
 });
 
 test("a busy lease is retried until the closed tab record is gone", async () => {

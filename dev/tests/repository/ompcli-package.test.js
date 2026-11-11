@@ -21,6 +21,11 @@ test("the packaged extension contains three commands and a scoped Ctrl+Enter", (
 		command: "workbench.action.terminal.sendSequence",
 		when: "terminalFocus && ompcli.terminalActive",
 		args: { text: "\u001b[13;5u" },
+	}, {
+		key: "shift+enter",
+		command: "workbench.action.terminal.sendSequence",
+		when: "terminalFocus && ompcli.terminalActive",
+		args: { text: "\u001b[13;2u" },
 	}]);
 	expect(extension.repository.url).toContain("ARQAWA/omp-lite");
 });
