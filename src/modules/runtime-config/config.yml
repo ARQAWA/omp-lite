@@ -106,7 +106,7 @@ retry:
   fallbackChains:
     web: []
     memory:
-      - opencode-go/deepseek-v4.1-flash:max
+      - openai-codex/gpt-6.1-terra:high
 compaction:
   modelThresholds:
     opencode-go/deepseek-v4.1-flash: f400000
