@@ -4,9 +4,9 @@ import { join } from "node:path";
 
 const config = Bun.YAML.parse(readFileSync(join(import.meta.dir, "../../../../src/modules/runtime-config/config.yml"), "utf8"));
 
-test("any model and any effort can be named per spawn", () => {
+test("any model can be named per spawn; the level rides in the model string", () => {
 	expect(config.task.perCallModel).toBe("on");
-	expect(config.task.enableEffort).toBe(true);
+	expect(config.task.enableEffort).toBe(false);
 	expect(config.modelRoles.sonnet).toBeUndefined();
 });
 

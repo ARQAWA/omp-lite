@@ -31,7 +31,7 @@ test("puts the rule under the first line of the task description", () => {
 test("keeps the rest of the description and other tools untouched", () => {
 	const event = { payload: payload() };
 	harness()(event);
-	expect(event.payload.tools[0].function.description.endsWith(`no \`agent\`, no \`effort\`. ${TAIL}`)).toBe(true);
+	expect(event.payload.tools[0].function.description.endsWith(`pass exactly the level the user says. ${TAIL}`)).toBe(true);
 	expect(event.payload.tools[1].function.description).toBe("Read a file.");
 });
 
@@ -43,7 +43,7 @@ test("the specificity line becomes the Codex-style default worker rule, once", (
 	const text = event.payload.tools[0].function.description;
 	expect(text).not.toContain("Use most specific agent.");
 	expect(text.split("# Delegation\nOmit `agent` by default: a general worker equal to you.")).toHaveLength(2);
-	for (const part of ["`scout` only for read-only search over unknown files", "`sonic` only for mechanical edits with exact instructions", "names an agent type: pass it in `agent`", "set `model` to `provider/id:level` (your own model if none named); no `agent`, no `effort`"]) {
+	for (const part of ["`scout` only for read-only search over unknown files", "`sonic` only for mechanical edits with exact instructions", "names an agent type: pass it in `agent`", "set `model` to `provider/id:level` (your own model if none named), no `agent`", "Levels: `low`, `medium`, `high`, `xhigh` (extra high), `max`"]) {
 		expect(text).toContain(part);
 	}
 });
@@ -95,10 +95,18 @@ test("removes mandatory scout wording even when the gate is already present", ()
 		parameters: {},
 	};
 	harness()({ payload: { tools: [tool] } });
-	expect(tool.description).toContain("no `agent`, no `effort`. Prefer one agent.");
+	expect(tool.description).toContain("pass exactly the level the user says. Prefer one agent.");
 	expect(tool.description).toContain("- `scout`: Fast read-only scout");
 	expect(tool.description).not.toContain("MUST");
 	expect(tool.description.split(RULE)).toHaveLength(2);
+});
+
+test("drops the specialist tip from task results only", () => {
+	const strip = handlers().get("tool_result");
+	const tip = "Tip: this call spawned 2 generic `task` workers. Check the agent list for a closer specialist type — e.g. read-only research belongs on `agent: \"scout\"`, which runs on a faster model.";
+	const content = [{ type: "text", text: `Spawned 2 background agents.\n\n${tip}\n\nCoordinate.` }, { type: "image", data: "x" }];
+	expect(strip({ toolName: "_task", content }).content).toEqual([{ type: "text", text: "Spawned 2 background agents.\n\nCoordinate." }, content[1]]);
+	expect(strip({ toolName: "read", content })).toBeUndefined();
 });
 
 test("eval prefers Bun, keeps Python, and drops agent and workpool advertising", () => {
