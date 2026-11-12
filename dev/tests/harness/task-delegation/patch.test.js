@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import taskDelegation, { RULE } from "../../../../src/modules/task-delegation/index.js";
 
 const FIRST = "Spawn `tasks[]` concurrently; IDs return immediately.";
-const DESCRIPTION = `${FIRST}\n\n# Results\nread the agent URL.\n\n# Delegation\nUse most specific agent.`;
+const TAIL = "Prefer one agent to investigate + edit. Omit `agent` only for default (`task`); NEVER specify it.";
+const DESCRIPTION = `${FIRST}\n\n# Results\nread the agent URL.\n\n# Delegation\nUse most specific agent. Read-only research MUST use \`scout\` only when files unknown. ${TAIL}`;
 
 function handlers() {
 	const handlers = new Map();
@@ -30,8 +31,21 @@ test("puts the rule under the first line of the task description", () => {
 test("keeps the rest of the description and other tools untouched", () => {
 	const event = { payload: payload() };
 	harness()(event);
-	expect(event.payload.tools[0].function.description.endsWith("# Delegation\nUse most specific agent.")).toBe(true);
+	expect(event.payload.tools[0].function.description.endsWith(`no \`agent\`, no \`effort\`. ${TAIL}`)).toBe(true);
 	expect(event.payload.tools[1].function.description).toBe("Read a file.");
+});
+
+test("the specificity line becomes the Codex-style default worker rule, once", () => {
+	const event = { payload: payload() };
+	const handler = harness();
+	handler(event);
+	handler(event);
+	const text = event.payload.tools[0].function.description;
+	expect(text).not.toContain("Use most specific agent.");
+	expect(text.split("# Delegation\nOmit `agent` by default: a general worker equal to you.")).toHaveLength(2);
+	for (const part of ["`scout` only for read-only search over unknown files", "`sonic` only for mechanical edits with exact instructions", "names an agent type: pass it in `agent`", "set `model` to `provider/id:level` (your own model if none named); no `agent`, no `effort`"]) {
+		expect(text).toContain(part);
+	}
 });
 
 test("adds the rule once across repeated requests", () => {
@@ -81,7 +95,7 @@ test("removes mandatory scout wording even when the gate is already present", ()
 		parameters: {},
 	};
 	harness()({ payload: { tools: [tool] } });
-	expect(tool.description).toContain("Use most specific agent. Prefer one agent.");
+	expect(tool.description).toContain("no `agent`, no `effort`. Prefer one agent.");
 	expect(tool.description).toContain("- `scout`: Fast read-only scout");
 	expect(tool.description).not.toContain("MUST");
 	expect(tool.description.split(RULE)).toHaveLength(2);

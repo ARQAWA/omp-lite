@@ -184,6 +184,7 @@ Python остаётся доступен для специальных библ�
 13. Каталога `~/.omp/agent/extensions/cursor-tools/` нет.
 14. Файлов `memory-tool-prompts*` в `~/.omp/agent/extensions/` нет. Новая сессия не пишет `memory patch stale`.
 15. Диктовка. Установщик окружение не меняет. Владельцу нужны `ffmpeg` в `PATH`, `PI_STT_CONFIG=~/.omp/agent/extensions/pi-voice-stt/stt.json` и `SONIOX_API_KEY`. Тогда `/stt doctor` отвечает `Pi Voice STT ready`. Без них остальной харнес работает.
+16. Сабагенты (D-060). В репозитории с `AGENTS.md`, где есть уникальное слово, попроси в новой сессии сабагента без типа: вызов `task` идёт без `agent`, а сабагент называет слово из инструкций без чтения файлов. `reviewer` отклоняется. Названная модель с усилием уходит в `model` и `effort`.
 
 ## 6. Откат
 

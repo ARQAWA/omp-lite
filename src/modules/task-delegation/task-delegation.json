@@ -13,5 +13,7 @@
 	"evalFiles": "For project file reading and searching, use the read, grep and glob tools. Use eval for computation, not as a substitute for those tools.",
 	"exampleOld": "eval(language=\"py\", code=\"%load \\\"scripts/my setup.py\\\"\")",
 	"exampleNew": "eval(language=\"js\", code=\"%load \\\"scripts/my setup.js\\\"\")",
+	"specificOld": "Use most specific agent.",
+	"specificNew": "Omit `agent` by default: a general worker equal to you. `scout` only for read-only search over unknown files; `sonic` only for mechanical edits with exact instructions. The user names an agent type: pass it in `agent`. The user names a model or effort level: set `model` to `provider/id:level` (your own model if none named); no `agent`, no `effort`.",
 	"blocked": "Direct agent() and workpool() calls are blocked in eval. Use the task tool for explicitly requested delegation."
 }
