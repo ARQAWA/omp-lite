@@ -1,8 +1,10 @@
 import { expect, mock, test } from "bun:test";
 
 let items;
+const user = { path: "/home/u/.omp/agent/agents.md", content: "user rules" };
+const other = { path: "/other/AGENTS.md", content: "other root" };
 mock.module("@oh-my-pi/pi-coding-agent/capability", () => ({
-	loadCapability: async (id, options) => ({ items: id === "context-files" && options.cwd === "/repo" ? items : [] }),
+	loadCapability: async (id, options) => ({ items: id !== "context-files" ? [] : options.cwd === "/repo" ? items : options.cwd === "/other" ? [other, user] : [] }),
 }));
 mock.module("@oh-my-pi/pi-coding-agent/discovery/at-imports", () => ({
 	expandAtImports: async (content, path) => content.replace("@extra.md", `[expanded for ${path}]`),
@@ -10,23 +12,30 @@ mock.module("@oh-my-pi/pi-coding-agent/discovery/at-imports", () => ({
 const { default: childAgentsMd } = await import("../../../../src/modules/child-agents-md/index.js");
 const text = (await import("../../../../src/modules/child-agents-md/child-agents-md.json")).default;
 
-function run(kind, systemPrompt = ["base"]) {
+function run(kind, systemPrompt = ["base"], additionalDirectories) {
 	let handler;
 	childAgentsMd({ on: (name, fn) => name === "before_agent_start" && (handler = fn) });
-	return handler({ systemPrompt }, { agent: { kind }, cwd: "/repo" });
+	return handler({ systemPrompt }, { agent: { kind }, cwd: "/repo", sessionManager: { getHeader: () => ({ additionalDirectories }) } });
 }
 
 const agents = { path: "/repo/AGENTS.md", content: "marker ZEBRA" };
 const claude = { path: "/repo/CLAUDE.md", content: "claude rules" };
 
 test("a subagent gets only the AGENTS.md files, after the base prompt", async () => {
-	items = [agents, claude, { path: "/home/u/.omp/agent/agents.md", content: "user rules" }];
+	items = [agents, claude, user];
 	expect(await run("sub")).toEqual({
 		systemPrompt: [
 			"base",
 			`<repo-rules>\n${text.head}\n<file path="/repo/AGENTS.md">\nmarker ZEBRA\n</file>\n<file path="/home/u/.omp/agent/agents.md">\nuser rules\n</file>\n</repo-rules>`,
 		],
 	});
+});
+
+test("AGENTS.md of an additional workspace root is added, each file once", async () => {
+	items = [agents, user];
+	const block = (await run("sub", ["base"], ["/other"])).systemPrompt[1];
+	expect(block).toContain('<file path="/other/AGENTS.md">\nother root');
+	expect(block.split("user rules")).toHaveLength(2);
 });
 
 test("@imports are expanded as for the main agent", async () => {
