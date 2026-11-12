@@ -1131,9 +1131,11 @@ URL и архивы остаются у родных `grep` и `read`.
 
 **Проба 12.11 (OMP 18.18.8, Sonnet 5.5, временный репозиторий с `AGENTS.md`):** без расширения сабагент отвечает `UNKNOWN`; с ним называет слово. Системный промпт главного агента держит слово один раз, сабагента один раз. Вызов без типа идёт без `agent`, сабагент `task`. `scout` на Terra `xhigh`, `sonic` на Terra `medium`. `reviewer` отклонён: «агент выключен в настройках».
 
-**Уточнение 12.11, усилие словами:** владелец называет усилие словом, агент ставит ровно его. `task.enableEffort: false`: поле `effort` давало только `lo/med/hi`, и `hi` у Sonnet 5.5 становилось `max`. Уровни в правиле: `low`, `medium`, `high`, `xhigh`, `max`. `minimal` и `off` владелец исключил. Модель без названного уровня получает ближайший ниже: так решил владелец. Родная подсказка OMP про специалиста убирается из ответа `task` хуком `tool_result` (`omp://extensions.md`); настройки для неё нет.
+**Уточнение 12.11, усилие словами:** владелец называет усилие словом, агент ставит ровно его. `task.enableEffort: false`: поле `effort` давало только `lo/med/hi`, и `hi` у Sonnet 5.5 становилось `max`. Уровни в правиле: `low`, `medium`, `high`, `xhigh`, `max`. `minimal` и `off` владелец исключил. Модель без названного уровня получает ближайший ниже: так решил владелец. Родная подсказка OMP про специалиста заменяется в ответе `task` хуком `tool_result` (`omp://extensions.md`); настройки для неё нет.
 
 **Границы:** Новая модель или провайдер требует записи в роль `perCall`. Пробы не гарантируют выбор модели: правило в описании работает как инструкция.
+
+**Уточнение 12.11, одно правило выбора везде:** владелец не заказывал удаление подсказки OMP. Теперь её заменяет наша: ``Tip: omit `agent` by default; `scout` only for read-only search over unknown files; `sonic` only for mechanical edits with exact instructions.`` Тот же текст (ключ `pick`) заменяет у сабагента родную строку тела `task`/`sonic` ``select most specific `agent` type per spawn...`` хуком `before_agent_start`. Раннер OMP передаёт `systemPrompt` от расширения к расширению: `AGENTS.md` от `child-agents-md` остаётся. Проба OMP 18.18.8: ответ `task` несёт нашу подсказку, родной нет. Запрос сабагента Opus 5.5 без родной строки, с нашей и с `AGENTS.md`. Сабагент сам отдал поиск `scout` (Terra `xhigh`), переименование `sonic` (Terra `medium`).
 
 **Носители правила:** `src/modules/task-delegation/`, `src/modules/child-agents-md/`, `src/modules/runtime-config/`, тесты в `dev/tests/harness/`, `install.manifest.json`, `INSTALL.md`.
 

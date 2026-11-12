@@ -31,7 +31,9 @@
 
 **Строка о рабочем агенте.** Родная строка `Use most specific agent.` толкала модель к `scout` и `sonic`. Она заменена правилом из `task-delegation.json` (`specificOld`, `specificNew`): без `agent` работает универсальный агент, как Codex `default`; `scout` только для чтения незнакомых файлов; `sonic` только для механических правок; названный тип агента идёт в `agent`; названные модель или уровень усилия идут в `model` как `provider/id:level` (своя модель, если названа только степень), без `agent`. Уровни названы в правиле: `low`, `medium`, `high`, `xhigh`, `max`. Поля `effort` нет: `task.enableEffort` выключен, оно давало лишь `lo/med/hi`. Остальная строка про делегирование родная. Настройки модели и усилия на каждый вызов лежат в [runtime-config](../runtime-config/README.md).
 
-**Хук `tool_result`:** из ответа `task` убирается родная подсказка OMP `Tip: this call spawned N generic ... workers`. Она зовёт к `scout` и спорит с правилом. Настройки для неё нет (`suppressSpawnAdvisory` внутренний). Шаблон лежит в `task-delegation.json`, ключ `tip`.
+**Хук `tool_result`:** в ответе `task` родная подсказка OMP `Tip: this call spawned N generic ... workers` заменяется нашей. Родная зовёт к `scout` и спорит с правилом. Настройки для неё нет (`suppressSpawnAdvisory` внутренний). Наша: `Tip:` и текст ключа `pick`. Шаблон родной лежит в ключе `tip`.
+
+**Хук `before_agent_start`:** только у сабагента (`ctx.agent.kind === "sub"`). Родная строка тела `task` и `sonic` `` `task` delegation: select most specific `agent` type... `` (ключ `stockPick`) заменяется текстом `pick`. OMP сцепляет `systemPrompt` расширений по очереди: правка [child-agents-md](../child-agents-md/README.md) сохраняется.
 
 **Границы:** фильтр текстовый, это не изоляция.
 Функции из ядра OMP не удаляются.
@@ -39,7 +41,7 @@
 Строки, комментарии и одноимённые методы могут блокироваться.
 `task` ограничивается инструкцией модели, не фильтром разрешений.
 Python остаётся включённым, выбирает язык модель.
-Системный промпт не меняется.
+Системный промпт главного агента не меняется.
 
 **Установка:** файл перечислен в [манифесте](../../../install.manifest.json); процедура — [INSTALL.md](../../../INSTALL.md).
 

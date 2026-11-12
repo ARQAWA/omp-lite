@@ -101,12 +101,21 @@ test("removes mandatory scout wording even when the gate is already present", ()
 	expect(tool.description.split(RULE)).toHaveLength(2);
 });
 
-test("drops the specialist tip from task results only", () => {
+test("swaps the specialist tip in task results for our rule", () => {
 	const strip = handlers().get("tool_result");
 	const tip = "Tip: this call spawned 2 generic `task` workers. Check the agent list for a closer specialist type — e.g. read-only research belongs on `agent: \"scout\"`, which runs on a faster model.";
 	const content = [{ type: "text", text: `Spawned 2 background agents.\n\n${tip}\n\nCoordinate.` }, { type: "image", data: "x" }];
-	expect(strip({ toolName: "_task", content }).content).toEqual([{ type: "text", text: "Spawned 2 background agents.\n\nCoordinate." }, content[1]]);
+	const ours = "Tip: omit `agent` by default; `scout` only for read-only search over unknown files; `sonic` only for mechanical edits with exact instructions.";
+	expect(strip({ toolName: "_task", content }).content).toEqual([{ type: "text", text: `Spawned 2 background agents.\n\n${ours}\n\nCoordinate.` }, content[1]]);
 	expect(strip({ toolName: "read", content })).toBeUndefined();
+});
+
+test("subagent prompt gets our rule instead of the stock specialist line", () => {
+	const start = handlers().get("before_agent_start");
+	const stock = "- `task` delegation: select most specific `agent` type per spawn; general-purpose worker only if no listed specialist fits.";
+	const systemPrompt = ["base", `Role\n${stock}\n</directives>`];
+	expect(start({ systemPrompt }, { agent: { kind: "sub" } }).systemPrompt).toEqual(["base", "Role\n- `task` delegation: omit `agent` by default; `scout` only for read-only search over unknown files; `sonic` only for mechanical edits with exact instructions.\n</directives>"]);
+	expect(start({ systemPrompt }, { agent: { kind: "main" } })).toBeUndefined();
 });
 
 test("eval prefers Bun, keeps Python, and drops agent and workpool advertising", () => {

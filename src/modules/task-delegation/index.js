@@ -30,10 +30,14 @@ export default function taskDelegation(pi) {
 		if (/\b(?:agent|workpool)\s*\(/.test(event.input.code)) return { block: true, reason: texts.blocked };
 	});
 
-	// OMP appends a "pick a specialist" tip to task results; it contradicts the default-worker rule.
+	// OMP's stock "pick a specialist" texts contradict the default-worker rule; ours replaces them.
 	pi.on("tool_result", event => {
 		if (toolName(event.toolName) !== "task") return;
-		return { content: event.content.map(part => (part.type === "text" ? { ...part, text: part.text.replace(new RegExp(texts.tip), "") } : part)) };
+		return { content: event.content.map(part => (part.type === "text" ? { ...part, text: part.text.replace(new RegExp(texts.tip), `\n\nTip: ${texts.pick}`) } : part)) };
+	});
+
+	pi.on("before_agent_start", (event, ctx) => {
+		if (ctx.agent.kind === "sub") return { systemPrompt: event.systemPrompt.map(part => part.replace(texts.stockPick, texts.pick)) };
 	});
 
 	pi.on("before_provider_request", event => {
