@@ -30,6 +30,12 @@ export default function taskDelegation(pi) {
 		if (/\b(?:agent|workpool)\s*\(/.test(event.input.code)) return { block: true, reason: texts.blocked };
 	});
 
+	// OMP appends a "pick a specialist" tip to task results; it contradicts the default-worker rule.
+	pi.on("tool_result", event => {
+		if (toolName(event.toolName) !== "task") return;
+		return { content: event.content.map(part => (part.type === "text" ? { ...part, text: part.text.replace(new RegExp(texts.tip), "") } : part)) };
+	});
+
 	pi.on("before_provider_request", event => {
 		if (typeof event !== "object" || event === null || !("payload" in event)) return event;
 		const seen = new WeakSet();
