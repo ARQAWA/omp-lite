@@ -14,7 +14,8 @@ export default function childAgentsMd(pi) {
 		const roots = [ctx.cwd, ...(ctx.sessionManager.getHeader()?.additionalDirectories ?? [])];
 		const found = await Promise.all(roots.map(cwd => loadCapability("context-files", { cwd })));
 		const files = [];
-		for (const f of found.flatMap(result => result.items)) {
+		// Farther from cwd first, as OMP orders them: the nearest file comes last.
+		for (const f of found.flatMap(result => result.items).sort((a, b) => (b.depth ?? 1e9) - (a.depth ?? 1e9))) {
 			if (basename(f.path).toLowerCase() !== "agents.md" || prompt.includes(`<file path="${f.path}">`) || files.some(seen => seen.path === f.path)) continue;
 			files.push({ path: f.path, content: await expandAtImports(f.content, f.path) });
 		}

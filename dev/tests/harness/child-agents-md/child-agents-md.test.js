@@ -38,6 +38,12 @@ test("AGENTS.md of an additional workspace root is added, each file once", async
 	expect(block.split("user rules")).toHaveLength(2);
 });
 
+test("the file nearest to cwd comes last, as for the main agent", async () => {
+	items = [{ path: "/repo/AGENTS.md", content: "near", depth: 0 }, { path: "/AGENTS.md", content: "far", depth: 1 }];
+	const block = (await run("sub")).systemPrompt[1];
+	expect(block.indexOf("far")).toBeLessThan(block.indexOf("near"));
+});
+
 test("@imports are expanded as for the main agent", async () => {
 	items = [{ path: "/repo/AGENTS.md", content: "see @extra.md" }];
 	const result = await run("sub");
