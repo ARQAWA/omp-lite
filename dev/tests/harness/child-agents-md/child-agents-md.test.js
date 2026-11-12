@@ -1,81 +1,44 @@
-import { expect, mock, test } from "bun:test";
+import { expect, test } from "bun:test";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
+import childAgentsMd from "../../../../src/modules/child-agents-md/index.js";
 
-let items;
-const user = { path: "/home/u/.omp/agent/agents.md", content: "user rules" };
-const other = { path: "/other/AGENTS.md", content: "other root" };
-mock.module("@oh-my-pi/pi-coding-agent/capability", () => ({
-	loadCapability: async (id, options) => ({ items: id !== "context-files" ? [] : options.cwd === "/repo" ? items : options.cwd === "/other" ? [other, user] : [] }),
-}));
-mock.module("@oh-my-pi/pi-coding-agent/discovery/at-imports", () => ({
-	expandAtImports: async (content, path) => content.replace("@extra.md", `[expanded for ${path}]`),
-}));
-const { default: childAgentsMd } = await import("../../../../src/modules/child-agents-md/index.js");
-const text = (await import("../../../../src/modules/child-agents-md/child-agents-md.json")).default;
+const files = [
+	{ path: "/repo/AGENTS.md", content: "rules", depth: 0 },
+	{ path: "/repo/CLAUDE.md", content: "claude", depth: 0 },
+];
+// The exact shape of OMP's withoutAgentsMd() callback.
+const withoutAgentsMd = list => list.filter(file => basename(file.path).toLowerCase() !== "agents.md");
 
-function run(kind, systemPrompt = ["base"], additionalDirectories) {
-	let handler;
-	childAgentsMd({ on: (name, fn) => name === "before_agent_start" && (handler = fn) });
-	return handler({ systemPrompt }, { agent: { kind }, cwd: "/repo", sessionManager: { getHeader: () => ({ additionalDirectories }) } });
-}
+test("OMP's name filter keeps AGENTS.md and returns a copy", () => {
+	const kept = withoutAgentsMd(files);
+	expect(kept).toEqual(files);
+	expect(kept).not.toBe(files);
+});
 
-const agents = { path: "/repo/AGENTS.md", content: "marker ZEBRA" };
-const claude = { path: "/repo/CLAUDE.md", content: "claude rules" };
+test("every other filter works as before", () => {
+	expect([1, 2, 3].filter(n => n > 1)).toEqual([2, 3]);
+	expect(files.filter(file => file.path.endsWith("CLAUDE.md"))).toEqual([files[1]]);
+	expect(["AGENTS.md", "a"].filter(name => name.toLowerCase() !== "agents.md")).toEqual(["a"]);
+	expect([].filter(file => file !== "agents.md")).toEqual([]);
+	expect([1, 2, 3].filter(function (n) { return n > this.min; }, { min: 2 })).toEqual([3]);
+});
 
-test("a subagent gets only the AGENTS.md files, after the base prompt", async () => {
-	items = [agents, claude, user];
-	expect(await run("sub")).toEqual({
-		systemPrompt: [
-			"base",
-			`<repo-rules>\n${text.head}\n<file path="/repo/AGENTS.md">\nmarker ZEBRA\n</file>\n<file path="/home/u/.omp/agent/agents.md">\nuser rules\n</file>\n</repo-rules>`,
-		],
+test("a worker thread gets the patch before its own code runs", async () => {
+	const script = join(mkdtempSync(join(tmpdir(), "agents-md-")), "worker.js");
+	writeFileSync(script, 'postMessage([{ path: "/repo/AGENTS.md", content: "rules" }].filter(file => file.path.toLowerCase() !== "agents.md").length);');
+	const worker = new Worker(script, { type: "module" });
+	const kept = await new Promise((resolve, reject) => {
+		worker.onmessage = event => resolve(event.data);
+		worker.onerror = reject;
 	});
+	worker.terminate();
+	expect(kept).toBe(1);
 });
 
-test("AGENTS.md of an additional workspace root is added, each file once", async () => {
-	items = [agents, user];
-	const block = (await run("sub", ["base"], ["/other"])).systemPrompt[1];
-	expect(block).toContain('<file path="/other/AGENTS.md">\nother root');
-	expect(block.split("user rules")).toHaveLength(2);
-});
-
-test("the file nearest to cwd comes last, as for the main agent", async () => {
-	items = [{ path: "/repo/AGENTS.md", content: "near", depth: 0 }, { path: "/AGENTS.md", content: "far", depth: 1 }];
-	const block = (await run("sub")).systemPrompt[1];
-	expect(block.indexOf("far")).toBeLessThan(block.indexOf("near"));
-});
-
-test("with --no-context-files a subagent gets nothing, as the main agent", async () => {
-	items = [agents];
-	process.argv.push("--no-context-files");
-	try {
-		expect(await run("sub")).toBeUndefined();
-	} finally {
-		process.argv.pop();
-	}
-});
-
-test("@imports are expanded as for the main agent", async () => {
-	items = [{ path: "/repo/AGENTS.md", content: "see @extra.md" }];
-	const result = await run("sub");
-	expect(result.systemPrompt[1]).toContain("see [expanded for /repo/AGENTS.md]");
-});
-
-test("the main agent already has AGENTS.md and gets nothing", async () => {
-	items = [agents];
-	expect(await run("main")).toBeUndefined();
-});
-
-test("a subagent whose prompt already holds the file gets no second copy", async () => {
-	items = [agents];
-	expect(await run("sub", ["base", `<file path="/repo/AGENTS.md">\n${agents.content}\n</file>`])).toBeUndefined();
-});
-
-test("the same text elsewhere in the prompt does not hide the file", async () => {
-	items = [agents];
-	expect((await run("sub", ["base", agents.content]))?.systemPrompt).toHaveLength(3);
-});
-
-test("no AGENTS.md means no change", async () => {
-	items = [claude];
-	expect(await run("sub")).toBeUndefined();
+test("the extension registers no hooks", () => {
+	const calls = [];
+	childAgentsMd({ on: (...args) => calls.push(args) });
+	expect(calls).toEqual([]);
 });

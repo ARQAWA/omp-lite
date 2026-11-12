@@ -33,7 +33,7 @@
 
 **Хук `tool_result`:** в ответе `task` родная подсказка OMP `Tip: this call spawned N generic ... workers` заменяется нашей. Родная зовёт к `scout` и спорит с правилом. Настройки для неё нет (`suppressSpawnAdvisory` внутренний). Наша: `Tip:` и текст ключа `pick`. Шаблон родной лежит в ключе `tip`.
 
-**Хук `before_agent_start`:** только у сабагента (`ctx.agent.kind === "sub"`). Родная строка тела `task` и `sonic` `` `task` delegation: select most specific `agent` type... `` (ключ `stockPick`) заменяется текстом `pick`. OMP сцепляет `systemPrompt` расширений по очереди: правка [child-agents-md](../child-agents-md/README.md) сохраняется.
+**Хук `before_agent_start`:** только у сабагента (`ctx.agent.kind === "sub"`). Родная строка тела `task` и `sonic` `` `task` delegation: select most specific `agent` type... `` (ключ `stockPick`) заменяется текстом `pick`.
 
 **Границы:** фильтр текстовый, это не изоляция.
 Функции из ядра OMP не удаляются.
