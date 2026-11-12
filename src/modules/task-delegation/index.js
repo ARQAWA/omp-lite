@@ -18,7 +18,8 @@ const patch = record => {
 		const tail = breakAt < 0 ? "" : description.slice(breakAt);
 		description = `${head}\n${addition}${tail}`;
 	}
-	if (name === "eval") description = description.replaceAll(texts.exampleOld, texts.exampleNew);
+	const [from, to] = name === "task" ? [texts.specificOld, texts.specificNew] : [texts.exampleOld, texts.exampleNew];
+	description = description.replaceAll(from, to);
 	record.description = description;
 };
 

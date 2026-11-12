@@ -1109,3 +1109,24 @@ URL и архивы остаются у родных `grep` и `read`.
 **Выпуск D-059:** `0.0.10`, ревизия `ae082271e25b633c905d9b57559abff41643e3e9`, 208234760 байт, sha256 `05e8a6ef37e70fce2a51e140bc9b6d4b1607c7359ecd11f8eae119b968822ba7`, Marketplace `win32-x64 validated`, 2026-11-11 12:37 UTC. В payload также D-057 и D-058. На VDI не проверено.
 
 **Выпуск D-057:** `0.0.11`, ревизия `1db2fe9a59ddd3e3c67781cd985d22b3cf167195`, 208234907 байт, sha256 `6675e9397bf2757a9aad2ef516fcc868bcbf8c0d23cbc462d0e81a97ef99e768`, Marketplace `win32-x64 validated`, 2026-11-11 13:20 UTC. Payload несёт оба дополнения D-057: строку дислексии и вопрос о следующем шаге. На VDI не проверено.
+
+## D-060 — сабагенты как рабочий агент Codex
+
+**Решение:**
+- В описании `task` строка `Use most specific agent.` заменена коротким правилом: без `agent` работает универсальный агент; `scout` только для чтения незнакомых файлов; `sonic` только для механических правок; названный тип идёт в `agent`; названные модель или уровень усилия идут в `model` как `provider/id:level`, без `agent` и `effort`: `effort` даёт лишь ведро `lo/med/hi`, где `hi` равно высшему уровню модели (у Sonnet 5.5 это `max`). Текст лежит в `task-delegation.json`.
+- `task.perCallModel: "on"` и `task.enableEffort: true`. Одна роль `modelRoles.perCall` перечисляет точные `provider/id` всех 79 чат-моделей `anthropic`, `openai-codex`, `opencode-go`. Роль `sonnet` убрана.
+- `task.agentModelOverrides`: `scout` на `openai-codex/gpt-6.1-terra:xhigh`, `sonic` на `openai-codex/gpt-6.1-terra:medium`.
+- `task.disabledAgents`: `reviewer`, `security-reviewer`.
+- Новый модуль [child-agents-md](../src/modules/child-agents-md/README.md) даёт сабагенту `AGENTS.md`, который исполнитель OMP вырезает.
+
+**Основание:** поручение владельца: сабагенты ведут себя как рабочий агент по умолчанию в Codex, с минимумом кода.
+
+**Документация OMP:** `omp://task-agent-discovery.md` (гранты моделей: только точные `provider/id` из ролей чата, шаблоны не дают права), `omp://extensions.md` (`before_agent_start`, `ctx.agent.kind`), `omp://settings.md`.
+
+**Костыль (помечен):** исполнитель OMP 18.18.8 ставит `excludeAgentsMd: true` сабагентам, настройки нет. Хук `before_agent_start` у сабагента срабатывает, проверено пробой. Поиск файлов берёт `loadCapability("context-files")` из бинаря OMP; подпуть `system-prompt` в бинаре не открыт; `@путь` раскрывает `discovery/at-imports`. `loadCapability` в документации расширений не описан.
+
+**Проба 12.11 (OMP 18.18.8, Sonnet 5.5, временный репозиторий с `AGENTS.md`):** без расширения сабагент отвечает `UNKNOWN`; с ним называет слово. Системный промпт главного агента держит слово один раз, сабагента один раз. Вызов без типа идёт без `agent`, сабагент `task`. PROBE_B_PLACEHOLDER `scout` на Terra `xhigh`, `sonic` на Terra `medium`. `reviewer` отклонён: «агент выключен в настройках».
+
+**Границы:** Новая модель или провайдер требует записи в роль `perCall`. Пробы не гарантируют выбор модели: правило в описании работает как инструкция.
+
+**Носители правила:** `src/modules/task-delegation/`, `src/modules/child-agents-md/`, `src/modules/runtime-config/`, тесты в `dev/tests/harness/`, `install.manifest.json`, `INSTALL.md`.

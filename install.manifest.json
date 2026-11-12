@@ -35,6 +35,14 @@
 			"to": "extensions/dyslexia.js"
 		},
 		{
+			"from": "src/modules/child-agents-md/index.js",
+			"to": "extensions/child-agents-md.js"
+		},
+		{
+			"from": "src/modules/child-agents-md/child-agents-md.json",
+			"to": "extensions/child-agents-md.json"
+		},
+		{
 			"from": "src/modules/memory-guide/index.js",
 			"to": "extensions/memory-guide.js"
 		},
