@@ -1,8 +1,0 @@
-memory:
-  backend: "off"
-autolearn:
-  enabled: false
-tools:
-  approval:
-    write: deny
-    edit: deny

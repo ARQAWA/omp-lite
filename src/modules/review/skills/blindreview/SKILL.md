@@ -6,3 +6,4 @@ description: "Run a blind review of the current work when the user requests blin
 # Blind review
 
 Read `skill://reviewer/SKILL.md` and follow it with level blind.
+The user's words given with this call name what to review: they are the `scope`. If they order new work, do it first, then review it.

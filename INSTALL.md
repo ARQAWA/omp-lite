@@ -111,14 +111,14 @@ mkdir -p "$(dirname "$HOME/.omp/agent/<to>")"
 cp "<from>" "$HOME/.omp/agent/<to>"
 ```
 
-**Удаление старых файлов.** Список `remove` манифеста называет файлы прежних версий: старую обёртку и подмену текстов памяти `memory-tool-prompts`. Для каждого пути: файл `~/.omp/agent/<путь>` есть — скопируй его в `$backup/<путь>` и удали. Каталог `~/.omp/agent/extensions/cursor-tools/` после этого удали целиком. Файла нет — ничего не делай. Расширение `ompcli` делает то же самое само.
+**Удаление старых файлов.** Список `remove` манифеста называет файлы прежних версий: старую обёртку, подмену текстов памяти `memory-tool-prompts`, скрипт и оверлеи прежнего ревьюера. Для каждого пути: файл `~/.omp/agent/<путь>` есть — скопируй его в `$backup/<путь>` и удали. Каталог `~/.omp/agent/extensions/cursor-tools/` после этого удали целиком. Файла нет — ничего не делай. Расширение `ompcli` делает то же самое само.
 
 Правила:
 
 - `<from>` — путь от корня этого репозитория.
 - `<to>` — путь от `~/.omp/agent`; выходить за его пределы нельзя.
 - Каталог `extensions/codex-web-run/` создаётся как каталог: расширение грузит `index.js` рядом с ресурсами.
-- `skills/reviewer/` хранит скилл, его скрипт, промпты и оверлеи рядом.
+- `agents/` хранит профили сабагентов приёмки: `collector.md` и `acceptor.md`.
 - `extensions/pi-voice-stt/` хранит плагин диктовки с его `package.json`: OMP грузит его по `pi.extensions`.
 - Одинаковые имена и структура каталогов обязательны: код читает ресурсы относительно себя.
 - Не копируй каталог целиком и не используй `cp -r` по `src/`.
@@ -166,7 +166,7 @@ cmp "$from" "$HOME/.omp/agent/$to"
 bun -e 'const m=JSON.parse(await Bun.file("install.manifest.json").text());const flat=(n,p="",o={})=>{for(const[k,v]of Object.entries(n??{})){const id=p?p+"."+k:k;if(v&&typeof v==="object"&&!Array.isArray(v))flat(v,id,o);else o[id]=JSON.stringify(v)}return o};let want={};for(const c of m.config)Object.assign(want,flat(Bun.YAML.parse(await Bun.file(c.from).text())));const live=flat(Bun.YAML.parse(await Bun.file(process.argv[1]).text()));console.log(new Set([...Object.keys(want),...Object.keys(live)]).values().filter(k=>want[k]!==live[k]).toArray().length)' "$config"
 ```
 5. Запусти новую сессию OMP. Расширения не печатают ошибок загрузки.
-6. Убедись, что тул `files` отвечает, а команда `reuse` и навыки `blindreview`, `highreview`, `reviewer` доступны.
+6. Убедись, что тул `files` отвечает, а команда `reuse` и навыки `blindreview`, `highreview` доступны. Навык `reviewer` скрыт из каталога и читается по `skill://reviewer/SKILL.md`. Сабагенты `collector` и `acceptor` есть в описании `task`.
 7. Проверь, что работает установленный `SYSTEM.md`. Запусти сессию вне репозитория и спроси, сколько строк максимум в финальном ответе. Наш промпт говорит про 50-70 строк. Промпт OMP по умолчанию такого числа не знает. Свой `SYSTEM.md` или шаблон в проекте главнее установленного: из каталога с `.omp/SYSTEM.md` эта проверка ничего не покажет.
 8. Спроси в новой сессии, когда можно звать саб-агентов. Ответ должен разрешать их только по прямой просьбе, `AGENTS.md` или скиллу. Если модель считает, что вправе звать их сама, проверка не прошла. Это проверяет `task-delegation`.
 9. Убедись, что `~/.omp/agent/extensions/background-jobs.js` отсутствует.

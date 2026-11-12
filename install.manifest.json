@@ -59,8 +59,12 @@
 			"to": "extensions/model-picker.json"
 		},
 		{
-			"from": "src/modules/review/index.js",
-			"to": "skills/reviewer/index.js"
+			"from": "src/modules/review/agents/acceptor.md",
+			"to": "agents/acceptor.md"
+		},
+		{
+			"from": "src/modules/review/agents/collector.md",
+			"to": "agents/collector.md"
 		},
 		{
 			"from": "src/modules/review/skills/blindreview/SKILL.md",
@@ -73,22 +77,6 @@
 		{
 			"from": "src/modules/review/skills/reviewer/SKILL.md",
 			"to": "skills/reviewer/SKILL.md"
-		},
-		{
-			"from": "src/modules/review/skills/reviewer/collector.md",
-			"to": "skills/reviewer/collector.md"
-		},
-		{
-			"from": "src/modules/review/skills/reviewer/collector.yml",
-			"to": "skills/reviewer/collector.yml"
-		},
-		{
-			"from": "src/modules/review/skills/reviewer/reviewer.md",
-			"to": "skills/reviewer/reviewer.md"
-		},
-		{
-			"from": "src/modules/review/skills/reviewer/reviewer.yml",
-			"to": "skills/reviewer/reviewer.yml"
 		},
 		{
 			"from": "src/modules/short-task/SKILL.md",
@@ -422,7 +410,12 @@
 		"extensions/memory-tool-prompts.js",
 		"extensions/memory-tool-prompts.descriptions.json",
 		"memory-tool-prompts.status.json",
-		"memory-tool-prompts.log"
+		"memory-tool-prompts.log",
+		"skills/reviewer/index.js",
+		"skills/reviewer/collector.md",
+		"skills/reviewer/collector.yml",
+		"skills/reviewer/reviewer.md",
+		"skills/reviewer/reviewer.yml"
 	],
 	"config": [
 		{
