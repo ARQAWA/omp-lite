@@ -411,7 +411,8 @@
 		"skills/reviewer/collector.md",
 		"skills/reviewer/collector.yml",
 		"skills/reviewer/reviewer.md",
-		"skills/reviewer/reviewer.yml"
+		"skills/reviewer/reviewer.yml",
+		"extensions/child-agents-md.json"
 	],
 	"config": [
 		{
