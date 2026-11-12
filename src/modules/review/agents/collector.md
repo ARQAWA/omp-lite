@@ -1,7 +1,6 @@
 ---
 name: collector
 description: Builds the sealed fact file for an acceptance review. Launched only by the reviewer skill.
-tools: read, grep, glob, bash, eval, write
 model: openai-codex/gpt-6.1-terra
 thinking-level: xhigh
 ---
