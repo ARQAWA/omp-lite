@@ -393,6 +393,8 @@
 
 **Носители правила:** [runtime-config](../src/modules/runtime-config/config.yml), [compaction-400k](../src/modules/compaction-400k/thresholds.yml), README обоих модулей, этот документ.
 
+**Уточнение 2026-11-13:** роль `memory` переведена на `openai-codex/gpt-6.1-terra:xhigh` по поручению владельца. Запасная цепочка `retry.fallbackChains.memory` осталась на `opencode-go/deepseek-v4.1-flash:max`.
+
 ## D-030 — живой счётчик tok/s включён
 
 **Решение:** [status-line](../src/modules/status-line/status-line.yml) ставит `composer.tokenRate: true`. Счётчик живёт в строке работы, рядом с названием сессии.
