@@ -8,7 +8,8 @@ const file = f => `<file path="${f.path}">\n${f.content}\n</file>`;
 
 export default function childAgentsMd(pi) {
 	pi.on("before_agent_start", async (event, ctx) => {
-		if (ctx.agent.kind !== "sub") return;
+		// --no-context-files: the main agent has no AGENTS.md either. OMP exposes the flag to extensions only as argv.
+		if (ctx.agent.kind !== "sub" || process.argv.includes("--no-context-files")) return;
 		const prompt = event.systemPrompt.join("\n");
 		// The main agent also reads the additional workspace roots.
 		const roots = [ctx.cwd, ...(ctx.sessionManager.getHeader()?.additionalDirectories ?? [])];

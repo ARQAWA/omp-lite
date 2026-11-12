@@ -44,6 +44,16 @@ test("the file nearest to cwd comes last, as for the main agent", async () => {
 	expect(block.indexOf("far")).toBeLessThan(block.indexOf("near"));
 });
 
+test("with --no-context-files a subagent gets nothing, as the main agent", async () => {
+	items = [agents];
+	process.argv.push("--no-context-files");
+	try {
+		expect(await run("sub")).toBeUndefined();
+	} finally {
+		process.argv.pop();
+	}
+});
+
 test("@imports are expanded as for the main agent", async () => {
 	items = [{ path: "/repo/AGENTS.md", content: "see @extra.md" }];
 	const result = await run("sub");
