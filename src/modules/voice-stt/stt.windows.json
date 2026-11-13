@@ -8,6 +8,6 @@
   },
   "capture": {
     "inputFormat": "dshow",
-    "input": "audio=Microphone"
+    "input": "audio=Remote Audio"
   }
 }
