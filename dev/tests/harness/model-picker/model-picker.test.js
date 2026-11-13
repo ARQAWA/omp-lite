@@ -270,6 +270,12 @@ test("the picker lists only enabledModels", async () => {
 });
 
 test("Shift+arrow opens one picker at a time", async () => {
+	let opened;
+	const moved = session({ models: [opus, flash], custom: factory => new Promise(resolve => (opened = factory({}, theme, {}, resolve))) });
+	moved.handlers.session_start({}, moved.ctx);
+	moved.inputs[0]("\x1b[1;2B");
+	expect(opened.current.model).toBe(flash);
+
 	const notes = [];
 	let mounted = 0;
 	let close;
