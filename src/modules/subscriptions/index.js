@@ -1,5 +1,5 @@
 // Publishes subscription limits as status marks: CC, CX and Go.
-// Data comes from the documented `omp usage --json`; subscriptions without a window stay silent.
+// Data comes from `omp usage --json`; subscriptions without a window stay silent.
 import { execFile } from "node:child_process";
 
 const KEYS = ["10-cc", "20-cx", "30-go"];

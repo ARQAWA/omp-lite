@@ -4,7 +4,7 @@
 
 **Условие:** настройка `memory.backend` равна `mnemopi`. Иное значение: блока нет.
 
-**Вход OMP:** `omp://extensions.md` — событие `before_agent_start` и чтение настройки через `lookup(id)` из `@oh-my-pi/pi-coding-agent/config/registry`. Ключ настройки: `omp://mnemosyne-memory-backend.md`.
+**Вход OMP:** событие `before_agent_start` и чтение настройки через `lookup(id)` из `@oh-my-pi/pi-coding-agent/config/registry`.
 
 **Вход:** `~/.omp/agent/extensions/memory-guide.js` и `memory-guide.json` рядом с ним.
 

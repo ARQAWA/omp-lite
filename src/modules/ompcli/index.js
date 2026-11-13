@@ -2,7 +2,6 @@
 
 // OMP CLI for Windows VDI: a VS Code extension. Installing and updating the harness happen inside
 // the extension host; the only programs it starts are omp.exe and the memory server.
-// Documentation: omp://cli-reference.md, omp://config-usage.md, omp://mnemosyne-memory-backend.md.
 
 const { createHash, randomBytes, randomUUID } = require("node:crypto");
 const { createReadStream, createWriteStream } = require("node:fs");
@@ -264,7 +263,7 @@ async function ensureRuntime({ extensionPath, storageDir, version, request = fet
 }
 
 // Harness installation: explicit manifest, journaled replacement. The user's config.yml is never
-// written: the config fragments of the manifest reach OMP as overlay files (omp://config-usage.md).
+// written: the config fragments of the manifest reach OMP as overlay files.
 
 function assertRelative(value) {
 	if (typeof value !== "string" || !value) throw new Error(format(messages.path, { value: String(value) }));

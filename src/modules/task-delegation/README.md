@@ -6,7 +6,6 @@
 **Почему костыль:** штатной настройки описаний тулов нет.
 Отдельного выключателя `agent()` и `workpool()` также нет.
 Общая политика спавна ограничивает и `task`.
-Документация: `omp://extensions.md`, `omp://tools/eval.md`, `omp://task-agent-discovery.md`.
 Ранее упомянутой настройки `tasks.delegationBias` не существует.
 
 **Вход:** `~/.omp/agent/extensions/task-delegation.js` и соседний `task-delegation.json`.
