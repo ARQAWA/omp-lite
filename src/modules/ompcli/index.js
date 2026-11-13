@@ -993,11 +993,16 @@ function createUpdater(deps) {
 	let pending = null;
 
 	async function compareBootstrap(stage, extensionPath, manifest) {
+		let stale = false;
 		for (const entry of manifest.vscode?.files ?? []) {
 			const next = await fsp.readFile(inside(stage, ".bootstrap/" + entry.to));
 			const current = await fsp.readFile(inside(extensionPath, entry.to)).catch(() => null);
-			if (!current || !sameBootstrap(entry.to, next, current)) throw new Error(format(messages.rewritten, { marketplace: messages.marketplace }));
+			if (current && sameBootstrap(entry.to, next, current)) continue;
+			// Only new bundled programs need a new VSIX; any other bootstrap change just waits for Marketplace.
+			if (entry.to === "runtime.json") throw new Error(format(messages.rewritten, { marketplace: messages.marketplace }));
+			stale = true;
 		}
+		return stale;
 	}
 
 	async function perform() {
@@ -1051,7 +1056,7 @@ function createUpdater(deps) {
 				await fsp.mkdir(stage, { recursive: true });
 				await extract({ archive: file, stage, revision: sha });
 				const manifest = JSON.parse(await fsp.readFile(path.join(stage, "install.manifest.json"), "utf8"));
-				await compareBootstrap(stage, deps.extensionPath, manifest);
+				const stale = await compareBootstrap(stage, deps.extensionPath, manifest);
 				await fsp.rm(path.join(stage, ".bootstrap"), { recursive: true, force: true });
 				const revision = await payloadRevision(stage);
 				if ((await tabs(storageDir)).length) throw new Error(messages.closeTabs);
@@ -1062,7 +1067,7 @@ function createUpdater(deps) {
 					pointer: { file: path.join(base, "current.json"), text: JSON.stringify(revision) },
 					payloadRoot: path.dirname(base),
 				});
-				return { revision, changed: true, applied: result?.changed === true };
+				return { revision, changed: true, applied: result?.changed === true, ...(stale && { stale }) };
 			});
 		} finally {
 			await fsp.rm(file, { force: true });
@@ -1347,6 +1352,7 @@ function createCli(host) {
 		});
 		const result = await updater.run();
 		if (result.changed) vscode.window.showInformationMessage(messages.updated);
+		if (result.stale) vscode.window.showInformationMessage(messages.stale);
 		return result;
 	}
 

@@ -26,7 +26,7 @@ function manifest(bootstrap) {
 		version: 1,
 		files: [{ from: "src/modules/a/index.js", to: "extensions/a.js" }],
 		config: [{ from: "src/modules/a/memory.yml", to: "config.yml", mode: "merge" }],
-		vscode: { target: "win32-x64", files: [{ from: "src/modules/ompcli/index.js", to: "index.js" }] },
+		vscode: { target: "win32-x64", files: [{ from: "src/modules/ompcli/index.js", to: "index.js" }, { from: "src/modules/ompcli/runtime.json", to: "runtime.json" }] },
 		bootstrap,
 	};
 }
@@ -43,21 +43,23 @@ function archive(entries) {
 	return file;
 }
 
-function upstream({ bootstrap = "bootstrap", payload = "new" } = {}) {
+function upstream({ bootstrap = "bootstrap", payload = "new", runtime = "pins" } = {}) {
 	return {
 		"install.manifest.json": JSON.stringify(manifest(bootstrap)),
 		"src/modules/a/index.js": payload,
 		"src/modules/a/memory.yml": "memory:\n  backend: mnemopi\n",
 		"src/modules/ompcli/index.js": bootstrap,
+		"src/modules/ompcli/runtime.json": runtime,
 	};
 }
 
-function environment({ bootstrap = "bootstrap", pointer = null, tarball } = {}) {
+function environment({ bootstrap = "bootstrap", runtime = "pins", pointer = null, tarball } = {}) {
 	const root = temporary();
 	const storageDir = join(root, "storage");
 	const extensionPath = join(root, "extension");
 	const agentDir = join(root, "agent");
 	write(join(extensionPath, "index.js"), bootstrap);
+	write(join(extensionPath, "runtime.json"), runtime);
 	write(join(extensionPath, "payload/install.manifest.json"), JSON.stringify(manifest(bootstrap)));
 	write(join(extensionPath, "payload/src/modules/a/index.js"), "old");
 	write(join(extensionPath, "payload/src/modules/a/memory.yml"), "{}\n");
@@ -277,11 +279,17 @@ test("a new revision installs the harness and keeps personal state", async () =>
 	expect(existsSync(join(env.calls.apply[0].sourceDir, ".bootstrap"))).toBe(false);
 });
 
-test("a bootstrap change asks for a new VSIX and keeps everything", async () => {
-	const env = environment({ bootstrap: "current", tarball: archive(upstream({ bootstrap: "next" })) });
+test("a runtime.json change asks for a new VSIX and keeps everything", async () => {
+	const env = environment({ runtime: "current", tarball: archive(upstream({ runtime: "next" })) });
 	await expect(createUpdater(env.deps).run()).rejects.toThrow("Update OMP CLI in Marketplace.");
 	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("old");
 	expect(existsSync(env.pointer)).toBe(false);
+});
+
+test("an index.js change installs the harness and reports a newer Marketplace version", async () => {
+	const env = environment({ bootstrap: "current", tarball: archive(upstream({ bootstrap: "next" })) });
+	expect(await createUpdater(env.deps).run()).toEqual({ revision: newSha, changed: true, applied: true, stale: true });
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
 });
 
 test("a broken archive keeps the old pointer", async () => {
