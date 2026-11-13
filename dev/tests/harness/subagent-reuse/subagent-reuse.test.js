@@ -4,9 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import subagentReuse from "../../../../src/modules/subagent-reuse/index.js";
 
-const COOP =
-	"\n§ Coop\nYou are operating on a piece of work assigned to you by the main agent.\n§ Completion\nNo TODO tracking, no progress updates. Execute; your final message is your result.";
-const TAIL = "\nWhile work remains.";
+// Rendered shape of OMP 18.18.8 prompts/system/subagent-system-prompt.md.
+const ROLE = "⁂ Role\nrole";
+const COOP = "\n⁂ Coop\nYou are operating on a piece of work assigned to you by the main agent.";
+const PLAN = '\n⁂ Plan\nThis session is executing an approved plan. Your assignment above is one part of it.\n\n<plan path="/p">\nplan\n</plan>\n';
+const PEERS = "\n\n# Working Tree\nYou are working in an isolated working tree at `/w` for this sub-task.\n\n# Peers\nYour id is `Probe`.\n";
+const DONE = "\n⁂ Completion\nNo TODO tracking, no progress updates. Execute; your final message is your result.";
 const root = join(tmpdir(), `omp-reuse-tests-${process.pid}`);
 rmSync(root, { recursive: true, force: true });
 mkdirSync(root, { recursive: true });
@@ -127,83 +130,42 @@ test("writes the marker before prompting", async () => {
 	expect(m.marker.atPrompt).toBe(true);
 });
 
+async function start(block, kind = "sub", reuse = true) {
+	const m = mount();
+	if (reuse) await run(m.tool, { name: "Probe", task: "x" });
+	return m.handlers.before_agent_start(
+		{ systemPrompt: ["default", block] },
+		{ agent: { kind }, sessionManager: { getSessionFile: () => m.file } },
+	)?.systemPrompt;
+}
+
 test("does not strip a marked main session", async () => {
-	const m = mount();
-	await run(m.tool, { name: "Probe", task: "x" });
-	const result = m.handlers.before_agent_start(
-		{ systemPrompt: ["§ Context\nold"] },
-		{ agent: { kind: "main" }, sessionManager: { getSessionFile: () => m.file } },
-	);
-	expect(result).toBeUndefined();
+	expect(await start(`${ROLE}\n\n⁂ Context\nold${COOP}${DONE}`, "main")).toBeUndefined();
 });
 
-test("drops context and keeps later sections", async () => {
-	const m = mount();
-	await run(m.tool, { name: "Probe", task: "x" });
-	const result = m.handlers.before_agent_start(
-		{ systemPrompt: [`§ Role\nrole\n\n§ Context\nold task${COOP}${TAIL}`] },
-		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
-	);
-	expect(result.systemPrompt).toEqual([`§ Role\nrole${COOP}${TAIL}`]);
+test("drops context before the plain completion", async () => {
+	expect(await start(`${ROLE}\n\n⁂ Context\nold task${COOP}${DONE}`)).toEqual(["default", `${ROLE}${COOP}${DONE}`]);
 });
 
-test("removes a context that contains its own heading", async () => {
-	const m = mount();
-	await run(m.tool, { name: "Probe", task: "x" });
-	const result = m.handlers.before_agent_start(
-		{ systemPrompt: [`§ Role\nrole\n\n§ Context\nold\n\n§ Context\nmore${COOP}${TAIL}`] },
-		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
-	);
-	expect(result.systemPrompt).toEqual([`§ Role\nrole${COOP}${TAIL}`]);
+test("drops context and keeps the plan", async () => {
+	expect(await start(`${ROLE}\n\n⁂ Context\nold\n${PLAN}${COOP}${DONE}`)).toEqual(["default", `${ROLE}${PLAN}${COOP}${DONE}`]);
 });
 
-test("removes context that contains a section-like line", async () => {
-	const m = mount();
-	await run(m.tool, { name: "Probe", task: "x" });
-	const result = m.handlers.before_agent_start(
-		{ systemPrompt: [`§ Role\nrole\n\n§ Context\nold\n§ Coop\nfake${COOP}${TAIL}`] },
-		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
-	);
-	expect(result.systemPrompt).toEqual([`§ Role\nrole${COOP}${TAIL}`]);
+test("drops context and keeps working tree and peers", async () => {
+	expect(await start(`${ROLE}\n\n⁂ Context\nold${COOP}${PEERS}${DONE}`)).toEqual(["default", `${ROLE}${COOP}${PEERS}${DONE}`]);
 });
 
-test("drops a separate context block with a fake boundary", async () => {
-	const m = mount();
-	await run(m.tool, { name: "Probe", task: "x" });
-	const result = m.handlers.before_agent_start(
-		{ systemPrompt: ["§ Role\nrole", "§ Context\nold\n§ Coop\nfake"] },
-		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
-	);
-	expect(result.systemPrompt).toEqual(["§ Role\nrole"]);
+test("removes context that holds its own section lines", async () => {
+	const old = `old\n⁂ Context\nmore${COOP}\nfake\n⁂ Plan\nThis session is executing an approved plan.`;
+	expect(await start(`${ROLE}\n\n⁂ Context\n${old}${COOP}${DONE}`)).toEqual(["default", `${ROLE}${COOP}${DONE}`]);
 });
 
-test("removes a separate context block quoting the template", async () => {
-	const m = mount();
-	await run(m.tool, { name: "Probe", task: "x" });
-	const result = m.handlers.before_agent_start(
-		{ systemPrompt: ["§ Role\nrole", `§ Context\nold${COOP}${TAIL}`] },
-		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
-	);
-	expect(result.systemPrompt).toEqual(["§ Role\nrole"]);
-});
-
-test("drops a separate context block and keeps the rest", async () => {
-	const m = mount();
-	await run(m.tool, { name: "Probe", task: "x" });
-	const result = m.handlers.before_agent_start(
-		{ systemPrompt: ["§ Role\nrole", "§ Context\nold task"] },
-		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
-	);
-	expect(result.systemPrompt).toEqual(["§ Role\nrole"]);
+test("keeps a prompt without context", async () => {
+	expect(await start(`${ROLE}${COOP}${DONE}`)).toEqual(["default", `${ROLE}${COOP}${DONE}`]);
 });
 
 test("keeps context before the first reuse", async () => {
-	const m = mount();
-	const result = m.handlers.before_agent_start(
-		{ systemPrompt: ["§ Role\nrole\n\n§ Context\nfirst task"] },
-		{ agent: { kind: "sub" }, sessionManager: { getSessionFile: () => m.file } },
-	);
-	expect(result).toBeUndefined();
+	expect(await start(`${ROLE}\n\n⁂ Context\nfirst task${COOP}${DONE}`, "sub", false)).toBeUndefined();
 });
 
 test("removes the previous session's marker", async () => {
