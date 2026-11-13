@@ -4,7 +4,7 @@
 
 **Вход OMP:** события `session_start`, `session_switch`, `session_branch`, `session_shutdown`, `ctx.ui.custom`, `ctx.ui.onTerminalInput`; роли темы `thinking*`, `accent`, `text`, `muted`, `dim`, `error`.
 
-**Активация:** Shift+любая стрелка открывает меню. Модель не меняется до подтверждения.
+**Активация:** Shift+любая стрелка открывает меню и сразу делает первый ход в свою сторону. Модель не меняется до подтверждения.
 
 **Подписка:** создаётся на `session_start`, `session_switch` и `session_branch`. `/new` снимает слушатели, поэтому без `session_switch` Shift+стрелки перестают открывать пикер.
 

@@ -277,7 +277,7 @@ export class ModelPicker {
 	}
 }
 
-export async function openPicker(pi, ctx, isCurrent = () => true, patterns) {
+export async function openPicker(pi, ctx, isCurrent = () => true, patterns, first) {
 	try {
 		if (!isCurrent()) return;
 		if (ctx?.mode !== "tui" || !ctx.hasUI || typeof ctx.ui?.custom !== "function") return;
@@ -289,7 +289,12 @@ export async function openPicker(pi, ctx, isCurrent = () => true, patterns) {
 		const current = ctx.models.current() ?? ctx.model;
 		const selected = models.find(model => sameModel(model, current)) ?? models[0];
 		const initial = { model: selected, effort: nearestLevel(selected, configuredEffort(ctx, pi)) };
-		const draft = await ctx.ui.custom((_tui, theme, _keybindings, done) => new ModelPicker(models, initial, theme, done));
+		const draft = await ctx.ui.custom((_tui, theme, _keybindings, done) => {
+			const picker = new ModelPicker(models, initial, theme, done);
+			// The opening Shift+arrow is also the first move.
+			if (first) picker.handleInput(first);
+			return picker;
+		});
 		if (!draft || !isCurrent()) return;
 		await commitSelection(pi, ctx, draft);
 	} catch (error) {
@@ -317,7 +322,7 @@ export default function modelPicker(pi) {
 			if (dialogOpen || !shiftArrow(input)) return;
 			dialogOpen = true;
 			const owner = generation;
-			void openPicker(pi, ctx, () => owner === generation, patterns).finally(() => {
+			void openPicker(pi, ctx, () => owner === generation, patterns, input).finally(() => {
 				if (owner === generation) dialogOpen = false;
 			});
 			return { consume: true };
