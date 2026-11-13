@@ -9,6 +9,7 @@
 	"memoryStopped": "Local memory stopped. Reopen OMP CLI tab.",
 	"marketplace": "Update OMP CLI in Marketplace.",
 	"updated": "omp-lite updated. Open a new tab.",
+	"stale": "A newer OMP CLI is in Marketplace.",
 	"install": "OMP CLI: installing harness",
 	"installFailed": "OMP CLI install failed: {reason}",
 	"preparing": "OMP CLI: preparing {name} ({size} MB)",
