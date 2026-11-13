@@ -99,6 +99,25 @@ export function filterModels(models, filter) {
 	return models.filter(model => `${model.provider}/${model.id} ${model.name ?? ""}`.toLowerCase().includes(query));
 }
 
+export function allowModels(models, patterns) {
+	if (!Array.isArray(patterns) || patterns.length === 0) return models;
+	const tests = patterns.map(
+		pattern => new RegExp(`^${String(pattern).replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`),
+	);
+	return models.filter(model => tests.some(test => test.test(`${model.provider}/${model.id}`)));
+}
+
+// Workaround: ctx.models.list() ignores enabledModels (OMP 18.18.8, extensibility/extensions/model-api.ts), so OMP itself is asked.
+async function enabledModels(pi) {
+	try {
+		return JSON.parse((await pi.exec(process.execPath, ["config", "get", "enabledModels", "--json"])).stdout).value;
+	} catch {
+		return [];
+	}
+}
+
+const side = (theme, model, room) => (room > size(model.provider) ? ` ${theme.fg("dim", model.provider)}` : "");
+
 export function configuredEffort(ctx, pi) {
 	let latest;
 	const branch = ctx?.sessionManager?.getBranch?.();
@@ -238,12 +257,13 @@ export class ModelPicker {
 	#row(model, selected, width) {
 		const theme = this.theme;
 		const name = modelLabel(model);
-		if (!selected) return `  ${theme.fg("muted", short(name, width - 2))}`;
+		if (!selected) return `  ${theme.fg("muted", short(name, width - 2))}${side(theme, model, width - 2 - size(name))}`;
 		const levels = levelsFor(model);
+		const used = 3 + size(levels.join(" "));
 		// The name gives way to the efforts, down to minName columns.
-		const label = short(name, width - 3 - size(levels.join(" ")));
+		const label = short(name, width - used);
 		const efforts = levels.map(level => paintEffort(theme, level, level === this.current.effort)).join(" ");
-		return `${theme.fg("accent", "› ")}${theme.fg("text", theme.bold(label))} ${efforts}`;
+		return `${theme.fg("accent", "› ")}${theme.fg("text", theme.bold(label))} ${efforts}${side(theme, model, width - used - size(label))}`;
 	}
 
 	#hint(width) {
@@ -257,11 +277,11 @@ export class ModelPicker {
 	}
 }
 
-export async function openPicker(pi, ctx, isCurrent = () => true) {
+export async function openPicker(pi, ctx, isCurrent = () => true, patterns) {
 	try {
 		if (!isCurrent()) return;
 		if (ctx?.mode !== "tui" || !ctx.hasUI || typeof ctx.ui?.custom !== "function") return;
-		const models = ctx.models.list();
+		const models = allowModels(ctx.models.list(), patterns);
 		if (models.length === 0) {
 			ctx.ui.notify(data.noModelsAvailable, "warning");
 			return;
@@ -282,6 +302,7 @@ export default function modelPicker(pi) {
 	let generation = 0;
 	let dialogOpen = false;
 	let unsubscribe;
+	let patterns;
 
 	const start = (_event, ctx) => {
 		if (ctx?.agent?.kind === "sub") return;
@@ -291,11 +312,12 @@ export default function modelPicker(pi) {
 		unsubscribe = undefined;
 		if (ctx?.mode !== "tui" || !ctx?.hasUI) return;
 		if (typeof ctx.ui?.onTerminalInput !== "function") return;
+		void enabledModels(pi).then(value => (patterns = value));
 		unsubscribe = ctx.ui.onTerminalInput(input => {
 			if (dialogOpen || !shiftArrow(input)) return;
 			dialogOpen = true;
 			const owner = generation;
-			void openPicker(pi, ctx, () => owner === generation).finally(() => {
+			void openPicker(pi, ctx, () => owner === generation, patterns).finally(() => {
 				if (owner === generation) dialogOpen = false;
 			});
 			return { consume: true };

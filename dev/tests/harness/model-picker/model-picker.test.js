@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import modelPicker, {
 	ModelPicker,
+	allowModels,
 	arrowDirection,
 	commitSelection,
 	configuredEffort,
@@ -141,12 +142,13 @@ test("the selected model stays on the middle row, as in MyP", () => {
 	const top = instance.render(120);
 	expect(top.slice(3, 5)).toEqual(["", ""]);
 	expect(top[5]).toContain("{accent|› }{text|**Opus 4.5**}");
-	expect(top.slice(6, 8)).toEqual(["  {muted|DeepSeek Flash}", "  {muted|GPT Plain}"]);
+	expect(top[5]).toEndWith(" {dim|anthropic}");
+	expect(top.slice(6, 8)).toEqual(["  {muted|DeepSeek Flash} {dim|deepseek}", "  {muted|GPT Plain} {dim|openai}"]);
 	expect(top[8]).toBe("{dim|↑↓ model · ←→ effort · type to filter · }**Enter**{dim| OK · }**Esc**{dim| cancel}");
 	instance.handleInput("\x1b[B");
 	instance.handleInput("\x1b[B");
 	const bottom = instance.render(120);
-	expect(bottom.slice(3, 5)).toEqual(["  {muted|Opus 4.5}", "  {muted|DeepSeek Flash}"]);
+	expect(bottom.slice(3, 5)).toEqual(["  {muted|Opus 4.5} {dim|anthropic}", "  {muted|DeepSeek Flash} {dim|deepseek}"]);
 	expect(bottom[5]).toContain("{accent|› }{text|**GPT Plain**}");
 	expect(bottom.slice(6, 8)).toEqual(["", ""]);
 });
@@ -248,6 +250,24 @@ function session({ models, custom }) {
 	};
 	return { handlers, inputs, pi, ctx };
 }
+
+test("the picker lists only enabledModels", async () => {
+	expect(allowModels([opus, flash, plain], ["anthropic/*", "openai/gpt-plain"])).toEqual([opus, plain]);
+	expect(allowModels([opus, flash], [])).toEqual([opus, flash]);
+
+	let shown;
+	const asked = [];
+	const env = session({ models: [opus, flash], custom: factory => new Promise(resolve => (shown = factory({}, theme, {}, resolve).models)) });
+	env.pi.exec = (_command, args) => {
+		asked.push(args);
+		return Promise.resolve({ stdout: JSON.stringify({ value: ["deepseek/deepseek-flash"] }) });
+	};
+	env.handlers.session_start({}, env.ctx);
+	await Bun.sleep(0);
+	env.inputs[0]("\x1b[1;2B");
+	expect(asked).toEqual([["config", "get", "enabledModels", "--json"]]);
+	expect(shown).toEqual([flash]);
+});
 
 test("Shift+arrow opens one picker at a time", async () => {
 	const notes = [];

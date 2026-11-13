@@ -20,6 +20,8 @@
 
 **Слепок:** фрагменты `config` манифеста вместе дают все настройки владельца. Установка по `INSTALL.md` заменяет ими конфиг целевой машины целиком; прежний конфиг уходит в копию. Секретов нет. Решение: D-046.
 
+**Модели:** `enabledModels` перечисляет десять точных моделей четырёх провайдеров: `anthropic`, `openai-codex`, `opencode-go`, `openrouter`. `providers.openrouterVariant: floor` дописывает `:floor` к запросам OpenRouter: без него тариф flex недоступен. Ключ OpenRouter в слепок не входит. На каждой машине он кладётся руками в `~/.omp/agent/models.yml`: `providers.openrouter.apiKey`. Без ключа модель OpenRouter в списках не появляется. Роль `perCall` несёт 79 моделей трёх провайдеров и одну модель `openrouter`. Решение: D-065.
+
 **Сабагенты:** `task.perCallModel: "on"` разрешает модель на каждый вызов `task`; усилие идёт хвостом `:level` в строке модели. `task.enableEffort: false`: поле `effort` знает только `lo/med/hi`. Кавычки у `"on"` нужны: голое `on` YAML читает как `true`. Грант даёт только роль чата с точным `provider/id`: шаблоны `*` ничего не разрешают, каталог и ключи тоже. Поэтому роль `perCall` перечисляет все 79 чат-моделей трёх провайдеров из `omp models --kind chat`. Новая модель или провайдер: дописать в роль. `task.agentModelOverrides`: `scout` на `openai-codex/gpt-6.1-terra:xhigh`, `sonic` на `openai-codex/gpt-6.1-terra:medium`. `task.disabledAgents`: `reviewer`, `security-reviewer`; приёмка идёт своими сабагентами `collector` и `acceptor` модуля `review`. Тест: `dev/tests/harness/runtime-config/subagents.test.js`.
 
 **Вход:** файл целиком в `~/.omp/agent/config.yml`, а блок памяти — фрагментом `mnemopi.yml` через [манифест](../../../install.manifest.json).
