@@ -14,14 +14,6 @@
 
 Активация только регистрирует команды. Модель не загружается, OMP не запускается.
 
-## Вход OMP
-
-- `omp://cli-reference.md` — запуск, `--config`, `--allow-home`.
-- `omp://config-usage.md` — слои настроек и `PI_CONFIG_FILES`.
-- `omp://environment-variables.md` — прокси, `NODE_EXTRA_CA_CERTS`, `MNEMOPI_*`.
-- `omp://mnemosyne-memory-backend.md` — ключи `mnemosyne`, модель и API эмбеддингов.
-- `omp://natives-shell-pty-process.md` — завершение дочерних процессов.
-
 ## Ресурсы
 
 |файл|назначение|
@@ -65,7 +57,7 @@ Git Bash `--login -i -c` -> программа. Второго bash и файл�
 Личные настройки, `auth`, `sessions` и `memories` не читаются и не копируются.
 
 Настройки харнеса в `config.yml` не сливаются. Фрагменты из раздела `config` манифеста
-идут в OMP слоями через `PI_CONFIG_FILES` (`omp://config-usage.md`, раздел Layers).
+идут в OMP слоями через `PI_CONFIG_FILES`.
 Порядок: прежние слои владельца, фрагменты по порядку манифеста, overlay памяти окна.
 Поздний файл перекрывает ранний, а все слои перекрывают `config.yml`. Поля `to` и `mode`
 манифеста расширение не использует: они нужны установке по `INSTALL.md`. Следствие:
@@ -103,7 +95,7 @@ Git Bash `--login -i -c` -> программа. Второго bash и файл�
 
 Терминал VS Code шлёт на Shift+Enter и Ctrl+Enter обычный Enter. Во вкладке расширения
 они уходят в OMP как `ESC[13;2u` и `ESC[13;5u`: Shift+Enter переносит строку,
-Ctrl+Enter ставит сообщение в очередь (`omp://keybindings.md`).
+Ctrl+Enter ставит сообщение в очередь.
 
 ## Диктовка
 

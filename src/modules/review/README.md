@@ -55,9 +55,6 @@
 Цитаты сверяет ревьюер по `id` реплики или `file:line`, не скрипт.
 Ревью запускает только основная сессия.
 
-Источники: `omp://task-agent-discovery.md`, `omp://tools/task.md`,
-`omp://tools/read.md`, `omp://skills.md`, `omp://tools/eval.md`.
-
 ## Ресурсы
 
 |файл|роль|

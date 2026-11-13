@@ -11,7 +11,6 @@
 Правило `find` покрывает также перечисление без фильтров.
 Данные получены через `omp config get bashInterceptor.patterns`.
 Свои `patterns` заменяют встроенный список, не дополняют.
-Источник: `omp://tools/bash.md`, `omp://tools/read.md`, `omp://settings.md`.
 
 **Предел:** это предпочтение возможностей, не изоляция.
 Потребители пайпов и код интерпретаторов могут пройти.
@@ -21,9 +20,9 @@
 
 **Слепок:** фрагменты `config` манифеста вместе дают все настройки владельца. Установка по `INSTALL.md` заменяет ими конфиг целевой машины целиком; прежний конфиг уходит в копию. Секретов нет. Решение: D-046.
 
-**Сабагенты:** `task.perCallModel: "on"` разрешает модель на каждый вызов `task`; усилие идёт хвостом `:level` в строке модели. `task.enableEffort: false`: поле `effort` знает только `lo/med/hi`. Кавычки у `"on"` нужны: голое `on` YAML читает как `true`. Грант даёт только роль чата с точным `provider/id` (`omp://task-agent-discovery.md`): шаблоны `*` ничего не разрешают, каталог и ключи тоже. Поэтому роль `perCall` перечисляет все 79 чат-моделей трёх провайдеров из `omp models --kind chat`. Новая модель или провайдер: дописать в роль. `task.agentModelOverrides`: `scout` на `openai-codex/gpt-6.1-terra:xhigh`, `sonic` на `openai-codex/gpt-6.1-terra:medium`. `task.disabledAgents`: `reviewer`, `security-reviewer`; приёмка идёт своими сабагентами `collector` и `acceptor` модуля `review`. Тест: `dev/tests/harness/runtime-config/subagents.test.js`.
+**Сабагенты:** `task.perCallModel: "on"` разрешает модель на каждый вызов `task`; усилие идёт хвостом `:level` в строке модели. `task.enableEffort: false`: поле `effort` знает только `lo/med/hi`. Кавычки у `"on"` нужны: голое `on` YAML читает как `true`. Грант даёт только роль чата с точным `provider/id`: шаблоны `*` ничего не разрешают, каталог и ключи тоже. Поэтому роль `perCall` перечисляет все 79 чат-моделей трёх провайдеров из `omp models --kind chat`. Новая модель или провайдер: дописать в роль. `task.agentModelOverrides`: `scout` на `openai-codex/gpt-6.1-terra:xhigh`, `sonic` на `openai-codex/gpt-6.1-terra:medium`. `task.disabledAgents`: `reviewer`, `security-reviewer`; приёмка идёт своими сабагентами `collector` и `acceptor` модуля `review`. Тест: `dev/tests/harness/runtime-config/subagents.test.js`.
 
-**Вход:** файл целиком в `~/.omp/agent/config.yml`, а блок памяти — фрагментом `mnemopi.yml` через [манифест](../../../install.manifest.json). Ключи: `omp://settings.md`, `omp://models.md`, `omp://mnemosyne-memory-backend.md`.
+**Вход:** файл целиком в `~/.omp/agent/config.yml`, а блок памяти — фрагментом `mnemopi.yml` через [манифест](../../../install.manifest.json).
 
 **Зависимости:** эндпоинт эмбеддингов `127.0.0.1:11434`.
 
