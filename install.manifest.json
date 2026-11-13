@@ -15,6 +15,14 @@
 			"to": "extensions/compactions.js"
 		},
 		{
+			"from": "src/modules/communication/rules/communication-main.md",
+			"to": "rules/communication-main.md"
+		},
+		{
+			"from": "src/modules/communication/rules/communication-subagent.md",
+			"to": "rules/communication-subagent.md"
+		},
+		{
 			"from": "src/modules/base-tools/index.js",
 			"to": "extensions/base-tools.js"
 		},
@@ -109,6 +117,14 @@
 		{
 			"from": "src/modules/task-delegation/task-delegation.json",
 			"to": "extensions/task-delegation.json"
+		},
+		{
+			"from": "src/modules/task-delegation/agents/task.md",
+			"to": "agents/task.md"
+		},
+		{
+			"from": "src/modules/task-delegation/agents/sonic.md",
+			"to": "agents/sonic.md"
 		},
 		{
 			"from": "src/modules/tool-summary/index.js",
