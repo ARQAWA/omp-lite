@@ -5,7 +5,7 @@ description: Use before writing, reviewing, or delivering omp-lite code. Covers 
 
 # omp-lite engineering
 
-Инварианты — в `.omp/RULES.md`. Здесь структура и порядок.
+Правила процесса — в `dev/PROCESS.md`. Здесь структура, порядок и раздел «Инварианты».
 
 ## Когда
 
@@ -34,3 +34,11 @@ dev/tests/harness/<name>/
 3. Напиши минимальный код.
 4. Проверь реальным входом и тестом.
 5. Ветка, коммит, merge, push.
+
+## Инварианты
+
+- Минимум строк и символов.
+- Без новых зависимостей без согласия.
+- Удаляй мёртвое и дубли.
+- Покажи вывод.
+- Обнови README и DECISIONS.

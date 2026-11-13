@@ -36,10 +36,6 @@ export default function taskDelegation(pi) {
 		return { content: event.content.map(part => (part.type === "text" ? { ...part, text: part.text.replace(new RegExp(texts.tip), `\n\nTip: ${texts.pick}`) } : part)) };
 	});
 
-	pi.on("before_agent_start", (event, ctx) => {
-		if (ctx.agent.kind === "sub") return { systemPrompt: event.systemPrompt.map(part => part.replace(texts.stockPick, texts.pick)) };
-	});
-
 	pi.on("before_provider_request", event => {
 		if (typeof event !== "object" || event === null || !("payload" in event)) return event;
 		const seen = new WeakSet();

@@ -34,7 +34,7 @@ README модуля описывает:
 - `compactions` — счётчик компакшенов сессии в статуслайне. Тест: `dev/tests/harness/compactions/`.
 - `turn-duration` — строка `⏱ 2m 4s` после каждого хода. Тест: `dev/tests/harness/turn-duration/`.
 - `base-tools` — тул `files`: карта проекта одним вызовом на движке OMP, без потолка 200 и без git; настройки `apply_patch`, контекста `grep` и порога спилла в `base-tools.yml`. Тест: `dev/tests/harness/base-tools/`.
-- `task-delegation` — правило Codex для `task`, Bun по умолчанию и фильтр прямого спавна в `eval`. Тест: `dev/tests/harness/task-delegation/`.
+- `task-delegation` — правило Codex для `task`, Bun по умолчанию, фильтр прямого спавна в `eval`, профили `task` и `sonic` с пустой ролью. Тест: `dev/tests/harness/task-delegation/`.
 - `child-agents-md` — патч рантайма: сабагент `task` получает `AGENTS.md` родным путём OMP. Тест: `dev/tests/harness/child-agents-md/`.
 - `ompcli` — расширение VS Code `arqawa.ompcli` для Windows VDI: вкладки OMP, комплектный runtime, локальная память, Update и установка харнеса по манифесту. Тест: `dev/tests/harness/ompcli/`.
 
@@ -45,6 +45,7 @@ README модуля описывает:
 Промпт без кода:
 
 - `system-prompt` — системный промпт на базе Cursor 5.5, `SYSTEM.md`.
+- `communication` — правила общения: блоки для главного агента, заметка об отчёте для сабагентов. Тест: `dev/tests/harness/communication/`.
 
 Каждый README описывает свой модуль.
 

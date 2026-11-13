@@ -34,7 +34,7 @@ test("the removed memory description patch is not installed", () => {
 test("targets stay inside the agent root and are unique", () => {
 	const targets = new Set();
 	for (const entry of manifest.files) {
-		expect(entry.to.startsWith("extensions/") || entry.to.startsWith("skills/") || entry.to.startsWith("agents/") || rootTargets.has(entry.to)).toBe(true);
+		expect(["extensions/", "skills/", "agents/", "rules/"].some(dir => entry.to.startsWith(dir)) || rootTargets.has(entry.to)).toBe(true);
 		expect(entry.to.split("/")).not.toContain("..");
 		expect(targets.has(entry.to)).toBe(false);
 		targets.add(entry.to);
