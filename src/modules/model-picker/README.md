@@ -20,7 +20,11 @@
 
 **Узкое окно:** имя выбранной модели сокращается с `…` и уступает место усилиям, но не короче `minName` колонок. Меньшая ширина показывает `Effort needs N columns`. Имена остальных моделей тоже сокращаются с `…`. Так же ведёт себя пикер MyP.
 
-**Источник:** только `ctx.models.list()`. OMP уже учитывает `enabledModels` и `disabledProviders`, порядок OMP сохраняется. Усилия: `auto`, `off` и `model.thinking.efforts`. Модель без reasoning показывает только `auto` и `off`.
+**Источник:** `ctx.models.list()`. OMP учитывает в нём `disabledProviders`, но не `enabledModels`. Порядок OMP сохраняется. Усилия: `auto`, `off` и `model.thinking.efforts`. Модель без reasoning показывает только `auto` и `off`.
+
+**Костыль `enabledModels`:** OMP 18.18.8 не применяет фильтр к `ctx.models.list()` (`packages/coding-agent/src/extensibility/extensions/model-api.ts`) и не даёт расширению настройки. Поэтому на старте сессии модуль спрашивает сам OMP: `omp config get enabledModels --json` через `pi.exec`. Список сверяется с `provider/id`, `*` значит любой хвост. Пустой список или сбой команды показывают все модели. Правка `enabledModels` видна после новой сессии.
+
+**Провайдер:** справа от имени модели приглушённо стоит провайдер. Так различимы одинаковые модели разных провайдеров. Если места нет, провайдер не рисуется.
 
 **Начальное усилие:** последняя запись `thinking_level_change` ветки, её `configured` (например `auto`), затем `thinkingLevel`, затем `pi.getThinkingLevel()`. Поэтому после выбора `auto` меню снова показывает `auto`, а не разрешённый уровень.
 

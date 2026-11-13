@@ -13,7 +13,7 @@ test("any model can be named per spawn; the level rides in the model string", ()
 test("one chat role grants every enabled chat model by exact id", () => {
 	const ids = config.modelRoles.perCall.split(", ");
 	expect(new Set(ids).size).toBe(ids.length);
-	const providers = config.enabledModels.map(pattern => pattern.replace("/*", ""));
+	const providers = [...new Set(config.enabledModels.map(pattern => pattern.split("/")[0]))];
 	for (const id of ids) {
 		expect(id).toMatch(/^[^/\s,*?]+\/[^\s,*?]+$/);
 		expect(providers).toContain(id.split("/")[0]);
