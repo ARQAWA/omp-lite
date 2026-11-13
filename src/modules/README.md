@@ -28,7 +28,7 @@ README модуля описывает:
 - `memory-guide` — короткий блок про память в системном промпте, пока включён Mnemopi. Тест: `dev/tests/harness/memory-guide/`.
 - `model-picker` — компактный пикер модели и усилия, Shift+стрелки, фильтр. Тест: `dev/tests/harness/model-picker/`.
 - `tool-summary` — одна строка со счётчиками тулов рядом с карточками. Тест: `dev/tests/harness/tool-summary/`.
-- `review` — приёмка: профили сабагентов `collector` и `acceptor`, три скилла. Кода и теста нет.
+- `review` — приёмка: профили сабагентов `collector` и `acceptor`, три скилла. Код только в скилле: сверка полноты. Тест: `dev/tests/harness/review/`.
 - `subagent-reuse` — инструмент `reuse`: та же сессия сабагента, история с нуля через `newSession()`. Тест: `dev/tests/harness/subagent-reuse/`.
 - `subscriptions` — метки `CC`, `CX`, `Go` с лимитами подписок. Тест: `dev/tests/harness/subscriptions/`.
 - `compactions` — счётчик компакшенов сессии в статуслайне. Тест: `dev/tests/harness/compactions/`.
