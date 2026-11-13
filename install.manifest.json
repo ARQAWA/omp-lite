@@ -35,6 +35,14 @@
 			"to": "extensions/dyslexia.js"
 		},
 		{
+			"from": "src/modules/workflow/index.js",
+			"to": "extensions/workflow.js"
+		},
+		{
+			"from": "src/modules/workflow/workflow.json",
+			"to": "extensions/workflow.json"
+		},
+		{
 			"from": "src/modules/child-agents-md/index.js",
 			"to": "extensions/child-agents-md.js"
 		},
