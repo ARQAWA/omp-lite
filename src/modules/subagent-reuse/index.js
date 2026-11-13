@@ -15,22 +15,17 @@ function pick(registry, name) {
 	return ref;
 }
 
-const COOP =
-	"\n§ Coop\nYou are operating on a piece of work assigned to you by the main agent.\n§ Completion\nNo TODO tracking, no progress updates. Execute; your final message is your result.";
+// Section starts of OMP 18.18.8 prompts/system/subagent-system-prompt.md after prompt.render.
+const COOP = "\n⁂ Coop\nYou are operating on a piece of work assigned to you by the main agent.\n";
+const PLAN = "\n⁂ Plan\nThis session is executing an approved plan.";
 
 export function withoutContext(prompt) {
-	return prompt.flatMap(block => {
-		if (block.startsWith("§ Context\n")) return [];
+	return prompt.map(block => {
+		const at = block.indexOf("\n⁂ Context\n");
 		const coop = block.lastIndexOf(COOP);
-		let at = -1;
-		const found = block.indexOf("\n\n§ Context\n");
-		if (found >= 0) at = found + 2;
-		if (at < 0) return [block];
-		const head = block.slice(0, at).replace(/\n+$/, "");
-		const rest = block.slice(at);
-		const tail = coop < 0 ? "" : rest.slice(coop - at);
-		const next = `${head}${tail}`.trim();
-		return next ? [next] : [];
+		if (at < 0 || coop < at) return block;
+		const plan = block.endsWith("</plan>\n", coop) ? block.lastIndexOf(PLAN, coop) : -1;
+		return block.slice(0, at).trimEnd() + block.slice(plan > at ? plan : coop);
 	});
 }
 
