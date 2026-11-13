@@ -1287,3 +1287,19 @@ Blind и high больше не различаются ни моделью, ни
 **Носители правила:** модули `model-picker` и `runtime-config`, их README, тесты `dev/tests/harness/model-picker/` и `dev/tests/harness/runtime-config/subagents.test.js`, установленные файлы `~/.omp/agent/extensions/model-picker.js` и `model-picker.json`.
 
 **Уточнение 2026-11-13:** открывающая Shift+стрелка сразу делает первый ход в свою сторону. Основание: слова владельца «вместе с открытием сразу делает первый ход».
+
+## D-066 — Update отказывает только при смене программ
+
+**Решение:** `OMP CLI: Update` отказывает с `OMP CLI bootstrap changed. Update OMP CLI in Marketplace.`, только если в `main` другой `runtime.json`: это пины `omp.exe`, сервера памяти и ffmpeg. Другие файлы bootstrap изменились: харнес ставится, а VS Code пишет `A newer OMP CLI is in Marketplace.` Версия расширения `0.0.12`.
+
+**Основание:** слова владельца от 2026-11-13 после отказа Update на VDI: «надо разобраться, почему она вылезает, и сделать так, чтобы больше её не было», «нельзя как-то сделать, чтобы через апдейт всё шло», «штука, которая не даёт заапдейтиться, должна зависеть именно от самого бинарника OMPCLI».
+
+**Причина:** после выпуска `0.0.11` коммит `2568f94` (D-063) убрал два комментария из `src/modules/ompcli/index.js`. Побайтная сверка всех файлов bootstrap не сошлась, и Update не поставил ничего, включая харнес.
+
+**Заменяет:** в D-054 и README модуля правило «изменённый bootstrap требует нового VSIX» для всех файлов, кроме `runtime.json`.
+
+**Границы:** заметка о новой версии появляется и при правке bootstrap в `main` без выпуска. Новый харнес может работать на старом коде расширения. На VDI не проверено.
+
+**Носители правила:** `src/modules/ompcli/index.js` (`compareBootstrap`, `update`), `messages.json` (`stale`), README модуля, `dev/tests/harness/ompcli/update.test.js`.
+
+**Выпуск D-066:** `0.0.12`, ревизия `275246eb04f5ef13467f2e12a3cca713a2c4b8e1`, 208244346 байт, sha256 `9d3cd92331f0c274a2bcf771cd9bfbda1339b5e06d2758b52772b05a277cca38`, Marketplace `win32-x64 validated`, 2026-11-13 13:21 UTC. В payload также D-065. На VDI не проверено.
