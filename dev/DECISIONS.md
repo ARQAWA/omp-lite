@@ -1285,3 +1285,5 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-13, живой OMP в псевдотерминале: Shift+стрелка, в списке только разрешённые модели, провайдеры видны. Тесты: 324 pass.
 
 **Носители правила:** модули `model-picker` и `runtime-config`, их README, тесты `dev/tests/harness/model-picker/` и `dev/tests/harness/runtime-config/subagents.test.js`, установленные файлы `~/.omp/agent/extensions/model-picker.js` и `model-picker.json`.
+
+**Уточнение 2026-11-13:** открывающая Shift+стрелка сразу делает первый ход в свою сторону. Основание: слова владельца «вместе с открытием сразу делает первый ход».
