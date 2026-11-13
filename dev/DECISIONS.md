@@ -1269,3 +1269,19 @@ Blind и high больше не различаются ни моделью, ни
 На Windows VDI не проверено.
 
 **Носители:** `src/modules/review/`, тест `dev/tests/harness/review/`.
+
+## D-065 — пикер слушает `enabledModels`, показывает провайдера; в слепке четыре провайдера
+
+**Решение:** [model-picker](../src/modules/model-picker/index.js) сам отсекает модели вне `enabledModels`. Список он берёт у OMP: `omp config get enabledModels --json` через `pi.exec`, один раз на старте сессии. Сверка идёт по `provider/id`, `*` значит любой хвост. Пустой список или сбой команды показывают все модели. Справа от имени модели приглушённо стоит провайдер. В слепке [runtime-config](../src/modules/runtime-config/config.yml) `enabledModels` перечисляет десять точных моделей, `openrouter` убран из `disabledProviders`, добавлен `providers.openrouterVariant: floor`, модель `openrouter/deepseek/deepseek-v4.1-flash-1017` дописана в роль `perCall`.
+
+**Костыль:** OMP `18.18.8` не применяет `enabledModels` к `ctx.models.list()`: `packages/coding-agent/src/extensibility/extensions/model-api.ts` отдаёт `modelRegistry.getAvailable()`. Настройки расширению OMP не даёт. Штатного способа нет. Владелец запретил править OMP и заказал минимальный костыль в расширении.
+
+**Основание:** слова владельца от 2026-11-13, сессия `01a1d454-b7ea`: «он не фильтрует список моделей», «OMP нельзя трогать, давай костыль минимальный через extension». Там же заказаны десять моделей и одна модель OpenRouter. В сессии доставки: «чтобы эти модели были везде», «в сторонке было видно тёмно-серым цветом провайдера», «у меня там будет два DeepSeek одинаковых».
+
+**Заменяет:** в D-055 «только три провайдера»: открыт четвёртый, `openrouter`. В D-013 слова, что список берётся только из `ctx.models.list()`.
+
+**Границы:** ключ OpenRouter в слепок не входит. Он кладётся руками в `~/.omp/agent/models.yml`, `providers.openrouter.apiKey`. Без ключа модель OpenRouter не видна. Роль `default` в слепке осталась `opencode-go/deepseek-v4.1-flash:max`. Правка `enabledModels` видна пикеру после новой сессии. Точный матчер OMP не повторён: суффиксы усилия и нечёткие имена в `enabledModels` пикер не поймёт. На VDI не проверено.
+
+**Проверка:** 2026-11-13, живой OMP в псевдотерминале: Shift+стрелка, в списке только разрешённые модели, провайдеры видны. Тесты: 324 pass.
+
+**Носители правила:** модули `model-picker` и `runtime-config`, их README, тесты `dev/tests/harness/model-picker/` и `dev/tests/harness/runtime-config/subagents.test.js`, установленные файлы `~/.omp/agent/extensions/model-picker.js` и `model-picker.json`.
