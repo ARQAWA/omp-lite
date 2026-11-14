@@ -70,6 +70,7 @@ disabledProviders:
   - lm-studio
   - meta
   - minimax
+  - minimax-cn
   - minimax-code
   - minimax-code-cn
   - mistral
@@ -125,8 +126,10 @@ compaction:
     anthropic/claude-fable-5: f400000
     anthropic/claude-fable-5-1: f400000
     anthropic/claude-fable-5-2: f400000
+    anthropic/claude-haiku-5-5: f400000
     anthropic/claude-mythos-5: f400000
     anthropic/claude-mythos-5-1: f400000
+    anthropic/claude-mythos-5-2: f400000
     anthropic/claude-opus-4-6: f400000
     anthropic/claude-opus-4-7: f400000
     anthropic/claude-opus-4-8: f400000

@@ -1678,3 +1678,23 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness/voice-stt`.
 
 **Носители правила:** `src/modules/voice-stt/pi-voice-stt/src/audio/launch.ts`, README и тест модуля.
+
+## D-091 — закрыт minimax-cn
+
+**Решение:** добавить `minimax-cn` в `disabledProviders`.
+
+**Основание:** заказ закрыть всех провайдеров, кроме четырёх разрешённых.
+
+**Причина:** OMP 18.18.8, `packages/catalog/src/models.json`: этот встроенный провайдер отсутствовал в списке.
+
+**Носители правила:** `src/modules/runtime-config/config.yml`.
+
+## D-092 — порог для Haiku и Mythos
+
+**Решение:** добавить Haiku 5.5 и Mythos 5.2 с порогом `f400000` в оба слепка.
+
+**Основание:** заказ порога 400k для Claude с окном 1M.
+
+**Причина:** OMP 18.18.8, `packages/catalog/src/compat/rules/providers/anthropic.kdl`: обе модели имеют окно 1M.
+
+**Носители правила:** `src/modules/compaction-400k/thresholds.yml`, `src/modules/runtime-config/config.yml`.
