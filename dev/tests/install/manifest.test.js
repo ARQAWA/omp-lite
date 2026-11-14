@@ -4,7 +4,6 @@ import { dirname, join } from "node:path";
 
 const root = join(import.meta.dir, "../../..");
 const manifest = JSON.parse(readFileSync(join(root, "install.manifest.json"), "utf8"));
-const rootTargets = new Set(["SYSTEM.md"]);
 
 test("the manifest covers every product module", () => {
 	const modules = readdirSync(join(root, "src/modules")).filter(name => statSync(join(root, "src/modules", name)).isDirectory()).sort();
@@ -27,18 +26,17 @@ test("the removed background counter is not installed", () => {
 test("the removed memory description patch is not installed", () => {
 	expect(manifest.files.some(entry => entry.to.includes("memory-tool-prompts"))).toBe(false);
 	expect(manifest.remove).toContain("extensions/memory-tool-prompts.js");
-	const installed = new Set(manifest.files.map(entry => entry.to));
-	for (const target of manifest.remove) expect(installed.has(target)).toBe(false);
 });
 
 test("targets stay inside the agent root and are unique", () => {
 	const targets = new Set();
 	for (const entry of manifest.files) {
-		expect(["extensions/", "skills/", "agents/", "rules/"].some(dir => entry.to.startsWith(dir)) || rootTargets.has(entry.to)).toBe(true);
+		expect(["extensions/", "skills/", "agents/", "rules/"].some(dir => entry.to.startsWith(dir)) || entry.to === "SYSTEM.md").toBe(true);
 		expect(entry.to.split("/")).not.toContain("..");
 		expect(targets.has(entry.to)).toBe(false);
 		targets.add(entry.to);
 	}
+	for (const target of manifest.remove) expect(targets.has(target)).toBe(false);
 	for (const entry of manifest.config) {
 		expect(entry.to).toBe("config.yml");
 		expect(entry.mode).toBe("merge");
