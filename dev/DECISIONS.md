@@ -1636,3 +1636,13 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-14. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 334 pass, 0 fail. Коммит `486b298`, слияние `cb642f1`. Резервная копия установки: `~/.omp/backups/install-contract-20261114-193527/agents/collector.md`.
 
 **Носители правила:** `src/modules/review/agents/collector.md`.
+
+## D-NEW-task-delegation — точечная замена подсказок
+
+**Решение:** подсказка `task` заменяется только в конце текстовой части; из `eval` удаляется и вариант подсказки `workpool` без `wait`.
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/task/index.ts` и `prompts/tools/eval.md`. Цитата в конце ответа неотличима от подсказки; подсказка перед советом координации не заменяется.
+
+**Проверка:** `bun test dev/tests/harness/task-delegation dev/tests/harness/runtime-config`.
+
+**Носители правила:** `src/modules/task-delegation/index.js`, `task-delegation.json`, тесты модулей.

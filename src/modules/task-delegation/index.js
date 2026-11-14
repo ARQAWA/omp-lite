@@ -33,7 +33,7 @@ export default function taskDelegation(pi) {
 	// OMP's stock "pick a specialist" texts contradict the default-worker rule; ours replaces them.
 	pi.on("tool_result", event => {
 		if (toolName(event.toolName) !== "task") return;
-		return { content: event.content.map(part => (part.type === "text" ? { ...part, text: part.text.replace(new RegExp(texts.tip), `\n\nTip: ${texts.pick}`) } : part)) };
+		return { content: event.content.map(part => (part.type === "text" ? { ...part, text: part.text.replace(new RegExp(`${texts.tip}$`), `\n\nTip: ${texts.pick}`) } : part)) };
 	});
 
 	pi.on("before_provider_request", event => {

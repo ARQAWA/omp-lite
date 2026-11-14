@@ -18,8 +18,7 @@ test("one chat role grants every enabled chat model by exact id", () => {
 		expect(id).toMatch(/^[^/\s,*?]+\/[^\s,*?]+$/);
 		expect(providers).toContain(id.split("/")[0]);
 	}
-	for (const provider of providers) expect(ids.some(id => id.startsWith(`${provider}/`))).toBe(true);
-	expect(ids).toContain("anthropic/claude-sonnet-5-5");
+	for (const id of config.enabledModels) expect(ids).toContain(id);
 });
 
 test("scout and sonic run on Terra and the reviewers are disabled", () => {

@@ -7,6 +7,7 @@
 	"evalRemove": [
 		" Subagents have separate kernels.",
 		"For 2+ independent items, use a named `workpool()`; results auto-deliver. If blocked, leave `eval` and call `wait`.\n",
+		"For 2+ independent items, use a named `workpool()`; results auto-deliver.\n",
 		"- `agent`, `workpool`: background subagents, DAG waves \u2192 `xd://eval/agents`\n"
 	],
 	"evalDefault": "Use JavaScript (Bun) by default. Use Python only for rare tasks requiring Python-specific libraries, such as pandas, NumPy or Matplotlib.",
