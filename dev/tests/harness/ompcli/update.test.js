@@ -1,8 +1,10 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, truncateSync, writeFileSync } from "node:fs";
+import fsp from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { applyHarness, createUpdater,
+import { gzipSync } from "node:zlib";
+import { applyHarness, createCli, createUpdater, runtime,
 	sameBootstrap, extractArchive } from "../../../../src/modules/ompcli/index.js";
 
 const oldSha = "1".repeat(40);
@@ -33,13 +35,22 @@ function manifest(bootstrap) {
 
 // Real GitHub archive shape: one root directory holding the repository files.
 function archive(entries) {
-	const dir = temporary("ompcli-archive-");
-	const root = join(dir, "repo-" + newSha);
-	for (const [name, content] of Object.entries(entries)) write(join(root, name), content);
-	const file = join(dir, "repo.tar.gz");
-	// macOS tar would add its own "._" entries; GitHub archives have none.
-	const result = Bun.spawnSync(["tar", "-czf", file, "-C", dir, "repo-" + newSha], { env: { ...process.env, COPYFILE_DISABLE: "1" } });
-	if (result.exitCode !== 0) throw new Error(result.stderr.toString());
+	const chunks = [];
+	const entry = (name, content, type = "0") => {
+		const data = Buffer.from(content), header = Buffer.alloc(512);
+		header.write(name.slice(0, 100)); header.write(data.length.toString(8).padStart(11, "0"), 124);
+		header.write("        ", 148); header.write(type, 156); header.write("ustar\0", 257);
+		header.write(header.reduce((sum, byte) => sum + byte, 0).toString(8).padStart(6, "0") + "\0 ", 148);
+		chunks.push(header, data, Buffer.alloc((512 - data.length % 512) % 512));
+	};
+	entry("pax_global_header", "14 comment=ok\n", "g");
+	for (const [name, content] of Object.entries(entries)) {
+		const full = "repo-" + newSha + "/" + name;
+		if (full.length > 100) { const record = " path=" + full + "\n"; entry("pax_header", (record.length + 3) + record, "x"); }
+		entry(full, content);
+	}
+	const file = join(temporary("ompcli-archive-"), "repo.tar.gz");
+	writeFileSync(file, gzipSync(Buffer.concat([...chunks, Buffer.alloc(1024)])));
 	return file;
 }
 
@@ -97,6 +108,36 @@ function environment({ bootstrap = "bootstrap", runtime = "pins", pointer = null
 	};
 	return { deps, calls, storageDir, extensionPath, agentDir, pointer: join(storageDir, "payload", version, "current.json") };
 }
+
+function client(env, request = env.deps.request) {
+	return createCli({
+		vscode: { window: { showInformationMessage() {} } }, extensionPath: env.extensionPath, storageDir: env.storageDir,
+		version, platform: "win32", arch: "x64", homedir: env.agentDir, env: { PI_CODING_AGENT_DIR: env.agentDir },
+		gitBash: "bash", existsSync: () => true, request,
+	});
+}
+
+test("the update command installs GitHub data without the memory model", async () => {
+	const env = environment();
+	const omp = join(env.extensionPath, "runtime", "omp.exe");
+	write(omp, "");
+	truncateSync(omp, runtime.assets.omp.size);
+	write(join(env.extensionPath, "runtime/llama/llama-server.exe"), "exe");
+	const requests = [];
+	const cli = client(env, async url => {
+		requests.push(url);
+		if (url === runtime.assets.model.url) throw new Error("model offline");
+		return env.deps.request(url);
+	});
+	expect((await cli.update()).revision).toBe(newSha);
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
+	expect(JSON.parse(readFileSync(env.pointer, "utf8"))).toBe(newSha);
+	expect(requests).not.toContain(runtime.assets.model.url);
+	rmSync(join(env.extensionPath, "runtime"), { recursive: true });
+	write(join(env.agentDir, "extensions/a.js"), "lost");
+	expect((await cli.update()).revision).toBe(newSha);
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
+});
 
 test("an interrupted download leaves no archive and does not block the next update", async () => {
 	const env = environment();
@@ -319,22 +360,19 @@ test("open tabs block the payload write", async () => {
 	expect(env.calls.apply.length).toBe(0);
 });
 
-test("a failed install restores the previous pointer", async () => {
+test("an update failure after a write restores the files and previous pointer", async () => {
 	const env = environment({ pointer: oldSha });
-	env.deps.apply = async () => {
-		throw new Error("OMP CLI install failed: disk");
+	const rename = fsp.rename; let written, pointed;
+	fsp.rename = async (from, to) => {
+		if (to === env.pointer) { written = readFileSync(join(env.agentDir, "extensions/a.js"), "utf8"); await rename(from, to); pointed = readFileSync(to, "utf8"); throw Object.assign(new Error("disk"), { code: "ENOSPC" }); }
+		return rename(from, to);
 	};
-	await expect(createUpdater(env.deps).run()).rejects.toThrow("disk");
+	try { await expect(client(env).update()).rejects.toThrow("disk"); }
+	finally { fsp.rename = rename; }
+	expect(written).toBe("new"); expect(pointed).toBe(JSON.stringify(newSha));
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("old");
 	expect(JSON.parse(readFileSync(env.pointer, "utf8"))).toBe(oldSha);
-});
-
-test("a failed first install removes the new pointer", async () => {
-	const env = environment();
-	env.deps.apply = async () => {
-		throw new Error("OMP CLI install failed: disk");
-	};
-	await expect(createUpdater(env.deps).run()).rejects.toThrow("disk");
-	expect(existsSync(env.pointer)).toBe(false);
+	expect(existsSync(join(env.agentDir, ".ompcli-backups/journal.json"))).toBe(false);
 });
 
 test("an invalid pointer is reported without rewriting it", async () => {
@@ -351,19 +389,11 @@ test("a bad upstream revision is refused", async () => {
 	expect(env.calls.apply.length).toBe(0);
 });
 
-test("a real git archive with a long path and a global header is unpacked in process", async () => {
-	const repo = temporary("ompcli-git-");
+test("an archive with a long path and a global header is unpacked in process", async () => {
 	const long = "src/modules/" + "deep-directory-name/".repeat(9) + "a-file-with-a-very-long-name-that-needs-a-pax-record.js";
 	const files = { "install.manifest.json": JSON.stringify({ version: 1, files: [{ from: long, to: "extensions/long.js" }], config: [], vscode: { files: [{ from: "boot.js", to: "index.js" }] } }), [long]: "long content", "boot.js": "boot", "not-listed.txt": "skip" };
-	for (const [name, content] of Object.entries(files)) write(join(repo, name), content);
-	const git = (...args) => Bun.spawnSync(["git", "-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: repo });
-	git("init", "-q");
-	git("add", "-A");
-	git("commit", "-q", "-m", "x");
-	const tarball = join(temporary(), "a.tar.gz");
-	expect(git("archive", "--format=tar.gz", "--prefix=omp-lite-abc/", "-o", tarball, "HEAD").exitCode).toBe(0);
 	const stage = join(temporary(), "stage");
-	expect(await extractArchive({ archive: tarball, stage, revision: newSha })).toBe(newSha);
+	expect(await extractArchive({ archive: archive(files), stage, revision: newSha })).toBe(newSha);
 	expect(readFileSync(join(stage, long), "utf8")).toBe("long content");
 	expect(readFileSync(join(stage, ".bootstrap/index.js"), "utf8")).toBe("boot");
 	expect(readFileSync(join(stage, ".revision"), "utf8")).toBe(newSha + "\n");

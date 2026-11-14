@@ -12,7 +12,7 @@
 bun dev/scripts/ompcli-runtime/index.js [file] [asset]
 ```
 
-`asset` — ключ из `runtime.json`: `omp`, `bun` или `model`. Без аргументов берётся `omp`
+`asset` — ключ из `runtime.json`: `omp` или `model`. Без аргументов берётся `omp`
 и путь `dist/ompcli/runtime/omp.exe`.
 
 ## Поведение

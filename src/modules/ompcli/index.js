@@ -241,24 +241,28 @@ async function ensureRuntime({ extensionPath, storageDir, version, request = fet
 		if (actual < 0 || (size !== undefined && actual !== size)) throw new Error(format(messages.bundle, { file: path.basename(file) }));
 	}
 	const asset = assets.model;
-	// Versions before 0.0.4 kept programs and the model under storage/runtime: the model moves, the rest goes.
+	// Versions before 0.0.4 kept programs and the model under storage/runtime.
 	const legacy = path.join(storageDir, "runtime");
+	let keepLegacy = false;
 	await fsp.mkdir(path.dirname(paths.model), { recursive: true });
 	for (const name of (await sizeOf(paths.model)) === asset.size ? [] : await fsp.readdir(legacy).catch(() => [])) {
 		const old = path.join(legacy, name, asset.file);
-		// Update and a tab may run this together: the one that loses the file finds the model in place below.
+		const temporary = paths.model + "." + randomUUID() + ".tmp";
+		// Two tabs may migrate together: publish only a complete copy.
 		try {
 			if ((await sizeOf(old)) !== asset.size || (await sha256File(old)) !== asset.sha256) continue;
-			await fsp.rename(old, paths.model);
-		} catch {}
+			await fsp.copyFile(old, temporary);
+			await fsp.rename(temporary, paths.model);
+		} catch { keepLegacy = true; }
+		finally { await fsp.rm(temporary, { force: true }).catch(() => {}); }
 		break;
 	}
-	await fsp.rm(legacy, { recursive: true, force: true }).catch(() => {});
 	if ((await sizeOf(paths.model)) !== asset.size) progress({ name: "model", size: Math.round(asset.size / 1048576) });
 	// The model is checked by content on every start: a damaged file is downloaded again.
 	await fetchRuntime(paths.model, asset, request, { curl }).catch(error => {
 		throw new Error(format(messages.asset, { name: asset.file, reason: error.message }));
 	});
+	if (!keepLegacy) await fsp.rm(legacy, { recursive: true, force: true }).catch(() => {});
 	return paths;
 }
 
@@ -381,7 +385,6 @@ async function rollback(agentDir, payloadRoot) {
 	let failed = null;
 	for (const entry of [...(journal.entries ?? [])].reverse()) {
 		let target;
-		let validated = false;
 		try {
 			if (typeof entry.path !== "string" || !path.isAbsolute(entry.path)) throw new Error("path");
 			target = path.resolve(entry.path);
@@ -389,7 +392,6 @@ async function rollback(agentDir, payloadRoot) {
 				if (!payloadRoot || path.basename(target) !== "current.json" || !isInside(path.resolve(payloadRoot), target)) throw new Error("path");
 			} else if (!isInside(root, target)) throw new Error("path");
 			await assertNoLinks(entry.pointer ? path.dirname(path.resolve(payloadRoot)) : root, target);
-			validated = true;
 			if (entry.existed) {
 				const backup = path.resolve(entry.backup ?? "");
 				if (!backup.startsWith(base + path.sep)) throw new Error("backup");
@@ -399,10 +401,10 @@ async function rollback(agentDir, payloadRoot) {
 				await fsp.rm(target, { force: true });
 			}
 		} catch {
-			if (!entry.pointer || validated) failed ??= entry.path;
+			failed ??= String(entry.path);
 		}
 	}
-	if (failed) throw new Error(format(messages.backup, { path: failed }));
+	if (failed !== null) throw new Error(format(messages.backup, { path: failed }));
 	await fsp.rm(journalPath, { force: true });
 	if (typeof journal.id === "string" && /^[a-f0-9-]{36}$/.test(journal.id)) await fsp.rm(path.join(base, journal.id), { recursive: true, force: true });
 	return true;
@@ -627,6 +629,7 @@ function createMemory(options = {}) {
 	const request = options.request ?? fetch;
 	const spawnProcess = options.spawnProcess;
 	const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
+	const now = options.now ?? (() => performance.now());
 	const attempts = options.attempts ?? 120;
 	const intervalMs = options.intervalMs ?? 500;
 	const dimensions = options.dimensions ?? MEMORY_DIM;
@@ -647,16 +650,17 @@ function createMemory(options = {}) {
 
 	async function start() {
 		const id = ++generation;
+		const deadline = now() + attempts * intervalMs;
 		for (let attempt = 1; ; attempt++) {
 			try {
-				return await attemptStart(id);
+				return await attemptStart(id, deadline);
 			} catch (error) {
-				if (id !== generation || attempt >= 3 || !error.retry) throw error;
+				if (id !== generation || attempt >= 3 || !error.retry || now() >= deadline) throw error;
 			}
 		}
 	}
 
-	async function attemptStart(id) {
+	async function attemptStart(id, deadline) {
 		const port = await acquire();
 		if (id !== generation) throw new Error(messages.memoryStopped);
 		const key = randomBytes(32).toString("hex");
@@ -686,24 +690,25 @@ function createMemory(options = {}) {
 		const health = `http://127.0.0.1:${port}/health`;
 		let healthy = false;
 		try {
-			for (let attempt = 0; attempt < attempts; attempt++) {
+			for (let attempt = 0; attempt < attempts && now() < deadline; attempt++) {
 				stop();
 				let response;
 				try {
-					response = await Promise.race([request(health, { signal: AbortSignal.timeout(1000) }), death]);
+					response = await Promise.race([request(health, { signal: AbortSignal.timeout(Math.max(1, Math.ceil(Math.min(1000, deadline - now())))) }), death]);
 				} catch (error) {
 					stop();
-					await Promise.race([sleep(intervalMs), death]);
+					await Promise.race([sleep(Math.max(0, Math.min(intervalMs, deadline - now()))), death]);
 					continue;
 				}
 				stop();
+				if (now() >= deadline) break;
 				if (response.ok) {
 					healthy = true;
 					break;
 				}
 				if (response.status !== 503) throw new Error(format(messages.memoryHealth, { status: response.status }));
 				if (attempt === attempts - 1) break;
-				await Promise.race([sleep(intervalMs), death]);
+				await Promise.race([sleep(Math.max(0, Math.min(intervalMs, deadline - now()))), death]);
 			}
 			if (!healthy) throw new Error(format(messages.memoryTimeout, { seconds: Math.round((attempts * intervalMs) / 1000) }));
 			stop();
@@ -1090,13 +1095,10 @@ function assertPlatform(platform, arch) {
 
 function loadNodePty(vscode) {
 	const candidates = [path.join(vscode.env.appRoot, "node_modules.asar", "node-pty"), path.join(vscode.env.appRoot, "node_modules", "node-pty")];
-	let last;
 	for (const candidate of candidates) {
 		try {
 			return require(candidate);
-		} catch (error) {
-			last = error;
-		}
+		} catch {}
 	}
 	throw new Error(format(messages.nodePty, { path: candidates[0] }));
 }
@@ -1337,7 +1339,6 @@ function createCli(host) {
 	async function update() {
 		assertReady();
 		const { request, curl } = transport();
-		await ensureRuntime({ extensionPath: host.extensionPath, storageDir: host.storageDir, version: host.version, request, curl });
 		const agentDir = resolveAgentDir(host.env, host.homedir);
 		const updater = createUpdater({
 			request,

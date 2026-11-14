@@ -63,8 +63,9 @@ async function fetchRuntime(file, asset, request = fetch) {
 
 if (require.main === module) {
 	const asset = process.argv[3] ?? "omp";
-	const file = process.argv[2] || path.resolve(root, "dist/ompcli/runtime", asset);
-	fetchRuntime(file, pins().assets[asset])
+	const pin = pins().assets[asset];
+	const file = process.argv[2] || path.resolve(root, "dist/ompcli/runtime", pin.file);
+	fetchRuntime(file, pin)
 		.then(result => console.log("OMP " + asset + ": " + result + " " + file))
 		.catch(error => {
 			console.error(error.message);

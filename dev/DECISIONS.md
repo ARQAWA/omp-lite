@@ -1698,3 +1698,15 @@ Blind и high больше не различаются ни моделью, ни
 **Причина:** OMP 18.18.8, `packages/catalog/src/compat/rules/providers/anthropic.kdl`: обе модели имеют окно 1M.
 
 **Носители правила:** `src/modules/compaction-400k/thresholds.yml`, `src/modules/runtime-config/config.yml`.
+
+## D-093 — восстановление и ожидание ompcli
+
+**Решение:** `Update` не требует модель и программы. Непроверенный указатель сохраняет журнал. Старый каталог модели удаляется после проверки модели, если перенос не сорвался. Ожидание памяти ограничено 60 секундами. Загрузчик использует имя файла из пина.
+
+**Основание:** заказ исправлений B-02, B-05, B-06, B-08 и B-10 после инвентаризации.
+
+**Границы:** OMP 18.18.8. Windows VDI не проверена; версия расширения не менялась.
+
+**Проверка:** `bun test dev/tests/harness/ompcli dev/tests/repository`: 119 pass, 0 fail.
+
+**Носители правила:** `src/modules/ompcli/index.js`, `dev/scripts/ompcli-runtime/index.js`, их README и тесты.

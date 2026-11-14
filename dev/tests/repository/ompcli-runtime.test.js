@@ -1,8 +1,10 @@
 import { afterEach, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import { runInNewContext } from "node:vm";
 import { fetchRuntime, pins, resourcePath, root } from "../../scripts/ompcli-runtime/index.js";
 
 const dirs = [];
@@ -18,6 +20,23 @@ function output() {
 
 afterEach(() => {
 	for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
+test("CLI defaults use the pinned asset filename without downloading", async () => {
+	const files = [], urls = [], mod = { exports: {} }, native = createRequire(import.meta.url);
+	const fs = { stat: async file => { files.push(file); throw Object.assign(new Error("missing"), { code: "ENOENT" }); }, mkdir: async () => {}, rm: async () => {} };
+	const require = name => name === "node:fs/promises" ? fs : native(name);
+	require.main = mod;
+	const finished = new Promise(resolve => {
+		runInNewContext(readFileSync(join(root, "dev/scripts/ompcli-runtime/index.js"), "utf8"), {
+			require, module: mod, __dirname: join(root, "dev/scripts/ompcli-runtime"),
+			process: { argv: ["bun", "script"] }, console: { error: resolve, log: resolve },
+			fetch: async url => { urls.push(url); return { ok: false, status: 503 }; },
+		});
+	});
+	await finished;
+	expect(files).toEqual([join(root, "dist/ompcli/runtime", pins().assets.omp.file)]);
+	expect(urls).toEqual([pins().assets.omp.url]);
 });
 
 test("downloads the verified binary and reuses it", async () => {

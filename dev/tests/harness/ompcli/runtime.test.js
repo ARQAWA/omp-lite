@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import fsp from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { bundledChild, bundledStarter, curlTransport, ensureRuntime, pickProxy, proxiedRequest, sha256, sweep } from "../../../../src/modules/ompcli/index.js";
@@ -72,6 +73,27 @@ test("the old storage runtime is removed and its model is kept without a downloa
 	expect(readFileSync(paths.model, "utf8")).toBe("model");
 	expect(existsSync(join(storageDir, "runtime"))).toBe(false);
 	expect(existsSync(join(storageDir, "chat-4242.sh"))).toBe(false);
+});
+
+test("failed replacement or migration keeps the valid legacy model", async () => {
+	const extensionPath = installed(), storageDir = temporary();
+	const old = join(storageDir, "runtime", "deadbeef", "model.gguf"), target = join(storageDir, "model", "model.gguf");
+	mkdirSync(join(storageDir, "runtime", "deadbeef"), { recursive: true }); mkdirSync(join(storageDir, "model"));
+	writeFileSync(old, "model"); writeFileSync(target, "wrong");
+	await expect(ensureRuntime({ extensionPath, storageDir, assets, request: async () => new Response(null, { status: 503 }) })).rejects.toThrow("HTTP 503");
+	expect(readFileSync(old, "utf8")).toBe("model");
+	rmSync(target);
+	const rename = fsp.rename; let attempts = 0;
+	fsp.rename = (from, to) => to === target && !attempts++ ? Promise.reject(new Error("move failed")) : rename(from, to);
+	try { await ensureRuntime({ extensionPath, storageDir, assets, request: async () => new Response("model") }); }
+	finally { fsp.rename = rename; }
+	expect(readFileSync(old, "utf8")).toBe("model");
+	expect(readFileSync(target, "utf8")).toBe("model");
+	rmSync(target); attempts = 0;
+	fsp.rename = async (from, to) => { await rename(from, to); if (to === target && !attempts++) writeFileSync(target, "wrong"); };
+	try { await expect(ensureRuntime({ extensionPath, storageDir, assets, request: async () => new Response(null, { status: 503 }) })).rejects.toThrow("HTTP 503"); }
+	finally { fsp.rename = rename; }
+	expect(readFileSync(old, "utf8")).toBe("model");
 });
 
 test("Update and a tab starting together both get the old model", async () => {

@@ -293,6 +293,27 @@ test("a pointer that cannot be restored keeps the journal for the next run", asy
 	expect(existsSync(join(agent, ".ompcli-backups", id, "0"))).toBe(true);
 });
 
+test("a linked pointer parent keeps the recovery journal and never touches its target", async () => {
+	const { dir, agent } = workspace([]);
+	const payloadRoot = join(dir, "storage", "payload"), outside = join(dir, "outside");
+	const target = join(payloadRoot, "1.0.0", "current.json"), victim = join(outside, "current.json");
+	const id = "0f8fad5b-d9cb-469f-a165-70867728950e", backup = join(agent, ".ompcli-backups", id, "0");
+	const journal = join(agent, ".ompcli-backups/journal.json");
+	mkdirSync(payloadRoot, { recursive: true }); mkdirSync(outside);
+	writeFileSync(victim, '"untouched"');
+	symlinkSync(outside, join(payloadRoot, "1.0.0"), "dir");
+	mkdirSync(dirname(backup), { recursive: true }); writeFileSync(backup, '"old"');
+	writeFileSync(journal, JSON.stringify({ id, entries: [{ path: target, existed: true, backup, pointer: true }] }));
+	await expect(recover(agent, payloadRoot)).rejects.toThrow("Cannot restore");
+	expect(readFileSync(victim, "utf8")).toBe('"untouched"');
+	expect(existsSync(journal)).toBe(true); expect(readFileSync(backup, "utf8")).toBe('"old"');
+	rmSync(join(payloadRoot, "1.0.0")); mkdirSync(join(payloadRoot, "1.0.0"));
+	await recover(agent, payloadRoot);
+	expect(readFileSync(target, "utf8")).toBe('"old"');
+	expect(readFileSync(victim, "utf8")).toBe('"untouched"');
+	expect(existsSync(journal)).toBe(false);
+});
+
 test("recovery refuses a linked agent root and leaves the journal", async () => {
 	const dir = mkdtempSync(join(tmpdir(), "ompcli-linked-"));
 	dirs.push(dir);
