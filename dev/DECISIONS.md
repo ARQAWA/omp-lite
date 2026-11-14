@@ -1833,7 +1833,7 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители правила:** `src/modules/turn-duration/`, `dev/tests/harness/turn-duration/`, `dev/history/turn-duration.md`.
 
-## D-NEW-read-summarize — структурные сводки чтения
+## D-104 — структурные сводки чтения
 
 **Решение:** включить `read.summarize.enabled` в рантайме и слепке.
 
