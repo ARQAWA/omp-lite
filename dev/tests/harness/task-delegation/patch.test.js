@@ -31,7 +31,7 @@ test("puts the rule under the first line of the task description", () => {
 test("keeps the rest of the description and other tools untouched", () => {
 	const event = { payload: payload() };
 	harness()(event);
-	expect(event.payload.tools[0].function.description.endsWith(`pass exactly the level the user says. ${TAIL}`)).toBe(true);
+	expect(event.payload.tools[0].function.description.endsWith(`pass exactly the level the user says. In every task say how thorough to be and exactly what to return. ${TAIL}`)).toBe(true);
 	expect(event.payload.tools[1].function.description).toBe("Read a file.");
 });
 
@@ -95,7 +95,7 @@ test("removes mandatory scout wording even when the gate is already present", ()
 		parameters: {},
 	};
 	harness()({ payload: { tools: [tool] } });
-	expect(tool.description).toContain("pass exactly the level the user says. Prefer one agent.");
+	expect(tool.description).toContain("pass exactly the level the user says. In every task say how thorough to be and exactly what to return. Prefer one agent.");
 	expect(tool.description).toContain("- `scout`: Fast read-only scout");
 	expect(tool.description).not.toContain("MUST");
 	expect(tool.description.split(RULE)).toHaveLength(2);
