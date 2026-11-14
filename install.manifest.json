@@ -3,10 +3,6 @@
 	"target": "~/.omp/agent",
 	"files": [
 		{
-			"from": "src/modules/codex-luna-search/codex-luna-search.js",
-			"to": "extensions/codex-luna-search.js"
-		},
-		{
 			"from": "src/modules/codex-transport/codex-parallel.js",
 			"to": "extensions/codex-parallel.js"
 		},
@@ -429,6 +425,7 @@
 		]
 	},
 	"remove": [
+		"extensions/codex-luna-search.js",
 		"extensions/cursor-tools/index.js",
 		"extensions/cursor-tools/descriptions.json",
 		"extensions/memory-tool-prompts.js",
