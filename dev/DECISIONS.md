@@ -1820,3 +1820,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness/subscriptions`.
 
 **Носители правила:** `src/modules/subscriptions/`, `dev/tests/harness/subscriptions/`, `dev/history/subscriptions.md`.
+
+## D-NEW-turn-duration-always — метка после ошибки и отмены
+
+**Решение:** прерванный и упавший ход тоже получает метку времени. Остальные условия вывода не меняются.
+
+**Основание:** 2026-11-14 владелец ответил «да» на вопрос «показывать время и после ошибки и отмены?». Он принял ограничения B-1, B-2 и B-3 аудита без правки кода.
+
+**Заменяет:** запрет метки после ошибки и отмены в D-022. Отмена до старта не выдаёт `agent_end`, поэтому метки нет и часы могут остаться. Проверка простоя может совпасть с новым вводом; переключение сессии может потерять отложенную метку.
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/modes/controllers/input-controller.ts` и `session/agent-session.ts`: отменённая подготовка может не дать `agent_end`, а отправка метки проверяет занятость асинхронно.
+
+**Носители правила:** `src/modules/turn-duration/`, `dev/tests/harness/turn-duration/`, `dev/history/turn-duration.md`.

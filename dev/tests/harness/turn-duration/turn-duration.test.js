@@ -105,19 +105,27 @@ test("a continuation keeps the measurement for the final completion", () => {
 	expect(turn.sent[0].content[0].text).toBe("⏱ 1m 0s");
 });
 
-test("aborted, error and print-mode runs stay silent", () => {
-	for (const [mode, reason, span] of [
-		["tui", "aborted", 90000],
-		["tui", "error", 90000],
-		["print", "stop", 90000],
-	]) {
-		const turn = mount(mode);
-		at([0, span], () => {
-			turn.handlers.input({ text: "go" }, turn.ctx);
-			turn.end(reason);
-		});
-		expect(turn.sent).toEqual([]);
-	}
+test.each(["aborted", "error"])("%s runs show the duration", reason => {
+	const turn = mount();
+	at([0, 90000], () => {
+		turn.handlers.input({ text: "go" }, turn.ctx);
+		turn.handlers.agent_start({}, turn.ctx);
+		turn.end(reason);
+	});
+	expect(turn.sent).toEqual([{
+		customType: "omp-lite.turn-duration",
+		content: [{ type: "text", text: "⏱ 1m 30s" }],
+		display: true,
+	}]);
+});
+
+test("print-mode runs stay silent", () => {
+	const turn = mount("print");
+	at([0, 90000], () => {
+		turn.handlers.input({ text: "go" }, turn.ctx);
+		turn.end();
+	});
+	expect(turn.sent).toEqual([]);
 });
 
 test("consecutive runs each measure from their own start", () => {
@@ -133,19 +141,18 @@ test("consecutive runs each measure from their own start", () => {
 	expect(turn.sent.map(message => message.content[0].text)).toEqual(["⏱ 40s", "⏱ 1m 0s"]);
 });
 
-test("a cancelled preparation does not inflate the next turn", () => {
+test("an aborted run does not inflate the next turn", () => {
 	const turn = mount();
 	at([0, 30000], () => {
 		turn.handlers.input({ text: "go" }, turn.ctx);
+		turn.handlers.agent_start({}, turn.ctx);
 		turn.end("aborted");
 	});
-	expect(turn.sent).toEqual([]);
 	at([50000, 95000], () => {
 		turn.handlers.input({ text: "again" }, turn.ctx);
 		turn.end();
 	});
-	expect(turn.sent.length).toBe(1);
-	expect(turn.sent[0].content[0].text).toBe("⏱ 45s");
+	expect(turn.sent.map(message => message.content[0].text)).toEqual(["⏱ 30s", "⏱ 45s"]);
 });
 
 test("a run without a submission prints nothing", () => {

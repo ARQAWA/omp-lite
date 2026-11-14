@@ -37,9 +37,8 @@ export default function turnDuration(pi) {
 		const messages = event.messages.filter(message => message.customType !== TYPE);
 		return messages.length === event.messages.length ? undefined : { messages };
 	});
-	// The clock starts with the submission, the way the owner asked, and the unit is the turn:
-	// a queued message does not restart it, a continuation keeps it, any end of the main agent
-	// clears it, so a cancelled preparation cannot inflate the next turn.
+	// Queued input does not restart the clock; a continuation keeps it.
+	// A terminal agent_end clears it, but a cancelled preparation may emit no agent_end.
 	pi.on("input", () => {
 		if (!running) started = performance.now();
 	});
@@ -54,11 +53,11 @@ export default function turnDuration(pi) {
 		if (start === undefined || event.willContinue || ctx.mode !== "tui") return;
 		let last;
 		for (const message of event.messages ?? []) if (message?.role === "assistant") last = message;
-		if (!last || last.stopReason === "aborted" || last.stopReason === "error") return;
+		if (!last) return;
 		const label = durationLabel(performance.now() - start);
 		const mark = { customType: TYPE, content: [{ type: "text", text: `⏱ ${label}` }], display: true };
 		// agent_end fires before the agent settles: a message sent now steers the run and the model answers it.
-		// One tick later the agent is idle and the message is only appended and drawn.
+		// One tick later, append when idle or defer while busy.
 		ctx.setTimeout(() => pi.sendMessage(mark, ctx.isIdle() ? { triggerTurn: false } : { deliverAs: "nextTurn" }), 0);
 	});
 }
