@@ -40,6 +40,8 @@ Answer for each row. Do not look for findings outside the rows.
 - Words like `only`, `all`, `every`, `each`, `no`, `consistent` speak of a set, in any language.
 - `only X`: the elements are all the things of that kind in the work. Each one is X or it is not.
 - A limit on a set (`only X`, `nothing beyond`, `minimal`): each element line names what makes it X: the requirement, element or part that needs it. Nothing needs it: violated.
+- An element is violated only when no honest reading of the limit's words allows it. In doubt: kept.
+- A limit covers what the owner spoke of when he set it. Do not stretch it over other parts of the work. Later owner words that allow a thing win over it.
 - `consistent`: the elements are the links: each reference and each pair of places that must agree.
 - A `consistent` line quotes the words of both sides, then gives the status.
 - A file row: read whole what the task did in the file: a new file in full, a changed file by its diff.
