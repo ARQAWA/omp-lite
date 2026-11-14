@@ -80,9 +80,9 @@ export function renderMap(files, budget = Infinity) {
 	for (const group of groups) for (const line of lines.get(group)) size += bytes(line);
 
 	const folded = new Set();
+	let listed = files.length;
 	const footer = () => {
 		if (folded.size === 0) return `[all ${files.length} files listed]`;
-		const listed = groups.filter(group => !folded.has(group)).reduce((sum, group) => sum + group.names.length, 0);
 		return `[${files.length} files: ${listed} listed, the rest folded into ${folded.size} directories]`;
 	};
 	const fold = group => {
@@ -91,6 +91,7 @@ export function renderMap(files, budget = Infinity) {
 		size += bytes(label);
 		lines.set(group, [label]);
 		folded.add(group);
+		listed -= group.names.length;
 	};
 	const total = () => size + bytes(footer());
 
@@ -120,6 +121,8 @@ function searchLine(entry, firstLine) {
 	return `${entry.path} (${matchesWord(entry.count)}): ${clip(firstLine.get(entry.path) ?? "")}`;
 }
 
+const groupLine = (dir, group) => `${dir}/ (${group.files} files, ${group.matches} matches)`;
+
 // Groups the tail by its directory, or by the top-level directory when even
 // those lines are too many.
 function foldTail(tail, firstLine, level) {
@@ -140,7 +143,7 @@ function foldTail(tail, firstLine, level) {
 	}
 	const dirLines = [...groups]
 		.sort((a, b) => b[1].matches - a[1].matches || a[0].localeCompare(b[0]))
-		.map(([dir, group]) => `${dir}/ (${group.files} files, ${group.matches} matches)`);
+		.map(([dir, group]) => groupLine(dir, group));
 	return {
 		dirLines,
 		rootLines: root.map(entry => searchLine(entry, firstLine)),
@@ -158,17 +161,27 @@ export function renderSearch(entries, firstLine, meta, budget = Infinity) {
 	if (sorted.length === 0) return [...base, "No files matched.", "[all 0 files listed]"].join("\n");
 	const footer = (listed, dirs) =>
 		dirs === 0 ? `[all ${sorted.length} files listed]` : `[${sorted.length} files: ${listed} listed, the rest folded into ${dirs} directories]`;
+	const lines = sorted.map(entry => searchLine(entry, firstLine));
+	const fullSize = [...base, ...lines].reduce((sum, line) => sum + bytes(line), 0);
 
 	for (const level of [0, 1]) {
+		const groups = new Map();
+		let size = fullSize, listedRoot = 0;
 		for (let listed = sorted.length; listed >= 0; listed--) {
-			const folded = foldTail(sorted.slice(listed), firstLine, level);
-			const body = [
-				...sorted.slice(0, listed).map(entry => searchLine(entry, firstLine)),
-				...folded.rootLines,
-				...folded.dirLines,
-			];
-			const text = [...base, ...body, footer(listed + folded.listedRoot, folded.dirs)].join("\n");
-			if (Buffer.byteLength(text) <= budget) return text;
+			if (size + bytes(footer(listed + listedRoot, groups.size)) - 1 <= budget) {
+				const folded = foldTail(sorted.slice(listed), firstLine, level);
+				return [...base, ...lines.slice(0, listed), ...folded.rootLines, ...folded.dirLines, footer(listed + listedRoot, groups.size)].join("\n");
+			}
+			if (listed === 0) break;
+			const entry = sorted[listed - 1], at = entry.path.lastIndexOf("/");
+			if (at < 0) { listedRoot++; continue; }
+			const parent = entry.path.slice(0, at), dir = level === 0 ? parent : parent.split("/")[0];
+			const group = groups.get(dir) ?? { files: 0, matches: 0 };
+			if (groups.has(dir)) size -= bytes(groupLine(dir, group));
+			group.files++;
+			group.matches += entry.count;
+			groups.set(dir, group);
+			size += bytes(groupLine(dir, group)) - bytes(lines[listed - 1]);
 		}
 	}
 	const folded = foldTail(sorted, firstLine, 1);
