@@ -1846,3 +1846,17 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests`.
 
 **Носители правила:** `src/modules/runtime-config/config.yml`, `src/modules/runtime-config/README.md`, `dev/history/runtime-config.md`.
+
+## D-105 — основной агент поднимает заметку, которая на деле серьёзная
+
+**Решение:** в `skills/reviewer/SKILL.md`, раздел 4, шаг 7. Уточняет D-098: фраза «основной агент уровень не меняет» стала «основной агент уровень только поднимает». Было: «7. After every round, append to `## Journal` at the end of `<dir>/updates.md` one line for each finding of the round: `<round>.<n> <level> <kind> <row> <place>: fixed | objected | note`. A `note`: record it; do not fix it and do not object. Steps 1-6 are for `serious` findings.» Стало две строки: «7. A `note`: open its place in the work yourself. It is in fact serious (an ordered item is not in the work, the work is against the owner's exact words, a part nobody ordered changes what the work does): fix it by steps 1 and 4. The work changed: the count of clean rounds starts from zero. It is not serious: do not fix it and do not object. You may only raise a level. Never lower a `serious` finding: object by step 2.» и «8. After every round, append to `## Journal` at the end of `<dir>/updates.md` one line for each finding of the round: `<round>.<n> <level> <kind> <row> <place>: fixed | objected | note`. Steps 1-6 are for `serious` findings.» В разделе 3, шаг 6: «(section 4, step 7)» стало «(section 4, steps 7 and 8)». В `README.md` модуля строка про уровень исправлена.
+
+**Основание:** слова владельца, сессия `01a1d13b-8491`: id `70cc7a45` «Смотри, и юрии работают вместе в тандеме. Вооот, и Наследное генжи может увидеть, что то, что посчитал шумом ревьювер Является чем-то серьёзным.» (продиктовано, искажено; смысл: ревьюер и основной агент работают в паре, основной агент может увидеть, что названное шумом серьёзно); id `16605d1a` «Да давай» в ответ на вопрос агента «меняю так и повторяю прогон на документах?» (id `64d1f101`).
+
+**Причина:** проверочный прогон D-098 на документах TRFS-5857 (`omp-lite-audit/reviewer-redesign/mvp/runL2/RESULT.md`): принято за 3 круга вместо 8. Но ревьюер занизил один настоящий дефект до `note`: контекст про эндпоинт, который не вызывает ни один тест-кейс, против слов владельца «только тот контекст, который необходим». По D-098 основной агент не должен был чинить `note`.
+
+**Границы:** основной агент автор работы, поэтому он только поднимает уровень. Опустить `serious` можно только возражением, его судит свежий ревьюер. На Windows VDI не проверено.
+
+**Проверка:** 2026-11-14. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 343 pass, 0 fail. Коммит `066c610`, слияние `ff91805`. Файлы в main и в установке равны (`cmp`). Резервная копия: `~/.omp/backups/install-contract-20261114-230143/skills/reviewer/SKILL.md`. Повтор прогона на документах впереди.
+
+**Носители правила:** `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`.
