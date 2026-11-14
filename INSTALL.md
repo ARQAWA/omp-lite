@@ -118,7 +118,7 @@ cp "<from>" "$HOME/.omp/agent/<to>"
 - `<from>` — путь от корня этого репозитория.
 - `<to>` — путь от `~/.omp/agent`; выходить за его пределы нельзя.
 - Каталог `extensions/codex-web-run/` создаётся как каталог: расширение грузит `index.js` рядом с ресурсами.
-- `agents/` хранит профили сабагентов: `collector.md` и `acceptor.md` приёмки, `task.md` и `sonic.md` с пустой ролью.
+- `agents/` хранит профили сабагентов: `collector.md` и `acceptor.md` приёмки, `task.md` и `sonic.md` с пустой ролью, `scout.md` с ролью `explore` из Cursor.
 - `rules/` хранит правила общения: `communication-main.md` для главного агента, `communication-subagent.md` для сабагентов.
 - `extensions/pi-voice-stt/` хранит плагин диктовки с его `package.json`: OMP грузит его по `pi.extensions`.
 - Одинаковые имена и структура каталогов обязательны: код читает ресурсы относительно себя.
