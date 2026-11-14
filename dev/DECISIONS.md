@@ -1710,3 +1710,13 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness/ompcli dev/tests/repository`: 119 pass, 0 fail.
 
 **Носители правила:** `src/modules/ompcli/index.js`, `dev/scripts/ompcli-runtime/index.js`, их README и тесты.
+
+## D-094 — исправления base-tools
+
+**Решение:** поиск сообщает корень OMP. При ошибке `realpath` используется лексический путь. Алиасы пути правятся вместе. Метка целого файла не ставится при обрезке столбцов. Ошибка `edit` остаётся видна. Сворачивание поиска считает размер постепенно.
+
+**Причина:** OMP 18.18.8: `packages/coding-agent/src/tools/{approval-cache,approval-targets,read,output-meta}.ts`, `crates/pi-edit/src/path_policy.rs`, `packages/tui/src/tools/edit.ts`.
+
+**Проверка:** `bun test dev/tests/harness/base-tools`.
+
+**Носители правила:** `src/modules/base-tools/`, `dev/tests/harness/base-tools/`.

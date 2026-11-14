@@ -4,7 +4,7 @@
 // is not a standard way; a live probe confirms it works.
 
 import { isAbsolute, relative, resolve } from "node:path";
-import { constants } from "node:fs";
+import { constants, realpathSync } from "node:fs";
 import { access, lstat, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import descriptions from "./base-tools.descriptions.json";
@@ -80,9 +80,9 @@ export function renderMap(files, budget = Infinity) {
 	for (const group of groups) for (const line of lines.get(group)) size += bytes(line);
 
 	const folded = new Set();
+	let listed = files.length;
 	const footer = () => {
 		if (folded.size === 0) return `[all ${files.length} files listed]`;
-		const listed = groups.filter(group => !folded.has(group)).reduce((sum, group) => sum + group.names.length, 0);
 		return `[${files.length} files: ${listed} listed, the rest folded into ${folded.size} directories]`;
 	};
 	const fold = group => {
@@ -91,6 +91,7 @@ export function renderMap(files, budget = Infinity) {
 		size += bytes(label);
 		lines.set(group, [label]);
 		folded.add(group);
+		listed -= group.names.length;
 	};
 	const total = () => size + bytes(footer());
 
@@ -120,6 +121,8 @@ function searchLine(entry, firstLine) {
 	return `${entry.path} (${matchesWord(entry.count)}): ${clip(firstLine.get(entry.path) ?? "")}`;
 }
 
+const groupLine = (dir, group) => `${dir}/ (${group.files} files, ${group.matches} matches)`;
+
 // Groups the tail by its directory, or by the top-level directory when even
 // those lines are too many.
 function foldTail(tail, firstLine, level) {
@@ -140,7 +143,7 @@ function foldTail(tail, firstLine, level) {
 	}
 	const dirLines = [...groups]
 		.sort((a, b) => b[1].matches - a[1].matches || a[0].localeCompare(b[0]))
-		.map(([dir, group]) => `${dir}/ (${group.files} files, ${group.matches} matches)`);
+		.map(([dir, group]) => groupLine(dir, group));
 	return {
 		dirLines,
 		rootLines: root.map(entry => searchLine(entry, firstLine)),
@@ -158,17 +161,27 @@ export function renderSearch(entries, firstLine, meta, budget = Infinity) {
 	if (sorted.length === 0) return [...base, "No files matched.", "[all 0 files listed]"].join("\n");
 	const footer = (listed, dirs) =>
 		dirs === 0 ? `[all ${sorted.length} files listed]` : `[${sorted.length} files: ${listed} listed, the rest folded into ${dirs} directories]`;
+	const lines = sorted.map(entry => searchLine(entry, firstLine));
+	const fullSize = [...base, ...lines].reduce((sum, line) => sum + bytes(line), 0);
 
 	for (const level of [0, 1]) {
+		const groups = new Map();
+		let size = fullSize, listedRoot = 0;
 		for (let listed = sorted.length; listed >= 0; listed--) {
-			const folded = foldTail(sorted.slice(listed), firstLine, level);
-			const body = [
-				...sorted.slice(0, listed).map(entry => searchLine(entry, firstLine)),
-				...folded.rootLines,
-				...folded.dirLines,
-			];
-			const text = [...base, ...body, footer(listed + folded.listedRoot, folded.dirs)].join("\n");
-			if (Buffer.byteLength(text) <= budget) return text;
+			if (size + bytes(footer(listed + listedRoot, groups.size)) - 1 <= budget) {
+				const folded = foldTail(sorted.slice(listed), firstLine, level);
+				return [...base, ...lines.slice(0, listed), ...folded.rootLines, ...folded.dirLines, footer(listed + listedRoot, groups.size)].join("\n");
+			}
+			if (listed === 0) break;
+			const entry = sorted[listed - 1], at = entry.path.lastIndexOf("/");
+			if (at < 0) { listedRoot++; continue; }
+			const parent = entry.path.slice(0, at), dir = level === 0 ? parent : parent.split("/")[0];
+			const group = groups.get(dir) ?? { files: 0, matches: 0 };
+			if (groups.has(dir)) size -= bytes(groupLine(dir, group));
+			group.files++;
+			group.matches += entry.count;
+			groups.set(dir, group);
+			size += bytes(groupLine(dir, group)) - bytes(lines[listed - 1]);
 		}
 	}
 	const folded = foldTail(sorted, firstLine, 1);
@@ -413,21 +426,23 @@ export function splitPatch(input) {
  * Undefined: the patch goes to the native edit as it is. `skipped` keeps every
  * left-out section as sent, so the model does not lose its text.
  */
-export async function partialPatch(input, dry) {
+export async function partialPatch(input, dry, cwd = process.cwd()) {
 	const sections = splitPatch(input) ?? [];
-	const paths = [...new Set(sections.map(section => section.path))];
 	// Internal URL targets resolve only inside the native edit.
-	if (paths.length < 2 || paths.some(path => /^\w+:\//.test(path))) return;
+	if (sections.some(section => /^\w{2,}:\//.test(section.path))) return;
+	const key = section => resolve(cwd, section.path);
+	const paths = [...new Set(sections.map(key))];
+	if (paths.length < 2) return;
 	if (!(await dry(input)).isError) return;
 	const skipped = [];
 	for (const path of paths) {
-		const own = sections.filter(section => section.path === path);
+		const own = sections.filter(section => key(section) === path);
 		const outcome = await dry(wrapPatch(own));
-		if (outcome.isError) skipped.push({ path, reason: outcome.text, patch: own.flatMap(section => section.lines).join("\n") });
+		if (outcome.isError) skipped.push({ path: own[0].path, reason: outcome.text, patch: own.flatMap(section => section.lines).join("\n") });
 	}
 	if (skipped.length === 0 || skipped.length === paths.length) return;
-	const names = new Set(skipped.map(entry => entry.path));
-	return { input: wrapPatch(sections.filter(section => !names.has(section.path))), skipped };
+	const names = new Set(skipped.map(entry => resolve(cwd, entry.path)));
+	return { input: wrapPatch(sections.filter(section => !names.has(key(section)))), skipped };
 }
 
 // One staging pass of the native edit engine; the writer keeps the disk untouched.
@@ -468,8 +483,12 @@ function skippedResult(event, reduced) {
 	if (!reduced.delete(event.toolCallId)) return;
 	const { head, section, tail } = toolTexts.skipped;
 	const note = [head, ...state.skipped.flatMap(({ path, reason, patch }) => [`[${path}]: ${reason}`, section, patch]), tail].join("\n");
+	if (event.isError === true) return {
+		content: [{ type: "text", text: [note, ...event.content.filter(block => block.type === "text").map(block => block.text)].join("\n") }, ...event.content.filter(block => block.type !== "text")],
+		isError: true,
+		details: event.details,
+	};
 	const content = [{ type: "text", text: note }, ...event.content];
-	if (event.isError === true) return { content };
 	const details = event.details;
 	const written = details?.perFileResults ?? (details ? [details] : []);
 	return {
@@ -481,12 +500,25 @@ function skippedResult(event, reduced) {
 
 export function install(pi, options = {}) {
 	const z = pi.zod;
+	let session, directoryKey, treeKey;
+	pi.on?.("session_start", async (_event, ctx) => {
+		session = ctx.sessionManager;
+		[{ approvalDirectoryKey: directoryKey }, { approvalTreeSearchKey: treeKey }] = await (options.approvalTargets ?? (() => Promise.all([
+			import("@oh-my-pi/pi-coding-agent/tools/approval-cache"), import("@oh-my-pi/pi-coding-agent/tools/approval-targets"),
+		])))();
+	});
 	pi.registerTool({
 		name: "files",
 		label: "files",
 		loadMode: "essential",
-		concurrency: "shared",
 		approval: "read",
+		approvalCacheTargets: args => {
+			const cwd = session.getCwd();
+			const root = args?.path ? (isAbsolute(args.path) ? args.path : resolve(cwd, args.path)) : cwd;
+			let target = resolve(cwd, root);
+			try { target = realpathSync.native(root); } catch {}
+			return [treeKey(directoryKey(target))];
+		},
 		strict: false,
 		description: FILES_DESCRIPTION,
 		parameters: z.object({
@@ -525,7 +557,7 @@ export function install(pi, options = {}) {
 		if (canonicalName(event.toolName) !== "edit" || typeof input !== "string") return;
 		// Fail open: an error or a slow dry run leaves the patch to the native edit.
 		const work = (async () => {
-			const partial = await partialPatch(input, options.dry ?? (await dryRunner(pi, ctx.cwd)));
+			const partial = await partialPatch(input, options.dry ?? (await dryRunner(pi, ctx.cwd)), ctx.cwd);
 			// One red box per skipped file, with absolute paths like the native entries.
 			return partial && {
 				...partial,
@@ -643,7 +675,7 @@ export function wholeFileContent(event) {
 	if (typeof event !== "object" || event === null || event.toolName !== "read" || event.isError === true) return;
 	const details = event.details;
 	if (typeof details !== "object" || details === null || details.isDirectory === true) return;
-	if (!Number.isInteger(details.totalLines) || details.truncation?.truncated === true) return;
+	if (!Number.isInteger(details.totalLines) || details.truncation?.truncated === true || details.meta?.limits?.columnTruncated) return;
 	if (details.summary !== undefined || details.meta?.source?.type === "url") return;
 	if (!Array.isArray(event.content) || event.content.some(block => block?.type === "image")) return;
 	if (marked.has(details)) return;

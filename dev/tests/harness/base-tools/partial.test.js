@@ -60,6 +60,19 @@ const reasonOf = name => `Failed to find expected lines in ${name}.txt`;
 const section = (name, text) => `[${name}.txt]: ${reasonOf(name)}\n${texts.skipped.section}\n${text}`;
 const failed = name => ({ path: resolve("/work", `${name}.txt`), diff: "", isError: true, errorText: reasonOf(name) });
 
+test("a failed file and its delete alias are both removed from the patch", async () => {
+	const handlers = hooks(dry(["a.txt"])), del = "*** Delete File: ./a.txt";
+	expect(await handlers.tool_call(call("edit", patch(a, del, c)), ctx)).toEqual({ input: { input: patch(c) } });
+	const message = handlers.tool_result(result("one")).content[0].text;
+	expect(message).toContain(`${a}\n${del}`);
+});
+
+test("Windows drive paths allow partial patches", async () => {
+	const good = "*** Add File: C:/repo/a.txt\n+a", bad = "*** Update File: C:/repo/b.txt\n@@\n-wrong\n+b";
+	const handlers = hooks(dry(["C:/repo/b.txt"]));
+	expect(await handlers.tool_call(call("edit", patch(good, bad)), ctx)).toEqual({ input: { input: patch(good) } });
+});
+
 test("several files written: the result is an error, the note keeps the removed sections, every skipped file gets a red entry", async () => {
 	const handlers = hooks(dry(["b.txt", "d.txt"]));
 	const done = [{ path: "/work/a.txt", diff: "+new a" }, { path: "/work/c.txt", diff: "+new c" }];
@@ -86,12 +99,14 @@ test("one file written: its own details become the first entry", async () => {
 	});
 });
 
-test("a native failure keeps its own error and details, the note is still first", async () => {
+test("a native failure keeps its error in the first text block and preserves details", async () => {
 	const handlers = hooks(dry(["b.txt"]));
 	await handlers.tool_call(call("edit", patch(a, b)), ctx);
 	const native = result("one", { isError: true, content: [{ type: "text", text: "boom" }], details: { diff: "", errorKind: "parse" } });
 	expect(handlers.tool_result(native)).toStrictEqual({
-		content: [{ type: "text", text: [texts.skipped.head, section("b", b), texts.skipped.tail].join("\n") }, ...native.content],
+		content: [{ type: "text", text: [texts.skipped.head, section("b", b), texts.skipped.tail, "boom"].join("\n") }],
+		isError: true,
+		details: native.details,
 	});
 });
 

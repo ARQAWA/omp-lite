@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
+import { existsSync, realpathSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import {
 	FILES_DESCRIPTION,
 	groupByDirectory,
@@ -545,6 +546,25 @@ test("a long tail is folded by directory and the counts add up", () => {
 	expect(Number(match[2])).toBeGreaterThan(0);
 });
 
+test("a large search preserves order and totals within the budget", async () => {
+	const n = 20000, entries = Array.from({ length: n }, (_, i) => ({ path: `src/d${i % 20}/f${i}.ts`, matchCount: n - i }));
+	const field = () => ({ optional: field }), tools = [];
+	install({ zod: { string: field, boolean: field, object: shape => shape }, registerTool: tool => tools.push(tool) }, {
+		engine: searchEngine([], { matches: entries, filesSearched: n }, { matches: entries.map(({ path }) => ({ path, line: "x".repeat(200) })) }),
+		threshold: 100,
+	});
+	const text = (await tools[0].execute("large", { pattern: "x" }, undefined, undefined, { cwd: "/repo" })).content[0].text;
+	const lines = text.split("\n"), listed = [...text.matchAll(/^src\/d\d+\/f\d+\.ts \((\d+) matches?\):/gm)].map(hit => +hit[1]);
+	const folded = [...text.matchAll(/^src\/d\d+\/ \((\d+) files, (\d+) matches\)$/gm)];
+	expect(lines[0]).toBe(`${n} files, ${n * (n + 1) / 2} matches, searched ${n} of ${n} files`);
+	expect(Buffer.byteLength(text)).toBeLessThanOrEqual(95 * 1024);
+	expect(listed.length).toBeGreaterThan(0);
+	expect(listed.every((count, i) => count === n - i)).toBe(true);
+	expect(listed.length + folded.reduce((sum, hit) => sum + +hit[1], 0)).toBe(n);
+	expect(listed.reduce((sum, count) => sum + count, 0) + folded.reduce((sum, hit) => sum + +hit[2], 0)).toBe(n * (n + 1) / 2);
+	expect(lines.at(-1)).toBe(`[${n} files: ${listed.length} listed, the rest folded into ${folded.length} directories]`);
+});
+
 test("an invalid regex is passed through literally, without a tool error", async () => {
 	const capture = [];
 	const result = await search({ pattern: "(" }, ["a.ts"], {
@@ -633,6 +653,28 @@ test("the schema exposes path, glob, pattern, case, hidden and gitignore", () =>
 	expect(tools[0].name).toBe("files");
 	expect(Object.keys(tools[0].parameters).sort()).toEqual(["case", "gitignore", "glob", "hidden", "path", "pattern"]);
 	expect(tools[0].description).toBe(FILES_DESCRIPTION);
+});
+
+test("files declares recursive approval targets for its session search root", async () => {
+	const root = await mkdtemp(join(tmpdir(), "files-approval-")), cwd = join(root, "repo"), outside = join(root, "outside ");
+	try {
+		await mkdir(join(cwd, "src"), { recursive: true });
+		await mkdir(outside);
+		await symlink(outside, join(cwd, "link"));
+		const handlers = {}, tools = [], field = () => ({ optional: field });
+		install({ zod: { string: field, boolean: field, object: shape => shape }, on: (name, fn) => handlers[name] = fn, registerTool: tool => tools.push(tool) }, {
+			approvalTargets: async () => [{ approvalDirectoryKey: path => { const dir = existsSync(path) ? realpathSync(resolve(path)) : resolve(path); return dir.endsWith("/") ? dir : `${dir}/`; } }, { approvalTreeSearchKey: dir => `tree\0${dir}` }],
+		});
+		await handlers.session_start({}, { sessionManager: { getCwd: () => cwd } });
+		for (const [params, target] of [[{}, cwd], [{ path: "src", pattern: "x" }, join(cwd, "src")], [{ path: outside }, outside], [{ path: join(cwd, "link") }, outside], [{ path: "/" }, "/"]]) {
+			const path = realpathSync(target);
+			expect(tools[0].approvalCacheTargets(params)).toEqual([`tree\0${path.endsWith("/") ? path : `${path}/`}`]);
+		}
+		const missing = join(realpathSync(cwd), "missing");
+		expect(tools[0].approvalCacheTargets({ path: missing })).toEqual([`tree\0${missing}/`]);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
 });
 
 test("the budget is the spill threshold minus five kilobytes", () => {

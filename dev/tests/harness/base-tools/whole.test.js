@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { wholeFileContent } from "../../../../src/modules/base-tools/index.js";
+import { install, wholeFileContent } from "../../../../src/modules/base-tools/index.js";
 
 const event = (details, overrides = {}) => ({
 	toolName: "read",
@@ -37,14 +37,7 @@ test("a range to EOF, tail and middle range are not covered", () => {
 	expect(wholeFileContent(event(whole({ displayContent: undefined })))).toBeUndefined();
 });
 
-test("a raw whole file with display metadata gets the marker", () => {
-	const content = wholeFileContent(
-		event(whole({ totalLines: 5, fileSize: 24, displayContent: { text: "one\ntwo\nthree\nfour\nfive", startLine: 1, lineNumbers: [1, 2, 3, 4, 5] } }), { content: [{ type: "text", text: "one\ntwo\nthree\nfour\nfive" }] }),
-	);
-	expect(content[0].text).toContain("[whole file: 5 lines]");
-});
-
-test("a range whose display covers the whole file is marked", () => {
+test("display metadata covering five lines gets the marker", () => {
 	const content = wholeFileContent(
 		event(whole({ totalLines: 5, fileSize: 24, displayContent: { text: "one\ntwo\nthree\nfour\nfive", startLine: 1, lineNumbers: [1, 2, 3, 4, 5] } }), { content: [{ type: "text", text: "one\ntwo\nthree\nfour\nfive" }] }),
 	);
@@ -60,6 +53,13 @@ test("a file that ends with another count is not mistaken for the marker", () =>
 
 test("a range or cut keeps its native notice", () => {
 	expect(wholeFileContent(event({ totalLines: 20, truncation: { truncated: true } }))).toBeUndefined();
+});
+
+test("a column-truncated read does not get a whole-file marker", () => {
+	const handlers = {}, field = () => ({ optional: field });
+	install({ zod: { string: field, boolean: field, object: shape => shape }, on: (name, fn) => handlers[name] = fn, registerTool() {} });
+	const meta = { source: { type: "path", value: "x" }, limits: { columnTruncated: { maxColumn: 4, unit: "chars" } } };
+	expect(handlers.tool_result(event(whole({ meta })))).toBeUndefined();
 });
 
 test("errors, directories, images, URLs, summaries and multi-ranges stay untouched", () => {
