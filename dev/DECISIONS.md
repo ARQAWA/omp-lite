@@ -1544,3 +1544,51 @@ Blind и high больше не различаются ни моделью, ни
 Установка по манифесту: заменены `extensions/base-tools.js` и `extensions/base-tools.texts.json`; копии в `~/.omp/backups/install-contract-20261114-181706`. Сверка: все записи манифеста на месте и байт в байт, кроме `stt.windows.json` вне сверки. Обычная сессия без флагов: `a.txt` и `c.txt` записаны, `b.txt` не тронут, ответ тула с `isError: true` и убранной секцией, stderr пуст.
 
 **Носители правила:** `src/modules/base-tools/index.js`, `base-tools.texts.json`, README модуля, тест `dev/tests/harness/base-tools/partial.test.js`.
+
+## D-081 — часть, которая только повторяет другую часть, это extra
+
+**Решение:** в `agents/acceptor.md`, раздел `## Rows`. Было: «A part serves a requirement only when the requirement is not met without this part. A limit never orders a part.» Стало: «A part serves a requirement only when the requirement is not met without this part. A part that only repeats another part serves none. A limit never orders a part.»
+
+**Основание:** Владелец, сессия `01a1d13b-8491`: «да давай делай всю работу далее автономно до тех пор пока не посчитаешь ее выполненной полностью и дай краткий отчет потом». Статус: в силе, подтвердит тестовый прогон 2b.
+
+**Причина:** замер E1 (15 ревьюеров `openai-codex/gpt-6.1-terra:xhigh` на одной замороженной работе TRFS-5857): таблица «Покрытие» плана тестов повторяет колонку AC таблицы тест-кейсов. С этой фразой ревьюеры назвали её `extra` в 4 ответах из 4, без неё в 1 из 8. В прогоне 2 нашли только в круге 6. Источники: `omp-lite-audit/reviewer-redesign/mvp/e1/` (`KEY.md`) и `omp-lite-audit/reviewer-redesign/mvp/run2/RESULT.md`.
+
+**Заменяет:** уточняет D-071 и D-064, ничего не отменяет.
+
+**Границы:** текст промпта, живой прогон ещё не делали. На Windows VDI не проверено.
+
+**Проверка:** 2026-11-14, OMP 18.18.8. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 338 pass, 0 fail. Коммит `fdc9174`, слияние `dae39f5`. Установлено по манифесту: копии в `~/.omp/backups/install-contract-20261114-182331`. Живой прогон ревью после правки ещё не был: ждёт прогон 2b
+
+**Носители правила:** `src/modules/review/agents/acceptor.md`, `src/modules/review/README.md`.
+
+## D-082 — после находки об ограничении на набор агент проходит весь набор сам
+
+**Решение:** в `skills/reviewer/SKILL.md`, раздел 4, шаг 1, в конце: «The finding is about a limit on a set (`only X`, `nothing beyond`, `minimal`): go through the whole set yourself and fix every element that breaks the limit, not only the named ones.»
+
+**Основание:** Владелец, сессия `01a1d13b-8491`: «да давай делай всю работу далее автономно до тех пор пока не посчитаешь ее выполненной полностью и дай краткий отчет потом». Статус: в силе, подтвердит тестовый прогон 2b.
+
+**Причина:** один ревьюер находит около половины элементов, нарушающих такое ограничение, другой другую половину (E1: из шести таких мест один ответ назвал от 1 до 6). В прогоне 2 находки по одному ограничению `L5` пришли в кругах 1, 2, 4 и 5: четыре круга на одно ограничение. Источники: `omp-lite-audit/reviewer-redesign/mvp/e1/` (`KEY.md`) и `omp-lite-audit/reviewer-redesign/mvp/run2/RESULT.md`.
+
+**Заменяет:** уточняет D-071 и D-064, ничего не отменяет.
+
+**Границы:** текст промпта, живой прогон ещё не делали. На Windows VDI не проверено.
+
+**Проверка:** 2026-11-14, OMP 18.18.8. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 338 pass, 0 fail. Коммит `fdc9174`, слияние `dae39f5`. Установлено по манифесту: копии в `~/.omp/backups/install-contract-20261114-182331`. Живой прогон ревью после правки ещё не был: ждёт прогон 2b
+
+**Носители правила:** `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`.
+
+## D-083 — поздние слова владельца, разрешающие запрещённое ограничением, цитируются под ограничением
+
+**Решение:** в `agents/collector.md`, шаг 2, строка про финальное состояние, в конце: «Later owner words that allow a thing a limit forbids: quote them under that limit, with their `id`, and let the limit line say what stands after them.»
+
+**Основание:** Владелец, сессия `01a1d13b-8491`: «да давай делай всю работу далее автономно до тех пор пока не посчитаешь ее выполненной полностью и дай краткий отчет потом». Статус: в силе, подтвердит тестовый прогон 2b.
+
+**Причина:** правило ревьюера из D-071 («Later owner words that allow a thing win over it») работает, только когда эти слова лежат в `facts.md`. В прогоне 2 ограничение `L6` («ты опираешься только на то, что написано в в тексте задачи») записано без позднего одобрения четырёх тест-кейсов с их источниками из MR. В E1 6 ответов из 12 подняли находку по `L6`, 6 оставили. Источники: `omp-lite-audit/reviewer-redesign/mvp/e1/` (`KEY.md`) и `omp-lite-audit/reviewer-redesign/mvp/run2/RESULT.md`.
+
+**Заменяет:** уточняет D-071 и D-064, ничего не отменяет.
+
+**Границы:** текст промпта, живой прогон ещё не делали. На Windows VDI не проверено.
+
+**Проверка:** 2026-11-14, OMP 18.18.8. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 338 pass, 0 fail. Коммит `fdc9174`, слияние `dae39f5`. Установлено по манифесту: копии в `~/.omp/backups/install-contract-20261114-182331`. Живой прогон ревью после правки ещё не был: ждёт прогон 2b
+
+**Носители правила:** `src/modules/review/agents/collector.md`, `src/modules/review/README.md`.
