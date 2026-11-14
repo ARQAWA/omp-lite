@@ -10,7 +10,6 @@
 	"marketplace": "Update OMP CLI in Marketplace.",
 	"updated": "omp-lite updated. Open a new tab.",
 	"stale": "A newer OMP CLI is in Marketplace.",
-	"install": "OMP CLI: installing harness",
 	"installFailed": "OMP CLI install failed: {reason}",
 	"preparing": "OMP CLI: preparing {name} ({size} MB)",
 	"download": "OMP download failed: HTTP {status}",
@@ -22,7 +21,6 @@
 	"path": "Unsafe path: {value}",
 	"manifest": "Invalid install manifest: {reason}",
 	"pointer": "Invalid payload pointer: {path}",
-	"config": "Invalid configuration: {path}",
 	"backup": "Cannot restore {path}",
 	"memoryTimeout": "Local memory did not start in {seconds}s.",
 	"memoryExit": "Local memory exited: {code} {reason}",
@@ -31,6 +29,5 @@
 	"update": "OMP CLI: updating",
 	"updateFailed": "OMP CLI update failed: {reason}",
 	"updateLookup": "OMP update lookup failed: HTTP {status}",
-	"updateDownload": "OMP update download failed: HTTP {status}",
 	"rewritten": "OMP CLI bootstrap changed. {marketplace}"
 }

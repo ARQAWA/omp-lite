@@ -1095,13 +1095,10 @@ function assertPlatform(platform, arch) {
 
 function loadNodePty(vscode) {
 	const candidates = [path.join(vscode.env.appRoot, "node_modules.asar", "node-pty"), path.join(vscode.env.appRoot, "node_modules", "node-pty")];
-	let last;
 	for (const candidate of candidates) {
 		try {
 			return require(candidate);
-		} catch (error) {
-			last = error;
-		}
+		} catch {}
 	}
 	throw new Error(format(messages.nodePty, { path: candidates[0] }));
 }

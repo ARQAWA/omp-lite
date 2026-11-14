@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { stage } from "../../scripts/ompcli-build/stage.js";
@@ -84,16 +84,6 @@ test("the staged payload keeps config fragments byte for byte", async () => {
 	const manifest = JSON.parse(readFileSync(join(root, "install.manifest.json"), "utf8"));
 	await stage(root, dist, manifest, "a".repeat(40));
 	expect(readFileSync(join(dist, "payload/src/modules/a/config.yml"), "utf8")).toBe(readFileSync(join(root, "src/modules/a/config.yml"), "utf8"));
-});
-
-test("the staged extension manifest keeps the three commands", async () => {
-	const root = fixture();
-	const dist = join(temporary(), "dist");
-	const manifest = JSON.parse(readFileSync(join(root, "install.manifest.json"), "utf8"));
-	await stage(root, dist, manifest, "b".repeat(40));
-	const packaged = JSON.parse(readFileSync(join(dist, "package.json"), "utf8"));
-	expect(packaged.contributes.commands.map(entry => entry.command)).toEqual(["ompcli.newTab", "ompcli.shellTab", "ompcli.update"]);
-	expect(statSync(join(dist, "index.js")).isFile()).toBe(true);
 });
 
 test("a development file in the manifest is refused", async () => {

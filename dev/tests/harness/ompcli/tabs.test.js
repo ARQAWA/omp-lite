@@ -234,7 +234,7 @@ test("a new terminal tab opens Git Bash, not OMP", async () => {
 	expect(readFileSync(rc, "utf8")).toContain("export PI_CONFIG_FILES=");
 });
 
-test("the shell receives OMP, Bun, the overlay and the embedding size", async () => {
+test("the shell receives OMP, the overlay and the embedding size", async () => {
 	const { pty, storageDir, instance } = cli();
 	await instance.shellTab();
 	await until(() => pty.spawned.length === 1);
