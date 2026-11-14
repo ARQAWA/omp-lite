@@ -1784,3 +1784,17 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** на Windows VDI не проверено, проверка за владельцем.
 
 **Носители правила:** `src/modules/ompcli/package.json`.
+
+## D-NEW-subs-active-account — лимит активного аккаунта
+
+**Решение:** для OAuth показывать отчёт активного аккаунта сессии при однозначном сопоставлении. Иначе сохранять последний отчёт провайдера.
+
+**Основание:** заказ владельца от 2026-11-14: показывать лимит активного аккаунта.
+
+**Причина:** OMP 18.18.8, `packages/ai/src/auth/oauth.ts` и `packages/coding-agent/src/slash-commands/helpers/active-oauth-account.ts`: список аккаунтов отмечает сессионный pin, сопоставление учитывает идентичность отчёта.
+
+**Границы:** отчёт OpenCode Go не содержит идентификатор аккаунта API-ключа.
+
+**Проверка:** `bun test dev/tests/harness/subscriptions`.
+
+**Носители правила:** `src/modules/subscriptions/`, `dev/tests/harness/subscriptions/`, `dev/history/subscriptions.md`.
