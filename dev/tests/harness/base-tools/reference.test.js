@@ -34,8 +34,10 @@ test("a child without edit is not a mismatch", () => {
 });
 
 test("the engine exports used by files are present", async () => {
-	expect(await checkEngine(async () => ({ glob() {}, grep() {}, FileType: {} }))).toBeUndefined();
-	expect(await checkEngine(async () => ({ glob: 1, grep() {}, FileType: {} }))).toBe("base-tools: engine glob changed");
+	const engine = { glob() {}, grep() {}, FileType: {}, EditSession() {}, EditStore() {} };
+	expect(await checkEngine(async () => engine)).toBeUndefined();
+	expect(await checkEngine(async () => ({ ...engine, glob: 1 }))).toBe("base-tools: engine glob changed");
+	expect(await checkEngine(async () => ({ ...engine, EditSession: undefined }))).toBe("base-tools: engine EditSession changed");
 });
 
 test("a changed description names its tool", () => {

@@ -2,7 +2,9 @@
 	"engine": {
 		"glob": "function",
 		"grep": "function",
-		"FileType": "object"
+		"FileType": "object",
+		"EditSession": "function",
+		"EditStore": "function"
 	},
 	"settings": {
 		"read.defaultLimit": 4000,
