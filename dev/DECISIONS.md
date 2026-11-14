@@ -1773,7 +1773,7 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители правила:** `src/modules/review/agents/acceptor.md`, `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`.
 
-## D-098 — выпуск ompcli 0.0.13
+## D-099 — выпуск ompcli 0.0.13
 
 **Решение:** расширение `arqawa.ompcli` 0.0.13 опубликовано в Marketplace. В нём правки D-093.
 
@@ -1785,7 +1785,7 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители правила:** `src/modules/ompcli/package.json`.
 
-## D-099 — удаление патча поиска
+## D-100 — удаление патча поиска
 
 **Решение:** удалить модуль и его файл из поставки; установленный файл удаляется по `remove` манифеста.
 
