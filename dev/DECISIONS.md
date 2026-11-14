@@ -1610,3 +1610,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness/compactions`.
 
 **Носители правила:** `src/modules/compactions/index.js`, README и тест модуля.
+
+## D-085 — лимиты подписок берутся из общих окон
+
+**Решение:** `subscriptions` выбирает окна с `scope.shared` без `scope.tier`.
+
+**Основание:** заказ владельца: не показывать лимит модели как лимит подписки.
+
+**Причина:** OMP 18.18.8, `packages/ai/src/usage/claude.ts`: общее окно помечено `shared`, лимиты моделей имеют `tier`. `packages/ai/src/usage/openai-codex.ts`: дополнительные лимиты имеют и `shared`, и `tier`. `packages/ai/src/usage/opencode-go.ts`: окна общие, без `tier`.
+
+**Проверка:** `bun test dev/tests/harness/subscriptions`.
+
+**Носители правила:** `src/modules/subscriptions/index.js`, тест модуля.

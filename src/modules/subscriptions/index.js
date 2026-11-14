@@ -11,7 +11,7 @@ const percent = amount => {
 	return typeof fraction === "number" ? `${Math.round(fraction * 100)}%` : undefined;
 };
 
-const windowOf = (report, id) => report?.limits?.find(limit => limit.window?.id === id);
+const windowOf = (report, id) => report?.limits?.find(limit => limit.scope?.shared && !limit.scope.tier && limit.window?.id === id);
 
 export function marks(reports) {
 	const byProvider = new Map(reports.map(report => [report.provider, report]));

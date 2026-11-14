@@ -1,9 +1,9 @@
-import { expect, test } from "bun:test";
+import { expect, mock, test } from "bun:test";
 import subscriptions, { marks } from "../../../../src/modules/subscriptions/index.js";
 
 const report = (provider, limits) => ({
 	provider,
-	limits: limits.map(([id, remainingFraction]) => ({ window: { id }, amount: { remainingFraction } })),
+	limits: limits.map(([id, remainingFraction]) => ({ scope: { shared: true }, window: { id }, amount: { remainingFraction } })),
 });
 
 test("marks show remaining percent for each subscription", () => {
@@ -19,55 +19,49 @@ test("marks show remaining percent for each subscription", () => {
 	]);
 });
 
-test("subscriptions without a window stay silent", () => {
+test("subscriptions without a window stay silent", async () => {
 	const reports = [report("cursor", [["monthly", 1]]), report("opencode-go", [["7d", 0.5]])];
 	expect(marks(reports)).toEqual([["30-go", "Go 50%"]]);
 	expect(marks([])).toEqual([]);
-});
-
-test("a missing window of a known provider prints nothing", () => {
-	const reports = [report("anthropic", [["5h", 1]])];
-	expect(marks(reports)).toEqual([]);
-});
-
-test("only the main TUI session paints", () => {
-	const handlers = {};
-	const painted = [];
-	const pi = { on: (event, handler) => (handlers[event] = handler) };
-	subscriptions(pi);
-	const ctx = {
-		mode: "print",
-		hasUI: true,
-		agent: { kind: "main" },
-		ui: { setStatus: (key, text) => painted.push([key, text]) },
-		setInterval: () => {},
-	};
-	handlers.session_start({}, ctx);
-	expect(painted).toEqual([]);
+	expect(marks([report("anthropic", [["5h", 1]])])).toEqual([]);
+	const limit = scope => ({ scope, window: { id: "7d" }, amount: { remainingFraction: 0.5 } });
+	const { painted } = mount(usage([{ provider: "anthropic", limits: [limit({ tier: "opus" })] }, { provider: "openai-codex", limits: [limit({ shared: true, tier: "spark" })] }]));
+	await flush();
+	expect(painted).toEqual([["10-cc", undefined], ["20-cx", undefined], ["30-go", undefined]]);
 });
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 
 const usage = reports => async () => JSON.stringify({ reports });
 
-function mount(read, mode = "tui") {
+function mount(read, overrides = {}) {
 	const handlers = {};
 	const painted = [];
 	let tick;
 	const pi = { on: (event, handler) => (handlers[event] = handler) };
 	subscriptions(pi, read);
 	const ctx = {
-		mode,
+		mode: "tui",
 		hasUI: true,
 		agent: { kind: "main" },
 		ui: { setStatus: (key, text) => painted.push([key, text]) },
 		setInterval: callback => {
 			tick = callback;
 		},
+		...overrides,
 	};
 	handlers.session_start({}, ctx);
 	return { handlers, painted, tick: () => tick() };
 }
+
+test("only the main TUI session paints", () => {
+	for (const ctx of [{ mode: "print" }, { hasUI: false }, { agent: { kind: "sub" } }]) {
+		const read = mock(usage([])), setInterval = mock(() => {});
+		mount(read, { ...ctx, setInterval });
+		expect(read).not.toHaveBeenCalled();
+		expect(setInterval).not.toHaveBeenCalled();
+	}
+});
 
 test("a successful read paints every mark through the extension entry", async () => {
 	const { painted } = mount(
