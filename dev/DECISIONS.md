@@ -1639,9 +1639,9 @@ Blind и high больше не различаются ни моделью, ни
 
 ## D-NEW-task-delegation — точечная замена подсказок
 
-**Решение:** подсказка `task` заменяется только в конце текстовой части; из `eval` удаляется и вариант подсказки `workpool` без `wait`.
+**Решение:** заменяется последнее совпадение подсказки `task` в текстовой части; из `eval` удаляется и вариант подсказки `workpool` без `wait`.
 
-**Причина:** OMP 18.18.8, `packages/coding-agent/src/task/index.ts` и `prompts/tools/eval.md`. Цитата в конце ответа неотличима от подсказки; подсказка перед советом координации не заменяется.
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/task/index.ts` и `prompts/tools/eval.md`. Совпадающую цитату без настоящей подсказки отличить нельзя.
 
 **Проверка:** `bun test dev/tests/harness/task-delegation dev/tests/harness/runtime-config`.
 

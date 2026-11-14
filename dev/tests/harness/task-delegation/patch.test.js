@@ -98,14 +98,21 @@ test("removes mandatory scout wording even when the gate is already present", ()
 	expect(tool.description.split(RULE)).toHaveLength(2);
 });
 
-test("replaces only a trailing specialist tip, not quoted report text", () => {
+const tip = "Tip: this call spawned 2 generic `task` workers. Check the agent list for a closer specialist type — e.g. read-only research belongs on `agent: \"scout\"`, which runs on a faster model.";
+const ours = "Tip: omit `agent` by default; `scout` only for read-only search over unknown files; `sonic` only for mechanical edits with exact instructions.";
+
+test("replaces the final specialist tip, not quoted report text", () => {
 	const strip = handlers().get("tool_result");
-	const tip = "Tip: this call spawned 2 generic `task` workers. Check the agent list for a closer specialist type — e.g. read-only research belongs on `agent: \"scout\"`, which runs on a faster model.";
 	const report = `The child reported:\n\n${tip}\n\nEnd of report.`;
 	const content = [{ type: "text", text: `${report}\n\n${tip}` }, { type: "image", data: "x" }];
-	const ours = "Tip: omit `agent` by default; `scout` only for read-only search over unknown files; `sonic` only for mechanical edits with exact instructions.";
 	expect(strip({ toolName: "_task", content }).content).toEqual([{ type: "text", text: `${report}\n\n${ours}` }, content[1]]);
 	expect(strip({ toolName: "read", content })).toBeUndefined();
+});
+
+test("replaces the specialist tip before the async coordination advisory", () => {
+	const coordination = "2 siblings run together. Overlapping files? Give each file one owner via `write agent://<id>`; siblings message only to unblock, never to announce edits. `read proc://` shows running jobs and agents.";
+	const content = [{ type: "text", text: `Spawned 2 background agents.\n\n${tip}\n\n${coordination}` }];
+	expect(handlers().get("tool_result")({ toolName: "task", content }).content[0].text).toBe(`Spawned 2 background agents.\n\n${ours}\n\n${coordination}`);
 });
 
 test("eval prefers Bun, keeps Python, and drops agent and workpool advertising", () => {
