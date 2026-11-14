@@ -5,9 +5,8 @@ import { existsSync, rmSync, writeFileSync } from "node:fs";
 const busy = new Set();
 
 function pick(registry, name) {
-	const ref = registry
-		.list()
-		.find(item => item.kind === "sub" && (item.id === name || item.displayName === name));
+	const refs = registry.list().filter(item => item.kind === "sub");
+	const ref = refs.find(item => item.id === name) ?? refs.find(item => item.displayName === name);
 	if (!ref) throw new Error(`Unknown subagent "${name}". Spawn it once with task first.`);
 	if (busy.has(ref.id)) throw new Error(`Subagent "${ref.id}" is already being reused.`);
 	if (ref.status === "running") throw new Error(`Subagent "${ref.id}" is running. Wait for it, or steer it with write.`);
@@ -19,7 +18,7 @@ function pick(registry, name) {
 const COOP = "\n⁂ Coop\nYou are operating on a piece of work assigned to you by the main agent.\n";
 const PLAN = "\n⁂ Plan\nThis session is executing an approved plan.";
 
-export function withoutContext(prompt) {
+function withoutContext(prompt) {
 	return prompt.map(block => {
 		const at = block.indexOf("\n⁂ Context\n");
 		const coop = block.lastIndexOf(COOP);
@@ -60,7 +59,7 @@ async function runReuse({ name, task }, { registry, lifecycle }) {
 		const tools = session.getEnabledToolNames?.();
 		if (tools?.includes("reuse")) await session.setActiveToolsByName(tools.filter(name => name !== "reuse"));
 		registry.attachSession(ref.id, session, session.sessionManager?.getSessionFile?.(), ref);
-		await session.prompt(task);
+		await session.prompt(task, { runCommands: false, throwOnDrop: true });
 		await session.waitForIdle();
 		const last = session.getLastAssistantMessage();
 		if (last?.stopReason === "aborted") throw new Error(`Subagent "${ref.id}" was aborted.`);

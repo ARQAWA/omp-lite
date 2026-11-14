@@ -1646,3 +1646,13 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness/task-delegation dev/tests/harness/runtime-config`.
 
 **Носители правила:** `src/modules/task-delegation/index.js`, `task-delegation.json`, тесты модулей.
+
+## D-NEW-subagent-reuse — выбор id и отправка задачи
+
+**Решение:** точный id важнее отображаемого имени. Задача отправляется с `runCommands: false` и `throwOnDrop: true`.
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/task/executor.ts` и `session/agent-session.ts`: команды могут перехватить задачу, отклонённая отправка может пройти молча.
+
+**Проверка:** `bun test dev/tests/harness/subagent-reuse`.
+
+**Носители правила:** `src/modules/subagent-reuse/index.js`, README и тест модуля.

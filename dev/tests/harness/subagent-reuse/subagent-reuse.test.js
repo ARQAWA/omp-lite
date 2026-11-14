@@ -1,4 +1,4 @@
-import { afterAll, afterEach, expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,11 +14,6 @@ const root = join(tmpdir(), `omp-reuse-tests-${process.pid}`);
 rmSync(root, { recursive: true, force: true });
 mkdirSync(root, { recursive: true });
 let fileSeq = 0;
-const files = [];
-
-afterEach(() => {
-	for (const file of files.splice(0)) rmSync(`${file}.reuse`, { force: true });
-});
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 function fixture({
@@ -33,7 +28,6 @@ function fixture({
 	const calls = [];
 	const statuses = [];
 	const file = join(root, `session-${++fileSeq}.jsonl`);
-	files.push(file);
 	const marker = { atPrompt: false };
 	let tools = ["read"];
 	const session = {
@@ -172,7 +166,6 @@ test("removes the previous session's marker", async () => {
 	const m = mount();
 	const oldFile = join(root, "old-session.jsonl");
 	const nextFile = join(root, "next-session.jsonl");
-	files.push(oldFile, nextFile);
 	writeFileSync(`${oldFile}.reuse`, "");
 	let current = oldFile;
 	m.session.sessionManager.getSessionFile = () => current;
@@ -211,6 +204,32 @@ test("matches the display name", async () => {
 	const m = mount({ id: "Probe-1", displayName: "Probe" });
 	expect(text(await run(m.tool, { name: "Probe", task: "x" }))).toBe("done");
 	expect(m.calls[0]).toEqual(["ensure", "Probe-1"]);
+});
+
+test("prefers an exact id over an earlier display name", async () => {
+	const m = mount();
+	m.registry.list = () => [{ id: "other", displayName: "Probe", kind: "sub", status: "running" }, m.ref];
+	expect(text(await run(m.tool, { name: "Probe", task: "x" }))).toBe("done");
+	expect(m.calls[0]).toEqual(["ensure", "Probe"]);
+});
+
+test("dispatches a slash task and reports a dropped prompt", async () => {
+	const m = mount();
+	let dispatched;
+	m.session.prompt = async (task, options) => {
+		if (options?.runCommands !== false) return false;
+		if (task === "/drop") {
+			if (options?.throwOnDrop) throw new Error("prompt dropped");
+			return true;
+		}
+		dispatched = task;
+		return true;
+	};
+	m.session.getLastAssistantText = () => dispatched;
+	expect(text(await run(m.tool, { name: "Probe", task: "/work" }))).toBe("/work");
+	const dropped = await run(m.tool, { name: "Probe", task: "/drop" });
+	expect(dropped.isError).toBe(true);
+	expect(text(dropped)).toBe("prompt dropped");
 });
 
 test("unknown, running and aborted subagents return errors", async () => {
