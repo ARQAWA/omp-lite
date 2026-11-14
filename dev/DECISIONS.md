@@ -1636,3 +1636,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-14. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 334 pass, 0 fail. Коммит `486b298`, слияние `cb642f1`. Резервная копия установки: `~/.omp/backups/install-contract-20261114-193527/agents/collector.md`.
 
 **Носители правила:** `src/modules/review/agents/collector.md`.
+
+## D-087 — границы и ошибки Codex web.run
+
+**Решение:** предел 2 МиБ считается по UTF-8 JSON накопленного `input`. `response_length` передаётся с разрешёнными командами. Ошибки потока планировщика не скрываются; после успешного поиска они и тайм-аут возвращают данные с `[incomplete]`. Отмена вызывающего сохраняется.
+
+**Основание:** заказ на исправление B3, B4, B6 и B8.
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/web/search/providers/codex.ts`: `callCodexSearch` обрабатывает `error` и `response.failed` с сообщениями в трёх формах. `packages/coding-agent/src/extensibility/extensions/wrapper.ts`: сигнал вызывающего необязателен.
+
+**Проверка:** `bun test dev/tests/harness/web-search`.
+
+**Носители правила:** `src/modules/web-search/`, `dev/tests/harness/web-search/web-search.test.js`.

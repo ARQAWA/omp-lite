@@ -42,7 +42,7 @@ export async function post(path, body, auth, stream, signal) {
 		method: "POST",
 		headers,
 		body: JSON.stringify(body),
-		signal: AbortSignal.any([signal ?? new AbortController().signal, AbortSignal.timeout(180000)]),
+		signal: AbortSignal.any([signal, AbortSignal.timeout(180000)].filter(Boolean)),
 	});
 	if (!response.ok) throw new Error(`Codex ${path} failed: ${response.status} ${(await response.text()).slice(0, 400)}`);
 	return stream ? await response.text() : await response.json();

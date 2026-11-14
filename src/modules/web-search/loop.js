@@ -8,12 +8,18 @@ const BYTES = 2 * 1024 * 1024;
 const INSTRUCTIONS =
 	"You gather web evidence. Call web.run to search or to open pages, read what it returns, and refine the queries until the evidence answers the question. Never answer from memory and never use another tool. When the evidence is sufficient, reply with one short line and no tool call.";
 
+class PlannerError extends Error {}
+
 const isRun = item => item?.type === "function_call" && item.namespace === "web" && item.name === "run";
 
 /** Native output items in stream order; a completed response wins over its incremental deltas. */
 function items(stream) {
 	const out = new Map();
 	for (const event of events(stream)) {
+		if (event?.type === "response.failed" || event?.type === "error") {
+			const message = [event.message, event.error?.message, event.response?.error?.message].find(value => typeof value === "string" && value);
+			throw new PlannerError(message || "Codex request failed");
+		}
 		if (event?.type === "response.output_item.done") out.set(event.output_index ?? out.size, event.item);
 		if (event?.type === "response.completed" && Array.isArray(event.response?.output)) {
 			out.clear();
@@ -44,33 +50,37 @@ export async function research(query, auth, tools, signal) {
 		{ type: "message", role: "user", content: [{ type: "input_text", text: query }] },
 	];
 	const found = [];
-	let bytes = JSON.stringify(input).length;
 	let calls = 0;
-	for (let round = 0; round < ROUNDS; round++) {
-		const body = {
-			model: MODEL,
-			stream: true,
-			store: false,
-			tool_choice: "auto",
-			parallel_tool_calls: false,
-			include: ["reasoning.encrypted_content"],
-			reasoning: { effort: "xhigh", context: "all_turns" },
-			service_tier: "priority",
-			prompt_cache_key: crypto.randomUUID(),
-			input,
-		};
-		const produced = items(await post("/responses", body, auth, true, signal));
-		const pending = produced.filter(isRun);
-		if (pending.length === 0) break;
-		input.push(...produced);
-		for (const call of pending) {
-			if (++calls > CALLS) return found;
-			const text = await search(threadId, query, call.arguments, auth, signal);
-			found.push(text);
-			input.push({ type: "function_call_output", call_id: call.call_id, output: [{ type: "input_text", text }] });
-			bytes += text.length;
-			if (bytes > BYTES) return found;
+	try {
+		for (let round = 0; round < ROUNDS; round++) {
+			if (Buffer.byteLength(JSON.stringify(input)) > BYTES) return found;
+			const body = {
+				model: MODEL,
+				stream: true,
+				store: false,
+				tool_choice: "auto",
+				parallel_tool_calls: false,
+				include: ["reasoning.encrypted_content"],
+				reasoning: { effort: "xhigh", context: "all_turns" },
+				service_tier: "priority",
+				prompt_cache_key: crypto.randomUUID(),
+				input,
+			};
+			const produced = items(await post("/responses", body, auth, true, signal));
+			const pending = produced.filter(isRun);
+			if (pending.length === 0) break;
+			input.push(...produced);
+			for (const call of pending) {
+				if (++calls > CALLS) return found;
+				const text = await search(threadId, query, call.arguments, auth, signal);
+				found.push(text);
+				input.push({ type: "function_call_output", call_id: call.call_id, output: [{ type: "input_text", text }] });
+				if (Buffer.byteLength(JSON.stringify(input)) > BYTES) return found;
+			}
 		}
+	} catch (error) {
+		if (signal?.aborted || !found.length || !(error instanceof PlannerError || error?.name === "TimeoutError")) throw error;
+		found.push(`[incomplete] ${error.message}`);
 	}
 	return found;
 }

@@ -11,5 +11,7 @@ export function commands(raw) {
 	if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
 	const out = {};
 	for (const key of ALLOWED) if (parsed[key] !== undefined) out[key] = parsed[key];
-	return Object.keys(out).length > 0 ? out : undefined;
+	if (!Object.keys(out).length) return undefined;
+	if (parsed.response_length !== undefined) out.response_length = parsed.response_length;
+	return out;
 }
