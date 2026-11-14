@@ -1821,7 +1821,7 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители правила:** `src/modules/subscriptions/`, `dev/tests/harness/subscriptions/`, `dev/history/subscriptions.md`.
 
-## D-NEW-turn-duration-always — метка после ошибки и отмены
+## D-103 — метка после ошибки и отмены
 
 **Решение:** прерванный и упавший ход тоже получает метку времени. Остальные условия вывода не меняются.
 
