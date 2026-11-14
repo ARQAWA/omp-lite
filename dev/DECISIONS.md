@@ -1772,3 +1772,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-14. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 339 pass, 0 fail. Коммит `6a5dd5e`, слияние `e5c4d72`. Файлы в main и в установке равны (`cmp`). Резервная копия установки: `~/.omp/backups/install-contract-20261114-224004/` (`agents/acceptor.md`, `skills/reviewer/SKILL.md`). Два живых прогона на настоящих задачах впереди.
 
 **Носители правила:** `src/modules/review/agents/acceptor.md`, `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`.
+
+## D-098 — выпуск ompcli 0.0.13
+
+**Решение:** расширение `arqawa.ompcli` 0.0.13 опубликовано в Marketplace. В нём правки D-093.
+
+**Основание:** владелец, 2026-11-14: «да давай публикуй в маркет».
+
+**Проверка:** ревизия payload `5945a6986ccf1ab947d887b26bca1cbd2c74e3ef`. VSIX 208249077 байт, sha256 `629eb563f7b0bd09d38ccfecc84e959887c8ae432eccece4b9093a5fdcfebed3`. Ответ Marketplace: версия 0.0.13, `win32-x64`, `validated`. `bun test dev/tests`: 339 pass, 0 fail.
+
+**Границы:** на Windows VDI не проверено, проверка за владельцем.
+
+**Носители правила:** `src/modules/ompcli/package.json`.
