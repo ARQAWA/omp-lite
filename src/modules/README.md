@@ -33,7 +33,7 @@ README модуля описывает:
 - `subscriptions` — метки `CC`, `CX`, `Go` с лимитами подписок. Тест: `dev/tests/harness/subscriptions/`.
 - `compactions` — счётчик компакшенов сессии в статуслайне. Тест: `dev/tests/harness/compactions/`.
 - `turn-duration` — строка `⏱ 2m 4s` после каждого хода. Тест: `dev/tests/harness/turn-duration/`.
-- `base-tools` — тул `files`: карта проекта одним вызовом на движке OMP, без потолка 200 и без git; настройки `apply_patch`, контекста `grep` и порога спилла в `base-tools.yml`. Тест: `dev/tests/harness/base-tools/`.
+- `base-tools` — тул `files`: карта проекта одним вызовом на движке OMP, без потолка 200 и без git; правка по файлам: несошедшийся файл патча пропускается, остальные пишет родной `edit`; настройки `apply_patch`, контекста `grep` и порога спилла в `base-tools.yml`. Тест: `dev/tests/harness/base-tools/`.
 - `task-delegation` — правило Codex для `task`, Bun по умолчанию, фильтр прямого спавна в `eval`, профили `task` и `sonic` с пустой ролью, профиль `scout` с ролью `explore` из Cursor. Тест: `dev/tests/harness/task-delegation/`.
 - `child-agents-md` — патч рантайма: сабагент `task` получает `AGENTS.md` родным путём OMP. Тест: `dev/tests/harness/child-agents-md/`.
 - `ompcli` — расширение VS Code `arqawa.ompcli` для Windows VDI: вкладки OMP, комплектный runtime, локальная память, Update и установка харнеса по манифесту. Тест: `dev/tests/harness/ompcli/`.
