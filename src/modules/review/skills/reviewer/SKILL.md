@@ -11,7 +11,7 @@ Two subagents do it through `task`: `collector` builds sealed facts once, `accep
 Only the main session runs this. A subagent asked for a review tells its parent and stops.
 
 ## 1. Before collection
-1. Look at your work yourself and remove what was not ordered. Keep what the repository rules require.
+1. Look at your work yourself. Remove what was not ordered. Do what was ordered and is not done. Keep what the repository rules require.
 2. A part that was not ordered, but without which the task dies: keep it. Write to the owner about it only when the reviewer calls it `extra` (section 4, step 6).
 
 ## 2. Collect once
