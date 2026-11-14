@@ -10,7 +10,6 @@ import modelPicker, {
 	modelLabel,
 	nearestLevel,
 	openPicker,
-	parseArrow,
 	shiftArrow,
 } from "../../../../src/modules/model-picker/index.js";
 
@@ -56,7 +55,6 @@ test("arrows parse legacy, kitty and release forms", () => {
 	expect(shiftArrow("\x1b[1;2:3A")).toBeUndefined();
 	expect(shiftArrow("\x1b[A")).toBeUndefined();
 	expect(shiftArrow("\x1b[1;6B")).toBeUndefined();
-	expect(parseArrow("\x1b[1D")).toEqual({ direction: "left", modifier: 1, event: 1 });
 	expect(arrowDirection("\x1b[B")).toBe("down");
 	expect(arrowDirection("\x1b[1;2C")).toBe("right");
 });
@@ -161,13 +159,16 @@ test("a long unselected name is shortened with an ellipsis", () => {
 });
 
 test("an empty list renders No models", () => {
-	const { instance } = picker([]);
+	const { instance } = picker([opus]);
+	instance.handleInput("z");
 	const rows = instance.render(80);
 	expect(rows[0]).toContain("Model / effort");
 	expect(rows.join("\n")).toContain("{muted|No models}");
 	instance.handleInput("\x1b[B");
 	instance.handleInput("\r");
 	expect(instance.current.model).toBeUndefined();
+	instance.handleInput("\x7f");
+	expect(instance.current.model).toBe(opus);
 });
 
 test("configuredEffort prefers the configured auto entry", () => {

@@ -30,12 +30,7 @@
 
 **Цвета усилий:** `auto` — серебряный 256-цвет 250, `off` — светло-серый 252, остальные — роли темы `thinkingMinimal` … `thinkingMax`. Если тема не задаёт необязательный `thinkingMax`, берётся `thinkingXhigh`.
 
-**Установка:** скопировать два файла в `~/.omp/agent/extensions/`:
-
-```bash
-cp src/modules/model-picker/index.js ~/.omp/agent/extensions/model-picker.js
-cp src/modules/model-picker/model-picker.json ~/.omp/agent/extensions/model-picker.json
-```
+**Установка:** файлы перечислены в [манифесте](../../../install.manifest.json); процедура — [INSTALL.md](../../../INSTALL.md).
 
 **Выключить:** удалить `~/.omp/agent/extensions/model-picker.js`.
 
