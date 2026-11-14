@@ -8,7 +8,7 @@ Mixed or unclear message (a change plus a question, research, or report): do onl
 
 export default function dyslexia(pi) {
 	pi.on("context", (event, ctx) => {
-		if (ctx.agent?.kind === "sub") return;
+		if (ctx.agent.kind === "sub") return;
 		let changed = false;
 		const messages = event.messages.map(message => {
 			if (message.role !== "user") return message;
