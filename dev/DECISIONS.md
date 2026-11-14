@@ -1919,8 +1919,8 @@ Blind и high больше не различаются ни моделью, ни
 
 **Причина:** прогон `runF3` на коде (`omp-lite-audit/reviewer-redesign/mvp/runF3/RESULT.md`): 8 кругов, 12 находок, верных 0. Сборщик построил требования из `INSTALL.md` и `dev/PROCESS.md`. Находку про прошлое действие нельзя было ни починить, ни закрыть. Правило «поднята снова: чини» владелец не заказывал: его дописал агент в проекте v5. Полный список требований владельца и проект: `omp-lite-audit/reviewer-redesign/mvp/FINAL.md`.
 
-**Границы:** решённое закрывает сам автор работы; сторож один: итоговый отчёт перечисляет решённые находки. Предела кругов нет. Живых прогонов на новых текстах не было: владелец прогоняет сам. На Windows VDI не проверено.
+**Границы:** решённое закрывает сам автор работы; сторож один: итоговый отчёт перечисляет решённые находки. Предела кругов нет. Повтор прогона на коде впереди. На Windows VDI не проверено.
 
-**Проверка:** 2026-11-15. `bun test dev/tests/harness/review`: 2 pass, 0 fail. `bun test dev/tests`: 342 pass, 0 fail. Коммит `74905a8`, слияние `432e13d`. Файлы в main и в установке равны (`cmp`). Резервная копия: `~/.omp/backups/install-contract-20261115-012228/`. OMP 18.18.8, `packages/coding-agent/src/prompts/tools/task.md`: имя задачи необязательно.
+**Проверка:** 2026-11-15. `bun test dev/tests/harness/review`: 2 pass, 0 fail. `bun test dev/tests`: 342 pass, 0 fail. Коммит `74905a8`, слияние `432e13d`. Файлы в main и в установке равны (`cmp`). Резервная копия: `~/.omp/backups/install-contract-20261115-012228/`. OMP 18.18.8, `packages/coding-agent/src/prompts/tools/task.md`: имя задачи необязательно. `/highreview` этой работы на ветке-снимке: принято за 3 круга (находки, чисто, чисто). Правки круга 1: коммит `458977b`, слияние `8fa1fd8`, резервная копия `~/.omp/backups/install-contract-20261115-014113/`.
 
 **Носители правила:** `src/modules/review/agents/collector.md`, `src/modules/review/agents/acceptor.md`, `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`, `dev/tests/harness/review/review.test.js`.
