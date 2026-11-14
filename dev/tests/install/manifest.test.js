@@ -63,6 +63,7 @@ test("config fragments form one snapshot without contradictions", () => {
 	}
 	expect(seen["claudeResets.autoRedeem5h"]).toBe('"no"');
 	expect(seen["claudeResets.autoRedeemWeekly"]).toBe('"no"');
+	expect(seen["read.summarize.enabled"]).toBe("true");
 	expect(Object.keys(seen).filter(key => /token$|secret|password/i.test(key))).toEqual([]);
 });
 
