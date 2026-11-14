@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { resolve } from "node:path";
 import { install, partialPatch, splitPatch } from "../../../../src/modules/base-tools/index.js";
 import texts from "../../../../src/modules/base-tools/base-tools.texts.json";
 
@@ -6,7 +7,9 @@ const patch = (...sections) => `*** Begin Patch\n${sections.join("\n")}\n*** End
 const a = "*** Update File: a.txt\n@@\n-old a\n+new a";
 const b = "*** Update File: b.txt\n@@\n-WRONG\n+new b";
 const c = "*** Add File: c.txt\n+new c";
+const d = "*** Update File: d.txt\n@@\n-WRONG\n+new d";
 const a2 = "*** Update File: a.txt\n@@\n-tail\n+end";
+const b2 = "*** Update File: b.txt\n@@\n-WRONG too\n+later";
 // Stands in for the native engine: a patch that touches a bad file fails as a whole.
 const dry = (bad, calls = []) => async input => {
 	calls.push(input);
@@ -20,10 +23,10 @@ test("a patch splits into file sections in order", () => {
 	expect(splitPatch(patch("stray line", a))).toBeUndefined();
 });
 
-test("a file that fails the dry run is left out, the others keep their order", async () => {
-	const result = await partialPatch(patch(a, b, c, a2), dry(["b.txt"]));
+test("a failing file is left out whole, every section of it is kept as sent", async () => {
+	const result = await partialPatch(patch(a, b, c, a2, b2), dry(["b.txt"]));
 	expect(result.input).toBe(patch(a, c, a2));
-	expect(result.failed).toEqual(["[b.txt]: Failed to find expected lines in b.txt"]);
+	expect(result.skipped).toEqual([{ path: "b.txt", reason: "Failed to find expected lines in b.txt", patch: `${b}\n${b2}` }]);
 });
 
 test("a patch that fits whole is not touched and costs one dry run", async () => {
@@ -50,29 +53,57 @@ const hooks = dryRun => {
 	);
 	return handlers;
 };
+const ctx = { cwd: "/work" };
 const call = (toolName, input, toolCallId = "one") => ({ toolName, toolCallId, input: { input } });
+const result = (toolCallId, extra) => ({ toolName: "edit", toolCallId, isError: false, content: [{ type: "text", text: "Success." }], ...extra });
+const reasonOf = name => `Failed to find expected lines in ${name}.txt`;
+const section = (name, text) => `[${name}.txt]: ${reasonOf(name)}\n${texts.skipped.section}\n${text}`;
+const failed = name => ({ path: resolve("/work", `${name}.txt`), diff: "", isError: true, errorText: reasonOf(name) });
 
-test("the hooks revise the edit input and report the skipped file", async () => {
-	const handlers = hooks(dry(["b.txt"]));
+test("several files written: the result is an error, the note keeps the removed sections, every skipped file gets a red entry", async () => {
+	const handlers = hooks(dry(["b.txt", "d.txt"]));
+	const done = [{ path: "/work/a.txt", diff: "+new a" }, { path: "/work/c.txt", diff: "+new c" }];
 	for (const name of ["edit", "apply_patch"]) {
-		expect(await handlers.tool_call(call(name, patch(a, b, c)), {})).toEqual({ input: { input: patch(a, c) } });
-		const result = handlers.tool_result({ toolName: "edit", toolCallId: "one", isError: false, content: [{ type: "text", text: "Success." }] });
-		expect(result.content.map(part => part.text)).toEqual([
-			`${texts.skipped.head}\n[b.txt]: Failed to find expected lines in b.txt\n${texts.skipped.tail}`,
-			"Success.",
-		]);
-		expect(handlers.tool_result({ toolName: "edit", toolCallId: "one", isError: false, content: [] })).toBeUndefined();
+		expect(await handlers.tool_call(call(name, patch(a, b, c, d)), ctx)).toEqual({ input: { input: patch(a, c) } });
+		const native = result("one", { details: { diff: "native diff", firstChangedLine: 3, perFileResults: done } });
+		expect(handlers.tool_result(native)).toEqual({
+			isError: true,
+			content: [{ type: "text", text: [texts.skipped.head, section("b", b), section("d", d), texts.skipped.tail].join("\n") }, ...native.content],
+			details: { diff: "native diff", firstChangedLine: 3, perFileResults: [...done, failed("b"), failed("d")] },
+		});
+		expect(handlers.tool_result(result("one"))).toBeUndefined();
 	}
 });
 
-test("other tools, whole patches, a failed edit and a broken dry run change nothing", async () => {
+test("one file written: its own details become the first entry", async () => {
 	const handlers = hooks(dry(["b.txt"]));
-	expect(await handlers.tool_call(call("write", patch(a, b)), {})).toBeUndefined();
-	expect(await handlers.tool_call(call("edit", patch(a, c)), {})).toBeUndefined();
-	await handlers.tool_call(call("edit", patch(a, b), "two"), {});
-	expect(handlers.tool_result({ toolName: "edit", toolCallId: "two", isError: true, content: [{ type: "text", text: "boom" }] })).toBeUndefined();
+	await handlers.tool_call(call("edit", patch(a, b)), ctx);
+	const one = { diff: "native diff", firstChangedLine: 1, path: "/work/a.txt", op: "update" };
+	expect(handlers.tool_result(result("one", { details: one })).details).toEqual({
+		diff: "native diff",
+		firstChangedLine: 1,
+		perFileResults: [one, failed("b")],
+	});
+});
+
+test("a native failure keeps its own error and details, the note is still first", async () => {
+	const handlers = hooks(dry(["b.txt"]));
+	await handlers.tool_call(call("edit", patch(a, b)), ctx);
+	const native = result("one", { isError: true, content: [{ type: "text", text: "boom" }], details: { diff: "", errorKind: "parse" } });
+	expect(handlers.tool_result(native)).toStrictEqual({
+		content: [{ type: "text", text: [texts.skipped.head, section("b", b), texts.skipped.tail].join("\n") }, ...native.content],
+	});
+});
+
+test("a success without details still reports the skipped file; other cases change nothing", async () => {
+	const handlers = hooks(dry(["b.txt"]));
+	expect(await handlers.tool_call(call("write", patch(a, b)), ctx)).toBeUndefined();
+	expect(await handlers.tool_call(call("edit", patch(a, c)), ctx)).toBeUndefined();
+	await handlers.tool_call(call("edit", patch(a, b), "two"), ctx);
+	expect(handlers.tool_result(result("two")).details.perFileResults).toEqual([failed("b")]);
 	const broken = hooks(async () => {
 		throw new Error("engine changed");
 	});
-	expect(await broken.tool_call(call("edit", patch(a, b)), {})).toBeUndefined();
+	expect(await broken.tool_call(call("edit", patch(a, b)), ctx)).toBeUndefined();
+	expect(broken.tool_result(result("one"))).toBeUndefined();
 });

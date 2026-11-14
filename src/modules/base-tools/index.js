@@ -410,7 +410,8 @@ export function splitPatch(input) {
 
 /**
  * Leaves out the files of a multi-file patch that fail a dry run.
- * Undefined: the patch goes to the native edit as it is.
+ * Undefined: the patch goes to the native edit as it is. `skipped` keeps every
+ * left-out section as sent, so the model does not lose its text.
  */
 export async function partialPatch(input, dry) {
 	const sections = splitPatch(input) ?? [];
@@ -418,13 +419,15 @@ export async function partialPatch(input, dry) {
 	// Internal URL targets resolve only inside the native edit.
 	if (paths.length < 2 || paths.some(path => /^\w+:\//.test(path))) return;
 	if (!(await dry(input)).isError) return;
-	const failed = new Map();
+	const skipped = [];
 	for (const path of paths) {
-		const outcome = await dry(wrapPatch(sections.filter(section => section.path === path)));
-		if (outcome.isError) failed.set(path, `[${path}]: ${outcome.text}`);
+		const own = sections.filter(section => section.path === path);
+		const outcome = await dry(wrapPatch(own));
+		if (outcome.isError) skipped.push({ path, reason: outcome.text, patch: own.flatMap(section => section.lines).join("\n") });
 	}
-	if (failed.size === 0 || failed.size === paths.length) return;
-	return { input: wrapPatch(sections.filter(section => !failed.has(section.path))), failed: [...failed.values()] };
+	if (skipped.length === 0 || skipped.length === paths.length) return;
+	const names = new Set(skipped.map(entry => entry.path));
+	return { input: wrapPatch(sections.filter(section => !names.has(section.path))), skipped };
 }
 
 // One staging pass of the native edit engine; the writer keeps the disk untouched.
@@ -458,10 +461,22 @@ async function dryRunner(pi, cwd) {
 	};
 }
 
-function skippedContent(event, skipped) {
-	const failed = skipped.get(event.toolCallId);
-	if (!skipped.delete(event.toolCallId) || event.isError === true) return;
-	return [{ type: "text", text: [toolTexts.skipped.head, ...failed, toolTexts.skipped.tail].join("\n") }, ...event.content];
+// The note always goes first. A native success becomes an error whose card
+// shows each skipped file in red; a native failure keeps its own flag and details.
+function skippedResult(event, reduced) {
+	const state = reduced.get(event.toolCallId);
+	if (!reduced.delete(event.toolCallId)) return;
+	const { head, section, tail } = toolTexts.skipped;
+	const note = [head, ...state.skipped.flatMap(({ path, reason, patch }) => [`[${path}]: ${reason}`, section, patch]), tail].join("\n");
+	const content = [{ type: "text", text: note }, ...event.content];
+	if (event.isError === true) return { content };
+	const details = event.details;
+	const written = details?.perFileResults ?? (details ? [details] : []);
+	return {
+		content,
+		isError: true,
+		details: { diff: details?.diff ?? "", firstChangedLine: details?.firstChangedLine, perFileResults: [...written, ...state.failed] },
+	};
 }
 
 export function install(pi, options = {}) {
@@ -504,23 +519,30 @@ export function install(pi, options = {}) {
 		rewritePayload(event.payload);
 		return event.payload;
 	});
-	const skipped = new Map();
+	const reduced = new Map();
 	pi.on?.("tool_call", async (event, ctx) => {
 		const input = event.input?.input;
 		if (canonicalName(event.toolName) !== "edit" || typeof input !== "string") return;
 		// Fail open: an error or a slow dry run leaves the patch to the native edit.
-		const work = (async () => partialPatch(input, options.dry ?? (await dryRunner(pi, ctx.cwd))))();
+		const work = (async () => {
+			const partial = await partialPatch(input, options.dry ?? (await dryRunner(pi, ctx.cwd)));
+			// One red box per skipped file, with absolute paths like the native entries.
+			return partial && {
+				...partial,
+				failed: partial.skipped.map(({ path, reason }) => ({ path: resolve(ctx.cwd, path), diff: "", isError: true, errorText: reason })),
+			};
+		})();
 		const partial = await Promise.race([
 			work.catch(() => undefined),
 			new Promise(resolve => setTimeout(resolve, DRY_RUN_MS).unref()),
 		]);
 		if (!partial) return;
-		skipped.set(event.toolCallId, partial.failed);
+		reduced.set(event.toolCallId, partial);
 		return { input: { input: partial.input } };
 	});
 	pi.on?.("tool_result", event => {
-		const content = wholeFileContent(event) ?? skippedContent(event, skipped);
-		if (content) return { content };
+		const content = wholeFileContent(event);
+		return content ? { content } : skippedResult(event, reduced);
 	});
 }
 
