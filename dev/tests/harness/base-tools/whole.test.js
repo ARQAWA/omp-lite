@@ -37,14 +37,7 @@ test("a range to EOF, tail and middle range are not covered", () => {
 	expect(wholeFileContent(event(whole({ displayContent: undefined })))).toBeUndefined();
 });
 
-test("a raw whole file with display metadata gets the marker", () => {
-	const content = wholeFileContent(
-		event(whole({ totalLines: 5, fileSize: 24, displayContent: { text: "one\ntwo\nthree\nfour\nfive", startLine: 1, lineNumbers: [1, 2, 3, 4, 5] } }), { content: [{ type: "text", text: "one\ntwo\nthree\nfour\nfive" }] }),
-	);
-	expect(content[0].text).toContain("[whole file: 5 lines]");
-});
-
-test("a range whose display covers the whole file is marked", () => {
+test("display metadata covering five lines gets the marker", () => {
 	const content = wholeFileContent(
 		event(whole({ totalLines: 5, fileSize: 24, displayContent: { text: "one\ntwo\nthree\nfour\nfive", startLine: 1, lineNumbers: [1, 2, 3, 4, 5] } }), { content: [{ type: "text", text: "one\ntwo\nthree\nfour\nfive" }] }),
 	);

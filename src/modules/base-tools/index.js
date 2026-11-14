@@ -511,7 +511,6 @@ export function install(pi, options = {}) {
 		name: "files",
 		label: "files",
 		loadMode: "essential",
-		concurrency: "shared",
 		approval: "read",
 		approvalCacheTargets: args => {
 			const cwd = session.getCwd();
