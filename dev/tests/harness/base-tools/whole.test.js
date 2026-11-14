@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { wholeFileContent } from "../../../../src/modules/base-tools/index.js";
+import { install, wholeFileContent } from "../../../../src/modules/base-tools/index.js";
 
 const event = (details, overrides = {}) => ({
 	toolName: "read",
@@ -60,6 +60,13 @@ test("a file that ends with another count is not mistaken for the marker", () =>
 
 test("a range or cut keeps its native notice", () => {
 	expect(wholeFileContent(event({ totalLines: 20, truncation: { truncated: true } }))).toBeUndefined();
+});
+
+test("a column-truncated read does not get a whole-file marker", () => {
+	const handlers = {}, field = () => ({ optional: field });
+	install({ zod: { string: field, boolean: field, object: shape => shape }, on: (name, fn) => handlers[name] = fn, registerTool() {} });
+	const meta = { source: { type: "path", value: "x" }, limits: { columnTruncated: { maxColumn: 4, unit: "chars" } } };
+	expect(handlers.tool_result(event(whole({ meta })))).toBeUndefined();
 });
 
 test("errors, directories, images, URLs, summaries and multi-ranges stay untouched", () => {

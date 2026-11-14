@@ -657,7 +657,7 @@ export function wholeFileContent(event) {
 	if (typeof event !== "object" || event === null || event.toolName !== "read" || event.isError === true) return;
 	const details = event.details;
 	if (typeof details !== "object" || details === null || details.isDirectory === true) return;
-	if (!Number.isInteger(details.totalLines) || details.truncation?.truncated === true) return;
+	if (!Number.isInteger(details.totalLines) || details.truncation?.truncated === true || details.meta?.limits?.columnTruncated) return;
 	if (details.summary !== undefined || details.meta?.source?.type === "url") return;
 	if (!Array.isArray(event.content) || event.content.some(block => block?.type === "image")) return;
 	if (marked.has(details)) return;
