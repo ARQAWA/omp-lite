@@ -1337,7 +1337,6 @@ function createCli(host) {
 	async function update() {
 		assertReady();
 		const { request, curl } = transport();
-		await ensureRuntime({ extensionPath: host.extensionPath, storageDir: host.storageDir, version: host.version, request, curl });
 		const agentDir = resolveAgentDir(host.env, host.homedir);
 		const updater = createUpdater({
 			request,

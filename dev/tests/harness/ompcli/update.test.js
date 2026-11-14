@@ -1,10 +1,10 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, truncateSync, writeFileSync } from "node:fs";
 import fsp from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { gzipSync } from "node:zlib";
-import { applyHarness, createUpdater,
+import { applyHarness, createCli, createUpdater, runtime,
 	sameBootstrap, extractArchive } from "../../../../src/modules/ompcli/index.js";
 
 const oldSha = "1".repeat(40);
@@ -108,6 +108,36 @@ function environment({ bootstrap = "bootstrap", runtime = "pins", pointer = null
 	};
 	return { deps, calls, storageDir, extensionPath, agentDir, pointer: join(storageDir, "payload", version, "current.json") };
 }
+
+function client(env, request = env.deps.request) {
+	return createCli({
+		vscode: { window: { showInformationMessage() {} } }, extensionPath: env.extensionPath, storageDir: env.storageDir,
+		version, platform: "win32", arch: "x64", homedir: env.agentDir, env: { PI_CODING_AGENT_DIR: env.agentDir },
+		gitBash: "bash", existsSync: () => true, request,
+	});
+}
+
+test("the update command installs GitHub data without the memory model", async () => {
+	const env = environment();
+	const omp = join(env.extensionPath, "runtime", "omp.exe");
+	write(omp, "");
+	truncateSync(omp, runtime.assets.omp.size);
+	write(join(env.extensionPath, "runtime/llama/llama-server.exe"), "exe");
+	const requests = [];
+	const cli = client(env, async url => {
+		requests.push(url);
+		if (url === runtime.assets.model.url) throw new Error("model offline");
+		return env.deps.request(url);
+	});
+	expect((await cli.update()).revision).toBe(newSha);
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
+	expect(JSON.parse(readFileSync(env.pointer, "utf8"))).toBe(newSha);
+	expect(requests).not.toContain(runtime.assets.model.url);
+	rmSync(join(env.extensionPath, "runtime"), { recursive: true });
+	write(join(env.agentDir, "extensions/a.js"), "lost");
+	expect((await cli.update()).revision).toBe(newSha);
+	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("new");
+});
 
 test("an interrupted download leaves no archive and does not block the next update", async () => {
 	const env = environment();
@@ -332,14 +362,14 @@ test("open tabs block the payload write", async () => {
 
 test("an update failure after a write restores the files and previous pointer", async () => {
 	const env = environment({ pointer: oldSha });
-	const rename = fsp.rename; let written;
+	const rename = fsp.rename; let written, pointed;
 	fsp.rename = async (from, to) => {
-		if (to === env.pointer) { written = readFileSync(join(env.agentDir, "extensions/a.js"), "utf8"); throw Object.assign(new Error("disk"), { code: "ENOSPC" }); }
+		if (to === env.pointer) { written = readFileSync(join(env.agentDir, "extensions/a.js"), "utf8"); await rename(from, to); pointed = readFileSync(to, "utf8"); throw Object.assign(new Error("disk"), { code: "ENOSPC" }); }
 		return rename(from, to);
 	};
-	try { await expect(createUpdater(env.deps).run()).rejects.toThrow("disk"); }
+	try { await expect(client(env).update()).rejects.toThrow("disk"); }
 	finally { fsp.rename = rename; }
-	expect(written).toBe("new");
+	expect(written).toBe("new"); expect(pointed).toBe(JSON.stringify(newSha));
 	expect(readFileSync(join(env.agentDir, "extensions/a.js"), "utf8")).toBe("old");
 	expect(JSON.parse(readFileSync(env.pointer, "utf8"))).toBe(oldSha);
 	expect(existsSync(join(env.agentDir, ".ompcli-backups/journal.json"))).toBe(false);
