@@ -22,8 +22,8 @@ README модуля описывает:
 
 Написанный код:
 
-- `dyslexia` — правило дислексии в хвосте отправленного сообщения. Тест: `dev/tests/harness/dyslexia/`.
-- `workflow` — подсказка о порядке работы в хвосте сообщения владельца, только основному агенту. Тест: `dev/tests/harness/workflow/`.
+- `dyslexia` — правило дислексии скрытым сообщением на каждом ходе. Тест: `dev/tests/harness/dyslexia/`.
+- `workflow` — подсказка о порядке работы скрытым сообщением, только основному агенту. Тест: `dev/tests/harness/workflow/`.
 - `skill-alias` — короткий `/имя` вместо `/skill:имя`. Тест: `dev/tests/harness/skill-alias/`.
 - `memory-guide` — короткий блок про память в системном промпте, пока включён Mnemopi. Тест: `dev/tests/harness/memory-guide/`.
 - `model-picker` — компактный пикер модели и усилия, Shift+стрелки, фильтр. Тест: `dev/tests/harness/model-picker/`.
