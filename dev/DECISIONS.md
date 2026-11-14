@@ -1860,3 +1860,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-14. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 343 pass, 0 fail. Коммит `066c610`, слияние `ff91805`. Файлы в main и в установке равны (`cmp`). Резервная копия: `~/.omp/backups/install-contract-20261114-230143/skills/reviewer/SKILL.md`. Повтор прогона на документах впереди.
 
 **Носители правила:** `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`.
+
+## D-NEW-picker-no-auto — усилия и список моделей
+
+**Решение:** в пикере только поддерживаемые моделью low, medium, high, xhigh и max. При пустой лестнице усилие не показывается и не передаётся. enabledModels читается раз на старте сессии, не при каждом открытии.
+
+**Основание:** владелец 2026-11-14: «Я вообще auto не использую нигде и никогда, отключи его, убери из пикера и из моделей, я юзаю только lo md hi xh mx», «Не должно быть НИ off ни auto нигде»; на чтение списка раз на сессию: «да. запиши это».
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/modes/controllers/extension-ui-controller.ts` и `session/agent-session.ts`: `getThinkingLevel()` возвращает разрешённый уровень; `packages/catalog/src/model-thinking.ts`: лестница может быть пустой. Если уровень неизвестен, берётся штатный high, ограниченный лестницей модели.
+
+**Границы:** другие модули и штатный OMP не меняются. До ответа команды чтения списка могут показываться все модели.
+
+**Носители правила:** `src/modules/model-picker/`, `dev/tests/harness/model-picker/`, `dev/history/model-picker.md`.
