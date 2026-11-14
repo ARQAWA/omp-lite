@@ -381,7 +381,6 @@ async function rollback(agentDir, payloadRoot) {
 	let failed = null;
 	for (const entry of [...(journal.entries ?? [])].reverse()) {
 		let target;
-		let validated = false;
 		try {
 			if (typeof entry.path !== "string" || !path.isAbsolute(entry.path)) throw new Error("path");
 			target = path.resolve(entry.path);
@@ -389,7 +388,6 @@ async function rollback(agentDir, payloadRoot) {
 				if (!payloadRoot || path.basename(target) !== "current.json" || !isInside(path.resolve(payloadRoot), target)) throw new Error("path");
 			} else if (!isInside(root, target)) throw new Error("path");
 			await assertNoLinks(entry.pointer ? path.dirname(path.resolve(payloadRoot)) : root, target);
-			validated = true;
 			if (entry.existed) {
 				const backup = path.resolve(entry.backup ?? "");
 				if (!backup.startsWith(base + path.sep)) throw new Error("backup");
@@ -399,10 +397,10 @@ async function rollback(agentDir, payloadRoot) {
 				await fsp.rm(target, { force: true });
 			}
 		} catch {
-			if (!entry.pointer || validated) failed ??= entry.path;
+			failed ??= String(entry.path);
 		}
 	}
-	if (failed) throw new Error(format(messages.backup, { path: failed }));
+	if (failed !== null) throw new Error(format(messages.backup, { path: failed }));
 	await fsp.rm(journalPath, { force: true });
 	if (typeof journal.id === "string" && /^[a-f0-9-]{36}$/.test(journal.id)) await fsp.rm(path.join(base, journal.id), { recursive: true, force: true });
 	return true;
