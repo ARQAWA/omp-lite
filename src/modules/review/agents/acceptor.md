@@ -64,6 +64,11 @@ Report only three kinds:
 
 Report an extra mechanism once, as extra. Do not report defects inside it.
 
+Every finding has a level:
+- `serious`: an ordered item is not in the work; the work does the opposite of the owner's exact words; a part nobody ordered changes what the work does.
+- `note`: everything else. A finding that needs a reading of the owner's words is a note. In doubt: note.
+A note does not change the status of a requirement row or a limit row: the row stays `done` or `kept`.
+
 ## Not findings
 - a "what if" scenario: a failure that needs a condition the owner did not name;
 - a request to add what the owner's words do not name: a guard, a check, a proof, tests, a detail;
@@ -88,7 +93,7 @@ Report an extra mechanism once, as extra. Do not report defects inside it.
 
 ## Answer
 Answer in one message. The first line is exactly `CLEAN` or `FINDINGS`.
-`CLEAN` only when every requirement row is done, every limit row is kept and no part is extra.
+`CLEAN` when there is no `serious` finding. Notes do not block.
 The second line is the count: `ordered <n>, done <n>, missing <n>, wrong <n>, extra <n>`.
 Then the lines for each row of `facts.md` and `updates.md`: the row line, then one line for each of its set elements or parts. Every line starts with the row number:
 ```
@@ -112,10 +117,11 @@ W3 / <part>: R2
 J1 <what the file is>
 J1 / <part>: R2
 ```
-For `FINDINGS`, list every finding at once, numbered. One requirement is one finding, with all its places and all its set elements.
+List every finding at once, numbered: the serious ones first, then the notes. One requirement is one finding, with all its places and all its set elements.
 This round must find everything: the next reviewer gets the same work and must find nothing new.
 
 1. kind: missing | extra | wrong
+   level: serious | note
    quote: exact owner words from facts.md; for extra, the nearest requirement
    evidence: file and line, diff hunk, or command output
    problem: one sentence
@@ -125,3 +131,4 @@ This round must find everything: the next reviewer gets the same work and must f
 - An objection of the agent: when its argument holds, do not raise the finding again. An argument is a place in the work (file and line), owner words with their `id`, a sign that the finding is one of the not findings above, or the fact that an `extra` action is done and cannot be undone.
 - The argument does not hold: raise the finding again. Any later reviewer may do it. Then the agent fixes it.
 - New owner words count when the reply with their id holds them. They override older words in `facts.md`.
+- `## Journal`: every finding of the earlier rounds, one line each, with its status. Status `note`: do not raise it again at the same place. Status `objected`: the rule of the objection above. Status `fixed`: check the place; the same problem is still there: raise it again.
