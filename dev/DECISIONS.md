@@ -1873,7 +1873,7 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители правила:** `src/modules/model-picker/`, `dev/tests/harness/model-picker/`, `dev/history/model-picker.md`.
 
-## D-NEW-read-summary-mark
+## D-107
 
 **Решение:** описание `read` различает родную сводку и целый файл. Сторож `base-tools` ожидает `read.summarize.enabled: true`. Новая метка в коде не добавляется.
 
