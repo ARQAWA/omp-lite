@@ -1598,3 +1598,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-14, OMP 18.18.8. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 338 pass, 0 fail. Коммит `fdc9174`, слияние `dae39f5`. Установлено по манифесту: копии в `~/.omp/backups/install-contract-20261114-182331`. Живой прогон ревью после правки ещё не был: ждёт прогон 2b
 
 **Носители правила:** `src/modules/review/agents/collector.md`, `src/modules/review/README.md`.
+
+## D-084 — счётчику компакшенов не нужен session_tree
+
+**Решение:** `compactions` не подписывается на `session_tree`.
+
+**Основание:** заказ владельца на удаление лишнего хука.
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/session/session-manager.ts`: `getEntries()` возвращает все записи, а `branch()` только меняет лист. `packages/coding-agent/src/session/agent-session.ts`: переход дерева может добавить сообщение или `branch_summary`, но не компакшен; подписка заставляет повторно строить контекст.
+
+**Проверка:** `bun test dev/tests/harness/compactions`.
+
+**Носители правила:** `src/modules/compactions/index.js`, README и тест модуля.
