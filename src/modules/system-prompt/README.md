@@ -8,31 +8,11 @@
 
 **Основа:** системный промпт Cursor 5.5 для GPT-5.5, снимок `runs-2026-10-16`. Ствол и текст Cursor сохранены. Модель по имени не названа: первая строка говорит «coding agent».
 
-**Принятые замены.** Меняются имена тулов, механики OMP и один приоритет работы:
-
-- модель и среда: `GPT-5.5` → `coding agent`, `Cursor` и `Cursor IDE` → `OMP`;
-- тулы: `Shell` → `bash`, `bash commands` вместо `shell commands`, `ReadFile` → `read`, `ApplyPatch` → `edit`, `terminal command` → `bash command`;
-- вызовы: `multi_tool_use.parallel` → обычные параллельные вызовы в одном ответе;
-- пакетирование: вместо строки про параллельные вызовы стоит приоритет «минимум ходов агента, максимум нужных независимых вызовов в ответе»;
-- номера строк: `Lxxx:` → `12|`;
-- теги: `<system_reminder>`, `<attached_files>`, `<system_notification>` → `<system-reminder>`, `<project-context>`, `<system-notification>`;
-- каналы `commentary` и `final` → обычные сообщения;
-- `<user_query>` → `in each message`;
-- ссылка на код: только `filepath`, без `startLine:endLine` и без пометки «в редакторе»;
-- строка bash: `cwd` вместо `cd`, без обещания общего окружения;
-- рендер: `styled by Cursor` → `rendered by OMP`.
+**Принятые замены в этом файле:** `GPT-5.5` → `coding agent`, `Cursor` → `OMP`; имена тулов `bash`, `read`, `edit`; `Lxxx:` → `12|`; теги `<system-reminder>`, `<project-context>`, `<system-notification>`; `<user_query>` → `in each message`; строка bash про `cwd` вместо `cd`; приоритет «минимум ходов агента, максимум нужных независимых вызовов в ответе» вместо строки про параллельные вызовы. Остальные замены (каналы, ссылка на код, `rendered by OMP`) стоят в блоках общения: [communication](../communication/README.md). Решения: D-025, D-035.
 
 **Удалено:** блоки `<mode_selection>`, `<dynamic_tools>` и `<terminal_files_information>`, строка про markdown-картинки.
 
-**Приоритет пакетирования.** Строка `Parallelize tool calls...` заменена целиком.
-Новый текст требует ждать зависимости и держать порядок у конфликтующих вызовов.
-Вызовы ради заполнения пакета запрещены.
-Числового лимита нет.
-Саб-агентов строка не разрешает: запрет живёт в описании `task`.
-
-**Строки про саб-агентов нет.** Как и в Codex CLI, запрет живёт в описании тула запуска, не в промпте. У нас это модуль [task-delegation](../task-delegation/README.md).
-
-**Блоки общения вынесены.** `<special_user_requests>`, `<mixed_requests>` и `<working_with_the_user>` перенесены без изменений в модуль [communication](../communication/README.md). Это правило OMP только для главного агента. Сабагенты их не получают. Там же описан `<mixed_requests>` (D-057). Решение: D-067.
+**Блоки общения вынесены.** `<special_user_requests>`, `<mixed_requests>` и `<working_with_the_user>` перенесены без изменений в модуль [communication](../communication/README.md). Это правило OMP только для главного агента. Сабагенты их не получают. Решения: D-057, D-067.
 
 **Дислексия не дублируется.** Правило дислексии дописывает расширение [dyslexia](../dyslexia/index.js) в конец пользовательского сообщения. В промпте его нет.
 

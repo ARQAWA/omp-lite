@@ -10,14 +10,10 @@
 **Вход:** `~/.omp/agent/skills/short-task/SKILL.md`. Скилл включается сам на фразы вроде
 «есть такая задача», «надо сделать». Вручную: `/skill:short-task`.
 
-**Источник:** managed-скилл, созданный в другой сессии OMP
-(`~/.omp/agent/managed-skills/short-task/SKILL.md`). Текст перенесён без правок.
-Managed-копия после переноса удалена: OMP и так отдаёт приоритет установленному скиллу.
-
 **Установка:** файл перечислен в [манифесте](../../../install.manifest.json); процедура в
 [INSTALL.md](../../../INSTALL.md). На VDI скилл приходит с харнесом через `OMP CLI: Update`.
 
 **Выключить:** удалить `~/.omp/agent/skills/short-task/`.
 
-**Проверка:** `omp read skill://short-task` отдаёт установленный файл. Постоянного теста нет:
+**Проверка:** `omp read skill://short-task/SKILL.md` отдаёт установленный файл. Постоянного теста нет:
 только ресурс. Наличие в поставке проверяет `dev/tests/install/manifest.test.js`.
