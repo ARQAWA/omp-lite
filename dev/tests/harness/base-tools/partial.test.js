@@ -99,12 +99,14 @@ test("one file written: its own details become the first entry", async () => {
 	});
 });
 
-test("a native failure keeps its own error and details, the note is still first", async () => {
+test("a native failure keeps its error in the first text block and preserves details", async () => {
 	const handlers = hooks(dry(["b.txt"]));
 	await handlers.tool_call(call("edit", patch(a, b)), ctx);
 	const native = result("one", { isError: true, content: [{ type: "text", text: "boom" }], details: { diff: "", errorKind: "parse" } });
 	expect(handlers.tool_result(native)).toStrictEqual({
-		content: [{ type: "text", text: [texts.skipped.head, section("b", b), texts.skipped.tail].join("\n") }, ...native.content],
+		content: [{ type: "text", text: [texts.skipped.head, section("b", b), texts.skipped.tail, "boom"].join("\n") }],
+		isError: true,
+		details: native.details,
 	});
 });
 

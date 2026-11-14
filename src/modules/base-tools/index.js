@@ -470,8 +470,12 @@ function skippedResult(event, reduced) {
 	if (!reduced.delete(event.toolCallId)) return;
 	const { head, section, tail } = toolTexts.skipped;
 	const note = [head, ...state.skipped.flatMap(({ path, reason, patch }) => [`[${path}]: ${reason}`, section, patch]), tail].join("\n");
+	if (event.isError === true) return {
+		content: [{ type: "text", text: [note, ...event.content.filter(block => block.type === "text").map(block => block.text)].join("\n") }, ...event.content.filter(block => block.type !== "text")],
+		isError: true,
+		details: event.details,
+	};
 	const content = [{ type: "text", text: note }, ...event.content];
-	if (event.isError === true) return { content };
 	const details = event.details;
 	const written = details?.perFileResults ?? (details ? [details] : []);
 	return {
