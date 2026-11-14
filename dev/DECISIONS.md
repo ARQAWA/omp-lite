@@ -1381,3 +1381,17 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-14, OMP 18.18.8, коммит `f9efadd`, слияние `22c90a2`. `bun test dev/tests`: 330 pass, 0 fail. Установка по манифесту: пять файлов ревью (`agents/acceptor.md`, `agents/collector.md`, `skills/reviewer/SKILL.md`, `skills/blindreview/SKILL.md`, `skills/highreview/SKILL.md`) скопированы, `cmp` молчит для всех пяти. В установленном `acceptor.md` «In doubt: kept» ровно одно совпадение. Ветка и worktree `reviewer-lenses` (HEAD `66b38a9`, чистый) удалены, на `origin` её не было. Живой запуск ревьюера не делался.
 
 **Носители правила:** `src/modules/review/agents/acceptor.md`, `src/modules/review/README.md`.
+
+## D-072 — три исключения сверки рантайма с репозиторием
+
+**Решение:** сверка установленного с репозиторием всегда пропускает три вещи. Первая: файл `extensions/pi-voice-stt/stt.windows.json`. Вторая: значение `modelRoles.default`: при установке прежнее значение остаётся, а если ключа не было, ставится значение слепка, модель `opencode-go`. Третья: каталог `~/.omp/agent/managed-skills/`.
+
+**Основание:** слова владельца от 2026-11-14: «чтобы файл STT Windows JSON всегда был, короче, out of scope»; «не надо обращать внимание на default agent модель, то есть если её нету изначально, то мы её выставляем в open code go, а если есть, то мы её не трогаем»; «Вообще для папочки managed skills, потому что managed skills — это хуйня, которая приобретается в процессе работы»; «в main ветку эти изменения надо сразу запушить».
+
+**Причина:** инвентаризация 2026-11-14 нашла одно расхождение из 94 файлов, `stt.windows.json`, и навык `release-ompcli-vsix` вне манифеста. Каталог `managed-skills` пишет сам OMP 18.18.8: `autolearn/managed-skills.ts`, `getManagedSkillsDir`.
+
+**Заменяет:** D-033 и D-046 уточнены: конфиг равен слепку, кроме значения `modelRoles.default`.
+
+**Границы:** правка только в документе. Установщик расширения `ompcli` не менялся. Команда сверки конфига в `INSTALL.md` пропускает ключ `modelRoles.default`.
+
+**Носители правила:** `INSTALL.md`.

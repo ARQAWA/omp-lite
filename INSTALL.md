@@ -128,6 +128,8 @@ cp "<from>" "$HOME/.omp/agent/<to>"
 
 `config` — слепок настроек владельца. Установка заменяет им конфиг целиком: прежний конфиг уже лежит в `$backup/config`. Начни с пустого конфига и слей в него фрагменты по порядку. Прежние ключи вне слепка пропадают. Все записи идут в режиме `merge`:
 
+**Исключение: `modelRoles.default`.** В прежнем конфиге ключ был — верни прежнее значение после слияния. Ключа не было — остаётся значение слепка, модель `opencode-go`.
+
 | mode | что делает |
 | --- | --- |
 | `merge` | выставляет ключи из фрагмента; список заменяется целиком |
@@ -145,14 +147,20 @@ mnemopi:
   embeddingApiKey: ollama
 ```
 
-После установки в конфиге ровно ключи слепка, других нет. Так сборка на любой машине одинаковая.
+После установки в конфиге ровно ключи слепка, других нет. Так сборка на любой машине одинаковая, кроме значения `modelRoles.default`.
 
 Секретов в слепке нет. Вход в провайдеров владелец делает сам.
 
 ## 5. Проверка
 
+**Вне сверки всегда.** Расхождение здесь не ошибка, его не сообщай и не исправляй:
+
+- файл `extensions/pi-voice-stt/stt.windows.json`: его содержимое не сверяй;
+- значение `modelRoles.default` в конфиге;
+- каталог `~/.omp/agent/managed-skills/`: навыки приходят в работе, установщик его не трогает.
+
 1. Каждый путь `to` из `files` существует в `~/.omp/agent`.
-2. Каждый установленный файл совпадает с файлом репозитория байт в байт. Прочитай `install.manifest.json` и пройди записи `files` циклом: в теле цикла `from` и `to` взяты из записи.
+2. Каждый установленный файл, кроме `stt.windows.json`, совпадает с файлом репозитория байт в байт. Прочитай `install.manifest.json` и пройди записи `files` циклом: в теле цикла `from` и `to` взяты из записи.
 
 ```bash
 cmp "$from" "$HOME/.omp/agent/$to"
@@ -164,7 +172,7 @@ cmp "$from" "$HOME/.omp/agent/$to"
 4. В конфиге выставлены четыре ключа `mnemopi` и отвечает запрос эмбеддингов. Конфиг равен слепку. Есть `bun` — команда из корня репозитория печатает `0`. Нет `bun` — выполни `omp config list --scope=global` и сверь вывод с фрагментами `config` глазами: ключи и значения те же, лишних ключей нет.
 
 ```bash
-bun -e 'const m=JSON.parse(await Bun.file("install.manifest.json").text());const flat=(n,p="",o={})=>{for(const[k,v]of Object.entries(n??{})){const id=p?p+"."+k:k;if(v&&typeof v==="object"&&!Array.isArray(v))flat(v,id,o);else o[id]=JSON.stringify(v)}return o};let want={};for(const c of m.config)Object.assign(want,flat(Bun.YAML.parse(await Bun.file(c.from).text())));const live=flat(Bun.YAML.parse(await Bun.file(process.argv[1]).text()));console.log(new Set([...Object.keys(want),...Object.keys(live)]).values().filter(k=>want[k]!==live[k]).toArray().length)' "$config"
+bun -e 'const m=JSON.parse(await Bun.file("install.manifest.json").text());const flat=(n,p="",o={})=>{for(const[k,v]of Object.entries(n??{})){const id=p?p+"."+k:k;if(v&&typeof v==="object"&&!Array.isArray(v))flat(v,id,o);else o[id]=JSON.stringify(v)}return o};let want={};for(const c of m.config)Object.assign(want,flat(Bun.YAML.parse(await Bun.file(c.from).text())));const live=flat(Bun.YAML.parse(await Bun.file(process.argv[1]).text()));console.log(new Set([...Object.keys(want),...Object.keys(live)]).values().filter(k=>k!=="modelRoles.default"&&want[k]!==live[k]).toArray().length)' "$config"
 ```
 5. Запусти новую сессию OMP. Расширения не печатают ошибок загрузки.
 6. Убедись, что тул `files` отвечает, а команда `reuse` и навыки `blindreview`, `highreview` доступны. Навык `reviewer` скрыт из каталога и читается по `skill://reviewer/SKILL.md`. Сабагенты `collector` и `acceptor` есть в описании `task`.
