@@ -1758,3 +1758,17 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness/dyslexia`.
 
 **Носители правила:** `src/modules/dyslexia/`, `dev/tests/harness/dyslexia/`.
+
+## D-098 — уровни находок и журнал ревью
+
+**Решение:** в `agents/acceptor.md` и `skills/reviewer/SKILL.md`. Находка имеет уровень `serious` или `note`; в сомнении `note`. Было: «`CLEAN` only when every requirement row is done, every limit row is kept and no part is extra.» Стало: «`CLEAN` when there is no `serious` finding. Notes do not block.» Было: «For `FINDINGS`, list every finding at once, numbered. One requirement is one finding, with all its places and all its set elements.» Стало: «List every finding at once, numbered: the serious ones first, then the notes. One requirement is one finding, with all its places and all its set elements.» Шаблон находки получил строку `level: serious | note`. Раздел `## updates.md` получил пункт `## Journal`: каждая находка прошлых кругов со статусом; `note` не поднимается снова на том же месте. Скилл: шаг 6 раздела 3 стал «First line `CLEAN`: write its notes to the journal (section 4, step 7), then go to section 5.»; в разделе 4 новый шаг 7 про журнал; в шаге 5 раздела 6 вместо «and the objections, one line each.» стало «the objections and the notes, one line each.»
+
+**Основание:** слова владельца, сессия `01a1d13b-8491`: id `1db42817` «если он нашел какую то хуйню - шум и не нашел ничего серьезного рили то надо считать это ща CLEAN. И надо сделать какой то журнал ревью»; id `5d447b28` «журнал и все файлы ревью одноразовые, они пусть живут во временных файлах ОС»; id `7ac00da0` «Ну давай прими иии провериммм ... на двух прогонах».
+
+**Причина:** в `/highreview` модуля `review` (2026-11-14) 12 кругов дали 9 находок; 8 закрыты возражениями, каждое стоило полного круга. Та же идея в Google EGM 0.1.1 (`github.com/google/elephant-goldfish-model`, коммит `e474732`, `skills/egm-review-loop/SKILL.md`): «A round is clean when no reviewer raises a Blocker or Major finding that is not settled. Nits do not block.» и список закрытых находок между кругами.
+
+**Границы:** уровень ставит ревьюер, основной агент его не меняет. Риск: настоящая находка занижена до `note`; владелец видит каждую `note` в итоговом отчёте. Один ревьюер на круг и два `CLEAN` подряд остаются. Журнал живёт только во временной папке ревью. На Windows VDI не проверено.
+
+**Проверка:** 2026-11-14. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 339 pass, 0 fail. Коммит `6a5dd5e`, слияние `e5c4d72`. Файлы в main и в установке равны (`cmp`). Резервная копия установки: `~/.omp/backups/install-contract-20261114-224004/` (`agents/acceptor.md`, `skills/reviewer/SKILL.md`). Два живых прогона на настоящих задачах впереди.
+
+**Носители правила:** `src/modules/review/agents/acceptor.md`, `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`.
