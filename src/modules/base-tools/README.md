@@ -51,6 +51,8 @@
 
 **Поля:** `path`, `glob`, `pattern`, `case`, `hidden`, `gitignore`.
 
+**Разрешения:** OMP проверяет корень поиска как рекурсивное дерево через родные `approvalDirectoryKey` и `approvalTreeSearchKey`.
+
 **Движок:** `glob` и `grep` из `@oh-my-pi/pi-natives`, через `await import`. В тесте движок подменён.
 
 **Пометка «костыль»:** импорт движка из расширения не штатный: `glob` и `grep` для `files`, `EditSession` и `EditStore` для сухого прогона. Импорт проверен живой пробой. Сторож сверяет эти экспорты на первом запросе сессии.

@@ -4,7 +4,7 @@
 // is not a standard way; a live probe confirms it works.
 
 import { isAbsolute, relative, resolve } from "node:path";
-import { constants } from "node:fs";
+import { constants, realpathSync } from "node:fs";
 import { access, lstat, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import descriptions from "./base-tools.descriptions.json";
@@ -481,12 +481,24 @@ function skippedResult(event, reduced) {
 
 export function install(pi, options = {}) {
 	const z = pi.zod;
+	let session, directoryKey, treeKey;
+	pi.on?.("session_start", async (_event, ctx) => {
+		session = ctx.sessionManager;
+		[{ approvalDirectoryKey: directoryKey }, { approvalTreeSearchKey: treeKey }] = await (options.approvalTargets ?? (() => Promise.all([
+			import("@oh-my-pi/pi-coding-agent/tools/approval-cache"), import("@oh-my-pi/pi-coding-agent/tools/approval-targets"),
+		])))();
+	});
 	pi.registerTool({
 		name: "files",
 		label: "files",
 		loadMode: "essential",
 		concurrency: "shared",
 		approval: "read",
+		approvalCacheTargets: args => {
+			const cwd = session.getCwd();
+			const root = args?.path ? (isAbsolute(args.path) ? args.path : resolve(cwd, args.path)) : cwd;
+			return [treeKey(directoryKey(realpathSync.native(root)))];
+		},
 		strict: false,
 		description: FILES_DESCRIPTION,
 		parameters: z.object({
