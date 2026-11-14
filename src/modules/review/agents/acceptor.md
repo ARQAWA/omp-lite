@@ -122,6 +122,6 @@ This round must find everything: the next reviewer gets the same work and must f
    fix: add the item the owner named, change the place, or remove the part
 
 ## updates.md
-- An objection of the agent: when its argument holds, do not raise the finding again. An argument is a place in the work (file and line), owner words with their `id`, or a sign that the finding is one of the not findings above.
+- An objection of the agent: when its argument holds, do not raise the finding again. An argument is a place in the work (file and line), owner words with their `id`, a sign that the finding is one of the not findings above, or the fact that an `extra` action is done and cannot be undone.
 - The argument does not hold: raise the finding again. Any later reviewer may do it. Then the agent fixes it.
 - New owner words count when the reply with their id holds them. They override older words in `facts.md`.

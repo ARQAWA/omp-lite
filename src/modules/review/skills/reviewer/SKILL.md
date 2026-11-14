@@ -30,7 +30,7 @@ Only the main session runs this. A subagent asked for a review tells its parent 
 
 ## 3. Review rounds
 1. Call `task` with `context: "acceptance review"` and one item: `agent: "acceptor"`, `name: "AcceptorRound<n>"`, `solutionSpace: "fixed procedure"`, `task: "dir: <dir>"`, `model: "openai-codex/gpt-6.1-terra:xhigh"`. The model is the same at level blind and at level high. Every round is a new call: one fresh reviewer and a full check. Every call gets a new `name`: `AcceptorRound1`, `AcceptorRound2`, and so on.
-2. After every answer, run the completeness check in eval, JavaScript, with your `dir` and the call's `name` in the first line:
+2. After every answer, run the completeness check in eval, JavaScript, with your `dir` and the agent id from the call's result as `name` in the first line. A name already used in the session gets a suffix there: `AcceptorRound1-2`.
    ```js
    const dir = "<dir>", name = "<name>", fs = require("node:fs");
    const ids = (file, re) => (fs.existsSync(file) ? fs.readFileSync(file, "utf8").match(re) ?? [] : []);
@@ -46,7 +46,7 @@ Only the main session runs this. A subagent asked for a review tells its parent 
 
 ## 4. Findings
 1. Before you fix anything, open the place in the work yourself. The finding is right and it is about the order: fix it.
-2. The finding is wrong or not about the order: write one objection to `updates.md`. Copy the finding text word for word and add your argument. An argument is a place in the work (file and line), owner words with their `id`, or a sign that the finding is not a finding: a "what if" scenario, a request to add what the owner did not name, the truth about the outside world, a method or a style the owner did not name, a step after the review, the repository rules.
+2. The finding is wrong or not about the order: write one objection to `updates.md`. Copy the finding text word for word and add your argument. An argument is a place in the work (file and line), owner words with their `id`, or a sign that the finding is not a finding: a "what if" scenario, a request to add what the owner did not name, the truth about the outside world, a method or a style the owner did not name, a step after the review, the repository rules. The finding calls `extra` an action that is done and cannot be undone: object with that fact.
 3. Any later reviewer raised it again: fix it with the smallest change, even if you disagree. There is no second objection. One exception: the critical part of step 6.
 4. A fix is the smallest one. First remove, then change. Add only what the owner named. Do nothing for the reviewer, except the fix of a finding raised again.
 5. Append a `## Round <n>` block to `<dir>/updates.md`: for each finding its number and either what you fixed and where, or your objection. A fix touched a file outside `Work`: append the row `J1 <path>` to `updates.md`. The next such file is `J2`.

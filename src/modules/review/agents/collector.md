@@ -64,7 +64,7 @@ A source the owner's words rest on cannot be found or opened: never guess what i
    - `Limits`: how the owner narrowed or forbade the work: scope, size, simplicity, "do not do", "out of scope". Each limit has its quotes.
    - The same owner words give one row, never a requirement and a limit at once. Words that narrow or forbid ("only", "not", "without", "minimal", "out of scope") give a limit.
    - An owner objection to what the agent did or proposed is an instruction, also as a question ("why is X here", "where did X go", "what has X to do with it"). It forbids X or orders X back. It is a row.
-   - A method is a requirement only when the owner named it. Mark it `[method]`.
+   - A method is a requirement only when the owner told the agent to work that way. Mark it `[method]`. A way he named for something else (how an installer, a user or a later step gets the result) is not a method.
    - Agent proposals count only with the owner's approval; quote both. From an approved plan of the agent take its results, not its lines. A general "do it by the plan" is not a requirement.
    - These are not requirements:
      - a question of the owner that orders nothing;
