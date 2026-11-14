@@ -1720,3 +1720,13 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness/base-tools`.
 
 **Носители правила:** `src/modules/base-tools/`, `dev/tests/harness/base-tools/`.
+
+## D-095 — авто-отчёты OMP выключены в слепке
+
+**Решение:** в слепке `dev.autoqaConsent: denied`. То же значение выставлено на Mac владельца.
+
+**Основание:** владелец, 2026-11-14: «поставь нет здесь и в установку».
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/tools/report-tool-issue.ts`: при `granted` жалобы модели на тулы уходят на `qa.omp.sh` без вопроса. Слепок копировал согласие на любую машину.
+
+**Носители правила:** `src/modules/runtime-config/config.yml`.
