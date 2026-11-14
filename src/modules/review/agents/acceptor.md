@@ -65,8 +65,8 @@ Report only three kinds:
 Report an extra mechanism once, as extra. Do not report defects inside it.
 
 Every finding has a level:
-- `serious`: an ordered item is not in the work; the work does the opposite of the owner's exact words; a part nobody ordered changes what the work does.
-- `note`: everything else. A finding that needs a reading of the owner's words is a note. In doubt: note.
+- `serious`: an ordered item is not in the work; the work is against the owner's words or breaks a limit of `Limits`; a part of the work that no requirement orders, or an item done noticeably bigger than its words need.
+- `note`: a finding that stands on one reading of the owner's words, when another honest reading allows the work. In doubt between two readings: note.
 A note does not change the status of a requirement row or a limit row: the row stays `done` or `kept`.
 
 ## Not findings
