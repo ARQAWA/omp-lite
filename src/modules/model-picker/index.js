@@ -28,11 +28,6 @@ function readArrow(value) {
 	};
 }
 
-export function parseArrow(value) {
-	const arrow = readArrow(value);
-	return arrow ? { direction: arrow.direction, modifier: arrow.modifier, event: arrow.event } : undefined;
-}
-
 export function shiftArrow(value) {
 	const arrow = readArrow(value);
 	return arrow && arrow.modifier === 2 && arrow.event !== 3 ? arrow.direction : undefined;
