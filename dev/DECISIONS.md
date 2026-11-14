@@ -1656,3 +1656,13 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness/subagent-reuse`.
 
 **Носители правила:** `src/modules/subagent-reuse/index.js`, README и тест модуля.
+
+## D-NEW-voice-stt — результат остановки дерева
+
+**Решение:** `killTree` возвращает успех только при успешном выходе `taskkill`. При ошибке рекордеры пробуют обычный `child.kill`.
+
+**Причина:** `src/audio/ffmpeg-recorder.ts` и `src/audio/stream-recorder.ts` выбирают запасной способ по результату `killTree`; потомки всё равно могут остаться.
+
+**Проверка:** `bun test dev/tests/harness/voice-stt`.
+
+**Носители правила:** `src/modules/voice-stt/pi-voice-stt/src/audio/launch.ts`, README и тест модуля.

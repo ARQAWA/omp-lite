@@ -15,9 +15,9 @@ export const launch = (file: string, args: string[], env = process.env, platform
   return ["powershell.exe", ["-NoLogo", "-NoProfile", "-Command", `& ${psQuote(bash)} --login -i -c ${psQuote(inner)}`]];
 };
 
-// Killing PowerShell alone would leave ffmpeg holding the microphone: the whole tree goes.
-export const killTree = (child: ChildProcess, env = process.env, platform: string = process.platform): boolean => {
+// Killing PowerShell alone can leave ffmpeg holding the microphone.
+export const killTree = (child: ChildProcess, env = process.env, platform: string = process.platform, run = spawnSync): boolean => {
   if (!chained(env, platform) || !child.pid) return false;
-  spawnSync("taskkill", ["/T", "/F", "/PID", String(child.pid)], { windowsHide: true });
-  return true;
+  const result = run("taskkill", ["/T", "/F", "/PID", String(child.pid)], { windowsHide: true });
+  return !result.error && result.status === 0;
 };
