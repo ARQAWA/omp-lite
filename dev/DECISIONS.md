@@ -1622,3 +1622,17 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness/subscriptions`.
 
 **Носители правила:** `src/modules/subscriptions/index.js`, тест модуля.
+
+## D-086 — ответ сборщика не ограничен одной строкой
+
+**Решение:** в `agents/collector.md`, раздел `## Stop`. Было: «Answer with one line: `READY <dir>`, or `STOP <reason>` when the session cannot be read or the work cannot be found.» Стало: «Answer `READY <dir>`, or `STOP <reason>` when the session cannot be read or the work cannot be found.»
+
+**Основание:** владелец заказал ревью: сессия `01a1d13b-8491`, id `18d237b4` «запусти HiReview и убери всё, что не было заказано». Скилл `reviewer`, раздел 4, шаг 3: «Any later reviewer raised it again: fix it with the smallest change, even if you disagree.»
+
+**Причина:** в `/highreview` модуля `review` (2026-11-14) ревьюер круга 6 назвал строку `wrong` против слов владельца, id `51117fbb` и `842aacf9`: «уних нет ограничения по длине ответа». Основной агент возразил: отчёт сборщика это файл `facts.md`, ответ только указывает на него. Ревьюер круга 7 поднял находку снова.
+
+**Границы:** скилл по-прежнему читает из ответа `READY <dir>` или `STOP <reason>`. На Windows VDI не проверено.
+
+**Проверка:** 2026-11-14. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 334 pass, 0 fail. Коммит `486b298`, слияние `cb642f1`. Резервная копия установки: `~/.omp/backups/install-contract-20261114-193527/agents/collector.md`.
+
+**Носители правила:** `src/modules/review/agents/collector.md`.
