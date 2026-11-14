@@ -241,24 +241,28 @@ async function ensureRuntime({ extensionPath, storageDir, version, request = fet
 		if (actual < 0 || (size !== undefined && actual !== size)) throw new Error(format(messages.bundle, { file: path.basename(file) }));
 	}
 	const asset = assets.model;
-	// Versions before 0.0.4 kept programs and the model under storage/runtime: the model moves, the rest goes.
+	// Versions before 0.0.4 kept programs and the model under storage/runtime.
 	const legacy = path.join(storageDir, "runtime");
+	let keepLegacy = false;
 	await fsp.mkdir(path.dirname(paths.model), { recursive: true });
 	for (const name of (await sizeOf(paths.model)) === asset.size ? [] : await fsp.readdir(legacy).catch(() => [])) {
 		const old = path.join(legacy, name, asset.file);
-		// Update and a tab may run this together: the one that loses the file finds the model in place below.
+		const temporary = paths.model + "." + randomUUID() + ".tmp";
+		// Two tabs may migrate together: publish only a complete copy.
 		try {
 			if ((await sizeOf(old)) !== asset.size || (await sha256File(old)) !== asset.sha256) continue;
-			await fsp.rename(old, paths.model);
-		} catch {}
+			await fsp.copyFile(old, temporary);
+			await fsp.rename(temporary, paths.model);
+		} catch { keepLegacy = true; }
+		finally { await fsp.rm(temporary, { force: true }).catch(() => {}); }
 		break;
 	}
-	await fsp.rm(legacy, { recursive: true, force: true }).catch(() => {});
 	if ((await sizeOf(paths.model)) !== asset.size) progress({ name: "model", size: Math.round(asset.size / 1048576) });
 	// The model is checked by content on every start: a damaged file is downloaded again.
 	await fetchRuntime(paths.model, asset, request, { curl }).catch(error => {
 		throw new Error(format(messages.asset, { name: asset.file, reason: error.message }));
 	});
+	if (!keepLegacy) await fsp.rm(legacy, { recursive: true, force: true }).catch(() => {});
 	return paths;
 }
 
