@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -663,13 +663,15 @@ test("files declares recursive approval targets for its session search root", as
 		await symlink(outside, join(cwd, "link"));
 		const handlers = {}, tools = [], field = () => ({ optional: field });
 		install({ zod: { string: field, boolean: field, object: shape => shape }, on: (name, fn) => handlers[name] = fn, registerTool: tool => tools.push(tool) }, {
-			approvalTargets: async () => [{ approvalDirectoryKey: path => { const dir = realpathSync(resolve(path)); return dir.endsWith("/") ? dir : `${dir}/`; } }, { approvalTreeSearchKey: dir => `tree\0${dir}` }],
+			approvalTargets: async () => [{ approvalDirectoryKey: path => { const dir = existsSync(path) ? realpathSync(resolve(path)) : resolve(path); return dir.endsWith("/") ? dir : `${dir}/`; } }, { approvalTreeSearchKey: dir => `tree\0${dir}` }],
 		});
 		await handlers.session_start({}, { sessionManager: { getCwd: () => cwd } });
 		for (const [params, target] of [[{}, cwd], [{ path: "src", pattern: "x" }, join(cwd, "src")], [{ path: outside }, outside], [{ path: join(cwd, "link") }, outside], [{ path: "/" }, "/"]]) {
 			const path = realpathSync(target);
 			expect(tools[0].approvalCacheTargets(params)).toEqual([`tree\0${path.endsWith("/") ? path : `${path}/`}`]);
 		}
+		const missing = join(realpathSync(cwd), "missing");
+		expect(tools[0].approvalCacheTargets({ path: missing })).toEqual([`tree\0${missing}/`]);
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}

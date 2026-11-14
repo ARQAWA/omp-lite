@@ -515,7 +515,9 @@ export function install(pi, options = {}) {
 		approvalCacheTargets: args => {
 			const cwd = session.getCwd();
 			const root = args?.path ? (isAbsolute(args.path) ? args.path : resolve(cwd, args.path)) : cwd;
-			return [treeKey(directoryKey(realpathSync.native(root)))];
+			let target = resolve(cwd, root);
+			try { target = realpathSync.native(root); } catch {}
+			return [treeKey(directoryKey(target))];
 		},
 		strict: false,
 		description: FILES_DESCRIPTION,

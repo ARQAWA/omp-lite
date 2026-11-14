@@ -51,7 +51,7 @@
 
 **Поля:** `path`, `glob`, `pattern`, `case`, `hidden`, `gitignore`.
 
-**Разрешения:** OMP проверяет корень поиска как рекурсивное дерево через родные `approvalDirectoryKey` и `approvalTreeSearchKey`.
+**Разрешения:** OMP проверяет корень поиска как рекурсивное дерево через родные `approvalDirectoryKey` и `approvalTreeSearchKey`. При ошибке `realpath` используется лексический путь.
 
 **Движок:** `glob` и `grep` из `@oh-my-pi/pi-natives`, через `await import`. В тесте движок подменён.
 
