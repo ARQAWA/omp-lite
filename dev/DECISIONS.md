@@ -1648,3 +1648,13 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness/web-search`.
 
 **Носители правила:** `src/modules/web-search/`, `dev/tests/harness/web-search/web-search.test.js`.
+
+## D-NEW-runtime-config — закрыт minimax-cn
+
+**Решение:** добавить `minimax-cn` в `disabledProviders`.
+
+**Основание:** заказ закрыть всех провайдеров, кроме четырёх разрешённых.
+
+**Причина:** OMP 18.18.8, `packages/catalog/src/models.json`: этот встроенный провайдер отсутствовал в списке.
+
+**Носители правила:** `src/modules/runtime-config/config.yml`.

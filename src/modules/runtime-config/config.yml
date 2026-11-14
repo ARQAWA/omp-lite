@@ -70,6 +70,7 @@ disabledProviders:
   - lm-studio
   - meta
   - minimax
+  - minimax-cn
   - minimax-code
   - minimax-code-cn
   - mistral
