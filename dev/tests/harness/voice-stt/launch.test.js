@@ -13,6 +13,13 @@ test("off the VDI the program starts as upstream does", () => {
 	expect(killTree({ pid: 1 }, {}, "win32")).toBe(false);
 });
 
+test("tree kill reports taskkill success and failure", () => {
+	const env = { OMPCLI_GIT_BASH: bash };
+	for (const [result, expected] of [[{ status: 0 }, true], [{ status: 1 }, false], [{ status: null, error: new Error("missing") }, false], [{ status: 0, error: new Error("failed") }, false]]) {
+		expect(killTree({ pid: 42 }, env, "win32", () => result)).toBe(expected);
+	}
+});
+
 test("on the VDI ffmpeg goes PowerShell -> login Git Bash -> ffmpeg, and bash gets every argument intact", () => {
 	const args = ["-f", "dshow", "-i", "audio=Microphone (Citrix HDX Audio)", "C:\\Users\\o'k\\AppData\\Local\\Temp\\rec.wav", "\$HOME"];
 	const [file, argv] = launch(process.execPath, args, { OMPCLI_GIT_BASH: bash }, "win32");

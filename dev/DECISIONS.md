@@ -1648,3 +1648,33 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness/web-search`.
 
 **Носители правила:** `src/modules/web-search/`, `dev/tests/harness/web-search/web-search.test.js`.
+
+## D-088 — точечная замена подсказок
+
+**Решение:** заменяется последнее совпадение подсказки `task` в текстовой части; из `eval` удаляется и вариант подсказки `workpool` без `wait`.
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/task/index.ts` и `prompts/tools/eval.md`. Совпадающую цитату без настоящей подсказки отличить нельзя.
+
+**Проверка:** `bun test dev/tests/harness/task-delegation dev/tests/harness/runtime-config`.
+
+**Носители правила:** `src/modules/task-delegation/index.js`, `task-delegation.json`, тесты модулей.
+
+## D-089 — выбор id и отправка задачи
+
+**Решение:** точный id важнее отображаемого имени. Задача отправляется с `runCommands: false` и `throwOnDrop: true`.
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/task/executor.ts` и `session/agent-session.ts`: команды могут перехватить задачу, отклонённая отправка может пройти молча.
+
+**Проверка:** `bun test dev/tests/harness/subagent-reuse`.
+
+**Носители правила:** `src/modules/subagent-reuse/index.js`, README и тест модуля.
+
+## D-090 — результат остановки дерева
+
+**Решение:** `killTree` возвращает успех только при успешном выходе `taskkill`. При ошибке рекордеры пробуют обычный `child.kill`.
+
+**Причина:** `src/audio/ffmpeg-recorder.ts` и `src/audio/stream-recorder.ts` выбирают запасной способ по результату `killTree`; потомки всё равно могут остаться.
+
+**Проверка:** `bun test dev/tests/harness/voice-stt`.
+
+**Носители правила:** `src/modules/voice-stt/pi-voice-stt/src/audio/launch.ts`, README и тест модуля.

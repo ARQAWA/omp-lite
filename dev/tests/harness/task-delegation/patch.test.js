@@ -33,6 +33,9 @@ test("keeps the rest of the description and other tools untouched", () => {
 	harness()(event);
 	expect(event.payload.tools[0].function.description.endsWith(`pass exactly the level the user says. In every task say how thorough to be and exactly what to return. ${TAIL}`)).toBe(true);
 	expect(event.payload.tools[1].function.description).toBe("Read a file.");
+	const noTask = { payload: { tools: [event.payload.tools[1]] } };
+	harness()(noTask);
+	expect(noTask.payload.tools[0].function.description).toBe("Read a file.");
 });
 
 test("the specificity line becomes the Codex-style default worker rule, once", () => {
@@ -71,12 +74,6 @@ test("patches the flat Anthropic shape and ignores non-tool look-alikes", () => 
 	expect(event.payload.meta.task.description).toBe("danger zone");
 });
 
-test("tolerates payloads without the task tool", () => {
-	const event = { payload: { tools: [{ type: "function", function: { name: "read", description: "Read.", parameters: {} } }] } };
-	expect(() => harness()(event)).not.toThrow();
-	expect(event.payload.tools[0].function.description).toBe("Read.");
-});
-
 test("patches OAuth-prefixed task names in both provider shapes", () => {
 	for (const tool of [
 		{ name: "_task", description: DESCRIPTION, input_schema: {} },
@@ -101,13 +98,21 @@ test("removes mandatory scout wording even when the gate is already present", ()
 	expect(tool.description.split(RULE)).toHaveLength(2);
 });
 
-test("swaps the specialist tip in task results for our rule", () => {
+const tip = "Tip: this call spawned 2 generic `task` workers. Check the agent list for a closer specialist type — e.g. read-only research belongs on `agent: \"scout\"`, which runs on a faster model.";
+const ours = "Tip: omit `agent` by default; `scout` only for read-only search over unknown files; `sonic` only for mechanical edits with exact instructions.";
+
+test("replaces the final specialist tip, not quoted report text", () => {
 	const strip = handlers().get("tool_result");
-	const tip = "Tip: this call spawned 2 generic `task` workers. Check the agent list for a closer specialist type — e.g. read-only research belongs on `agent: \"scout\"`, which runs on a faster model.";
-	const content = [{ type: "text", text: `Spawned 2 background agents.\n\n${tip}\n\nCoordinate.` }, { type: "image", data: "x" }];
-	const ours = "Tip: omit `agent` by default; `scout` only for read-only search over unknown files; `sonic` only for mechanical edits with exact instructions.";
-	expect(strip({ toolName: "_task", content }).content).toEqual([{ type: "text", text: `Spawned 2 background agents.\n\n${ours}\n\nCoordinate.` }, content[1]]);
+	const report = `The child reported:\n\n${tip}\n\nEnd of report.`;
+	const content = [{ type: "text", text: `${report}\n\n${tip}` }, { type: "image", data: "x" }];
+	expect(strip({ toolName: "_task", content }).content).toEqual([{ type: "text", text: `${report}\n\n${ours}` }, content[1]]);
 	expect(strip({ toolName: "read", content })).toBeUndefined();
+});
+
+test("replaces the specialist tip before the async coordination advisory", () => {
+	const coordination = "2 siblings run together. Overlapping files? Give each file one owner via `write agent://<id>`; siblings message only to unblock, never to announce edits. `read proc://` shows running jobs and agents.";
+	const content = [{ type: "text", text: `Spawned 2 background agents.\n\n${tip}\n\n${coordination}` }];
+	expect(handlers().get("tool_result")({ toolName: "task", content }).content[0].text).toBe(`Spawned 2 background agents.\n\n${ours}\n\n${coordination}`);
 });
 
 test("eval prefers Bun, keeps Python, and drops agent and workpool advertising", () => {
@@ -138,6 +143,13 @@ test("eval prefers Bun, keeps Python, and drops agent and workpool advertising",
 		expect(once).not.toContain("Subagents have separate kernels.");
 		expect(record.parameters).toEqual({ language: "keep" });
 	}
+});
+
+test("removes the rendered workpool hint when wait is absent", () => {
+	const record = { name: "eval", description: "One cell per call; top-level state persists, including across compaction.\nFor 2+ independent items, use a named `workpool()`; results auto-deliver.\nPython: plain Python subprocess, not IPython." };
+	harness()({ payload: { tools: [record] } });
+	expect(record.description).toContain("Python: plain Python subprocess, not IPython.");
+	expect(record.description).not.toContain("For 2+ independent items, use a named `workpool()`; results auto-deliver.");
 });
 
 test("the eval filter blocks direct agent and workpool calls in both runtimes", () => {
