@@ -3,13 +3,14 @@
 Расширение OMP. Делает делегирование явным через описание `task`.
 В `eval` предпочитает JavaScript на Bun.
 Даёт сабагентам `task` и `sonic` пустую роль.
+Даёт сабагенту `scout` роль `explore` из Cursor.
 
 **Почему костыль:** штатной настройки описаний тулов нет.
 Отдельного выключателя `agent()` и `workpool()` также нет.
 Общая политика спавна ограничивает и `task`.
 Ранее упомянутой настройки `tasks.delegationBias` не существует.
 
-**Вход:** `~/.omp/agent/extensions/task-delegation.js` и соседний `task-delegation.json`. Профили: `~/.omp/agent/agents/task.md` и `~/.omp/agent/agents/sonic.md`.
+**Вход:** `~/.omp/agent/extensions/task-delegation.js` и соседний `task-delegation.json`. Профили: `~/.omp/agent/agents/task.md`, `~/.omp/agent/agents/sonic.md` и `~/.omp/agent/agents/scout.md`.
 Код, строки описаний и сообщения ошибок разделены.
 
 **Строка:** `Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.` Взята дословно из Codex CLI, описание тула `spawn_agent`.
@@ -33,7 +34,9 @@
 
 **Хук `tool_result`:** в ответе `task` родная подсказка OMP `Tip: this call spawned N generic ... workers` заменяется нашей. Родная зовёт к `scout` и спорит с правилом. Настройки для неё нет (`suppressSpawnAdvisory` внутренний). Наша: `Tip:` и текст ключа `pick`. Шаблон родной лежит в ключе `tip`.
 
-**Профили `task` и `sonic`.** Лежат в `agents/`. Тело пустое. Фронтматтер взят из `omp agents unpack`. Как у Codex: роль `default` ничего не добавляет. Родная роль OMP (`prompts/agents/task.md`) просила «minimum useful result» и «MUST concise». Свой профиль заменяет встроенный с тем же именем: `task/discovery.ts`, OMP 18.18.8. Вместе с ролью ушла родная строка `select most specific agent type...`. Хук для её замены больше не нужен. `scout` пока не тронут. Решение: D-067.
+**Профили `task` и `sonic`.** Лежат в `agents/`. Тело пустое. Фронтматтер взят из `omp agents unpack`. Как у Codex: роль `default` ничего не добавляет. Родная роль OMP (`prompts/agents/task.md`) просила «minimum useful result» и «MUST concise». Свой профиль заменяет встроенный с тем же именем: `task/discovery.ts`, OMP 18.18.8. Вместе с ролью ушла родная строка `select most specific agent type...`. Хук для её замены больше не нужен. Решение: D-067.
+
+**Профиль `scout`.** Лежит в `agents/scout.md`. Тело — роль сабагента `explore` из Cursor. Источник: `~/ai-project/cursor-pi/research/cursor/reverse/prompts/items/subagent-task-33666c41b589.md`, тот же текст в пяти захватах. Вырезано три куска, остальное дословно. Первое: слова « for Cursor, an application to write code with AI». Второе: общая строка сабагента Cursor про спавн и Canvas. Третье: блок `<progress_reporting_instructions>`, тула `UpdateCurrentStep` в OMP нет. Ушли родные строки OMP (`prompts/agents/scout.md`): «Investigate the codebase rapidly», «brief», «finish in a few seconds», «NEVER read full files unless they're tiny». Они спорили с блоком `<file_work>` в `SYSTEM.md` и с заметкой сабагентам. Схема `output` убрана: `task.structured` выключен, схема не работает. Отчёт идёт обычным сообщением, как в Cursor. `readSummarize: false` дописан руками: `read` отдаёт файл как есть, без сводки (`task/types.ts`, `task/executor.ts`). `omp agents unpack` этот ключ не пишет. Не менялись имя, описание, тулы и модель. Наш конфиг по-прежнему запускает `scout` на `openai-codex/gpt-6.1-terra:xhigh` через `task.agentModelOverrides`. Решение: D-069.
 
 **Границы:** фильтр текстовый, это не изоляция.
 Функции из ядра OMP не удаляются.
@@ -45,6 +48,6 @@ Python остаётся включённым, выбирает язык моде
 
 **Установка:** файлы перечислены в [манифесте](../../../install.manifest.json); процедура — [INSTALL.md](../../../INSTALL.md).
 
-**Выключить:** удалить расширение и соседний JSON. Профили: удалить `agents/task.md` и `agents/sonic.md`, вернётся родная роль.
+**Выключить:** удалить расширение и соседний JSON. Профили: удалить `agents/task.md`, `agents/sonic.md` и `agents/scout.md`, вернётся родная роль.
 
 **Тесты:** `bun test dev/tests/harness/task-delegation`.

@@ -127,6 +127,10 @@
 			"to": "agents/sonic.md"
 		},
 		{
+			"from": "src/modules/task-delegation/agents/scout.md",
+			"to": "agents/scout.md"
+		},
+		{
 			"from": "src/modules/tool-summary/index.js",
 			"to": "extensions/tool-summary.js"
 		},

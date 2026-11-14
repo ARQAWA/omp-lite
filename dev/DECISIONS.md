@@ -1333,3 +1333,19 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-14, OMP 18.18.8. Живая проба в worktree, отдельный `omp -p`. Главный агент, `task` и `acceptor` получили текст `ENGINEERING.md` внутри блока `AGENTS.md`. Строки импорта в промпте нет: она раскрыта. Скилла в списке навыков нет.
 
 **Носители правила:** `dev/ENGINEERING.md`, `AGENTS.md`, `dev/README.md`.
+
+## D-069 — `scout` получает роль `explore` из Cursor
+
+**Решение:** свой профиль `src/modules/task-delegation/agents/scout.md` заменяет встроенный `scout`. Тело — роль сабагента `explore` из Cursor. Вырезано три куска, остальное дословно: слова « for Cursor, an application to write code with AI»; общая строка сабагента Cursor про спавн и Canvas; блок `<progress_reporting_instructions>`. Схема `output` убрана. `readSummarize: false` дописан руками. Имя, описание, тулы и модель родные.
+
+**Основание:** слова владельца от 2026-11-14, сессия `01a1d13b-8491`: «Так, про скаут на текст курсора я понял.»; «Ну, хорошо, мне нравится то, что ты написал. Давай, во-первых, это применим»; «Да, применяю роль скаута».
+
+**Причина:** родная роль OMP 18.18.8 (`prompts/agents/scout.md`) говорит «Investigate the codebase rapidly», «Summary ... brief», «Architecture ... brief», «this is a short investigation, and you are supposed to finish in a few seconds», «NEVER read full files unless they're tiny». Это спорит с блоком `<file_work>` в `SYSTEM.md` («Read: every relevant file in one response, whole», «Depth beats token cost») и с заметкой сабагентам из D-067 («It has no length limit»). Текст Cursor: `~/ai-project/cursor-pi/research/cursor/reverse/prompts/items/subagent-task-33666c41b589.md`, тот же в пяти захватах (`33666c41b589`, `44e430b004a1`, `5b8a62ab94f5`, `6c248612f1c5`, `70bb17c539d0`). В замерах Cursor сабагент `explore` читал файлы целиком и отдавал отчёты на 16–32 тысячи знаков на Sol. Длину там задавало задание вызывающего, роль её только не ограничивала. Штатный способ есть, кода не нужно. OMP 18.18.8: `task/discovery.ts`: профиль в `~/.omp/agent/agents/` заменяет встроенный с тем же именем. `task/types.ts`: `readSummarize` при `false` даёт `read` файл как есть, без сводки; `task/executor.ts` превращает его в `"read.summarize.enabled": false`; `discovery/helpers.ts` читает `frontmatter.readSummarize`. У родного `scout` стоит `read-summarize: false`, `omp agents unpack` этот ключ не пишет. Схема `output` не работает: `task.structured` выключен, живой промпт `scout` говорит «No `yield` tool exists». Ключ `taskRemove` в `task-delegation.json` вырезает фразу из родного описания; описание не менялось, ключ работает.
+
+**Заменяет:** D-067: «Роль `scout` не тронута».
+
+**Границы:** описание не менялось и всё ещё говорит «compressed context». Текст Cursor сохраняет «fast agent». Влияние на длину ответа не замерено. На VDI не проверено. Нужна новая сессия.
+
+**Проверка:** заполняет вызывающий после установки.
+
+**Носители правила:** `src/modules/task-delegation/agents/scout.md`, `src/modules/task-delegation/README.md`, `src/modules/communication/README.md`, `install.manifest.json`, `INSTALL.md`, тест `dev/tests/harness/task-delegation/profiles.test.js`.
