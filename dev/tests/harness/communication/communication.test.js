@@ -29,6 +29,7 @@ test("the subagent rule carries the report note, always applied", () => {
 	expect(sub.meta).toEqual({ alwaysApply: true, agents: "!main" });
 	expect(sub.body).toStartWith("You are an agent in a team of agents.");
 	expect(sub.body).toContain("It has no length limit.");
+	expect(sub.body).toContain("Maximize its useful payload");
 });
 
 test("scope: main rule only for main, subagent rule for every subagent", () => {

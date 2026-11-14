@@ -19,8 +19,10 @@ test("task and sonic keep stock frontmatter and have an empty role", async () =>
 
 test("scout keeps stock frontmatter without output and has the role of Cursor's explore", async () => {
 	const { meta, body } = await profile("scout");
-	expect(meta).toEqual({ name: "scout", description: "MUST be used for exploratory codebase research, rapid code analysis, and broad pattern searches. Fast read-only scout returning compressed context for handoff.", tools: ["read", "find", "grep", "glob", "ast_grep", "web_search"], model: ["@smol"], thinkingLevel: "medium", readSummarize: false });
+	expect(meta).toEqual({ name: "scout", description: "MUST be used for exploratory codebase research, rapid code analysis, and broad pattern searches. Read-only scout returning a full report for handoff.", tools: ["read", "find", "grep", "glob", "ast_grep", "web_search"], model: ["@smol"], thinkingLevel: "medium", readSummarize: false });
 	expect(body).toContain("You excel at thoroughly navigating and exploring codebases.");
 	expect(body).toContain("Adapt your search approach based on the thoroughness level specified by the caller");
 	expect(body).not.toMatch(/brief|few seconds|NEVER read full files|Cursor|UpdateCurrentStep/);
+	expect(body).toContain("Your report is the complete deliverable at the requested depth");
+	expect(body).not.toMatch(/fast agent|as quickly as possible/);
 });

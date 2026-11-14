@@ -18,7 +18,7 @@
 **Ресурсы:**
 
 - `rules/communication-main.md` — `agents: main`, только главный агент. Три блока Cursor GPT-5.5: `<special_user_requests>`, `<mixed_requests>`, `<working_with_the_user>`. Текст перенесён из `SYSTEM.md` без изменений. `<mixed_requests>` — наше дополнение, D-057.
-- `rules/communication-subagent.md` — `agents: "!main"`, все сабагенты. Заметка про финальный отчёт. Текст одобрен владельцем.
+- `rules/communication-subagent.md` — `agents: "!main"`, все сабагенты. Заметка про финальный отчёт. Она ещё просит увеличить полезную нагрузку ответа: глубина, ширина, плотность фактов (D-070). Текст одобрен владельцем.
 
 **`scout`.** Получает заметку, как все сабагенты. Его роль заменена ролью `explore` из Cursor: профиль в [task-delegation](../task-delegation/README.md), решение D-069.
 
