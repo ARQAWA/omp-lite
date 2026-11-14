@@ -1890,3 +1890,17 @@ Blind и high больше не различаются ни моделью, ни
 **Основание:** владелец, 2026-11-14: «процесс мд не должен резать длину ответа».
 
 **Носители правила:** [PROCESS.md](PROCESS.md).
+
+## D-109 — пропущенное, ошибочное и лишнее это serious; note только сомнительное прочтение
+
+**Решение:** уточняет D-098 и D-105. В `agents/acceptor.md`, раздел `## Findings`, две строки. Было: «- `serious`: an ordered item is not in the work; the work does the opposite of the owner's exact words; a part nobody ordered changes what the work does.» Стало: «- `serious`: an ordered item is not in the work; the work is against the owner's words or breaks a limit of `Limits`; a part of the work that no requirement orders, or an item done noticeably bigger than its words need.» Было: «- `note`: everything else. A finding that needs a reading of the owner's words is a note. In doubt: note.» Стало: «- `note`: a finding that stands on one reading of the owner's words, when another honest reading allows the work. In doubt between two readings: note.» В `skills/reviewer/SKILL.md`, раздел 4, шаг 7, слова в скобках. Было: «(an ordered item is not in the work, the work is against the owner's exact words, a part nobody ordered changes what the work does)». Стало: «(an ordered item is not in the work, the work is against the owner's words or his limit, a part no requirement orders)». В `README.md` модуля исправлена строка про уровни.
+
+**Основание:** слова владельца, сессия `01a1d13b-8491`: id `9deff2b0` «Смотри, самое главное — это чтобы было выполнено всё, что заказано, иии не было ничего лишнего. Это две кор-- это два-два кор этих ориентира, которые должен у-удерживать, э-э-э, ревьюер. Это прям крит.»; id `35de84ab` «Ну вот да, вот эти все три пункта, они критичны максимально. Вот, их-- и на-надо на них сфокусироваться, всё остальное для нас неважно.»; id `d2a95b7e` «Да, конечно, да. У нас нет задачи в три круга, блядь. Наша задача — получить качественный результат и не тратить время на хуйню. Именно на хуйню.»
+
+**Причина:** прогон D-105 на документах TRFS-5857 (`omp-lite-audit/reviewer-redesign/mvp/runL2b/RESULT.md`): принято за 3 круга, но все три `note` были настоящими незаказанными частями, основной агент не поднял ни одну. Документы стали короче с 5543 до 5487 знаков, в прогоне до уровней с 5543 до 4896. По старой формулировке незаказанная часть документа «не меняет то, что делает работа», поэтому каждый `extra` становился `note`, и ревьюер перестал резать.
+
+**Границы:** кругов станет больше: владелец выбрал строгость, не скорость. `note` теперь только сомнительное прочтение слов владельца. На Windows VDI не проверено.
+
+**Проверка:** 2026-11-15. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 345 pass, 0 fail. Коммит `66e2289`, слияние `2d13baf`. Файлы в main и в установке равны (`cmp`). Резервная копия: `~/.omp/backups/install-contract-20261115-000107/`. Два живых прогона на настоящих задачах впереди.
+
+**Носители правила:** `src/modules/review/agents/acceptor.md`, `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`.
