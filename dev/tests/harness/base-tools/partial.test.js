@@ -67,6 +67,12 @@ test("a failed file and its delete alias are both removed from the patch", async
 	expect(message).toContain(`${a}\n${del}`);
 });
 
+test("Windows drive paths allow partial patches", async () => {
+	const good = "*** Add File: C:/repo/a.txt\n+a", bad = "*** Update File: C:/repo/b.txt\n@@\n-wrong\n+b";
+	const handlers = hooks(dry(["C:/repo/b.txt"]));
+	expect(await handlers.tool_call(call("edit", patch(good, bad)), ctx)).toEqual({ input: { input: patch(good) } });
+});
+
 test("several files written: the result is an error, the note keeps the removed sections, every skipped file gets a red entry", async () => {
 	const handlers = hooks(dry(["b.txt", "d.txt"]));
 	const done = [{ path: "/work/a.txt", diff: "+new a" }, { path: "/work/c.txt", diff: "+new c" }];

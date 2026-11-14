@@ -416,7 +416,7 @@ export function splitPatch(input) {
 export async function partialPatch(input, dry, cwd = process.cwd()) {
 	const sections = splitPatch(input) ?? [];
 	// Internal URL targets resolve only inside the native edit.
-	if (sections.some(section => /^\w+:\//.test(section.path))) return;
+	if (sections.some(section => /^\w{2,}:\//.test(section.path))) return;
 	const key = section => resolve(cwd, section.path);
 	const paths = [...new Set(sections.map(key))];
 	if (paths.length < 2) return;
