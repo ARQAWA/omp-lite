@@ -161,7 +161,7 @@ spelling:
   autocomplete: "off"
 emojiAutocomplete: false
 dev:
-  autoqaConsent: granted
+  autoqaConsent: denied
 memory:
   backend: mnemopi
 autolearn:
