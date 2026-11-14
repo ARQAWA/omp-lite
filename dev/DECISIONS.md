@@ -1796,3 +1796,13 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** при выключенном `web-search` родной поиск больше не получает этот патч.
 
 **Носители правила:** `install.manifest.json`, `INSTALL.md`, `dev/history/codex-luna-search.md`.
+
+## D-NEW-skill-alias-limit — ограничение короткого вызова навыка
+
+**Решение:** принять риск перекрытия встроенной команды одноимённым навыком. Команды из `getCommands()` защищены; файловые команды тоже могут перекрываться. Это уточняет D-009.
+
+**Основание:** решение владельца от 2026-11-14 после инвентаризации, находка B1.
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/extensibility/extensions/get-commands-handler.ts`: `getCommands()` не возвращает встроенные и файловые команды.
+
+**Носители правила:** `src/modules/skill-alias/README.md`, `dev/history/skill-alias.md`.
