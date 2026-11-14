@@ -1,53 +1,37 @@
-// One live line with tool counters; tool cards stay hidden.
+// One live line with tool counters under the editor.
 import data from "./tool-summary.json";
 
-const ORDER = ["read", "edit", "search", "run", "other"];
-const kind = name => data.tools[name] ?? "other";
-
 export function summarize(calls) {
-	const counts = { read: 0, edit: 0, search: 0, run: 0, other: 0 };
-	let failed = 0;
-	for (const call of calls) {
-		counts[kind(call.name)] += 1;
-		if (call.isError) failed += 1;
+	const counts = {};
+	for (const { name, isError } of calls) {
+		const kind = data.tools[name] ?? "other";
+		counts[kind] = (counts[kind] ?? 0) + 1;
+		if (isError) counts.fail = (counts.fail ?? 0) + 1;
 	}
-	const parts = [];
-	for (const key of ORDER) if (counts[key] > 0) parts.push(`${data.labels[key]} ${counts[key]}`);
-	if (failed > 0) parts.push(`${data.labels.fail} ${failed}`);
-	return parts.join(" · ");
+	return Object.entries(data.labels)
+		.filter(([key]) => counts[key])
+		.map(([key, label]) => `${label} ${counts[key]}`)
+		.join(" · ");
 }
 
 export default function toolSummary(pi) {
-	let ctx;
 	let calls = [];
-
-	const paint = () => {
-		ctx?.ui?.setWidget?.(
-			"tool-summary",
-			calls.length > 0 ? [summarize(calls)] : undefined,
-			{ placement: "belowEditor" },
-		);
-	};
-	const reset = () => {
+	const paint = ctx => ctx.ui.setWidget("tool-summary", calls.length > 0 ? [summarize(calls)] : undefined, { placement: "belowEditor" });
+	const reset = (_event, ctx) => {
 		calls = [];
-		paint();
+		paint(ctx);
 	};
-
-	pi.on("session_start", (_event, session) => {
-		ctx = session;
-		reset();
-	});
 	pi.on("agent_start", reset);
 	// A queued request is dequeued inside a live run, without another agent_start.
 	pi.on("before_agent_start", reset);
-	pi.on("tool_execution_start", event => {
+	pi.on("tool_execution_start", (event, ctx) => {
 		calls.push({ id: event.toolCallId, name: event.toolName, isError: false });
-		paint();
+		paint(ctx);
 	});
-	pi.on("tool_execution_end", event => {
+	pi.on("tool_execution_end", (event, ctx) => {
 		const call = calls.find(item => item.id === event.toolCallId);
 		if (!call || event.isError !== true) return;
 		call.isError = true;
-		paint();
+		paint(ctx);
 	});
 }

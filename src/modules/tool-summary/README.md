@@ -2,7 +2,7 @@
 
 Расширение OMP. Показывает одну строку со счётчиками тулов под редактором. Карточки тулов не трогает.
 
-**Вход OMP:** `ctx.ui.setWidget`, события `session_start`, `agent_start`, `before_agent_start`, `tool_execution_start`, `tool_execution_end`.
+**Вход OMP:** `ctx.ui.setWidget`, события `agent_start`, `before_agent_start`, `tool_execution_start`, `tool_execution_end`.
 
 **Настройка OMP:** не нужна. Карточки тулов видны: в конфиге `display.hideToolActivity: false`.
 
@@ -10,11 +10,7 @@
 
 **Виды:** карта имён тулов лежит в `tool-summary.json`. `read` — чтение; `edit`, `apply_patch`, `write` — правка; `grep`, `glob`, `find`, `web_search` — поиск; `bash`, `eval` — запуск. Прочие тулы идут в `other`.
 
-**Установка:** скопировать два файла в `~/.omp/agent/extensions/`:
-```bash
-cp src/modules/tool-summary/index.js ~/.omp/agent/extensions/tool-summary.js
-cp src/modules/tool-summary/tool-summary.json ~/.omp/agent/extensions/tool-summary.json
-```
+**Установка:** файлы перечислены в [манифесте](../../../install.manifest.json); процедура — [INSTALL.md](../../../INSTALL.md).
 
 **Выключить:** удалить `tool-summary.js`.
 
