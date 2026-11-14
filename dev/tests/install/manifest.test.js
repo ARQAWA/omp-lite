@@ -28,6 +28,8 @@ test("the removed memory description patch is not installed", () => {
 	expect(manifest.remove).toContain("extensions/memory-tool-prompts.js");
 });
 
+test("the removed Luna patch is removed from installations", () => expect(manifest.remove).toContain("extensions/codex-luna-search.js"));
+
 test("targets stay inside the agent root and are unique", () => {
 	const targets = new Set();
 	for (const entry of manifest.files) {
