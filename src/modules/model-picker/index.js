@@ -73,16 +73,16 @@ export function modelLabel(model) {
 
 export function levelsFor(model) {
 	const efforts = Array.isArray(model?.thinking?.efforts) ? model.thinking.efforts : [];
-	const supported = new Set(["auto", "off", ...efforts]);
+	const supported = new Set(efforts);
 	return data.effortOrder.filter(level => supported.has(level));
 }
 
 export function nearestLevel(model, level) {
 	const levels = levelsFor(model);
-	if (typeof level !== "string") return levels[0];
+	if (!data.effortOrder.includes(level)) level = "high";
 	if (levels.includes(level)) return level;
 	const from = data.effortOrder.indexOf(level);
-	for (let index = (from < 0 ? data.effortOrder.length : from) - 1; index >= 0; index -= 1) {
+	for (let index = from - 1; index >= 0; index -= 1) {
 		if (levels.includes(data.effortOrder[index])) return data.effortOrder[index];
 	}
 	return levels[0];
@@ -113,18 +113,6 @@ async function enabledModels(pi) {
 
 const side = (theme, model, room) => (room > size(model.provider) ? ` ${theme.fg("dim", model.provider)}` : "");
 
-export function configuredEffort(ctx, pi) {
-	let latest;
-	const branch = ctx?.sessionManager?.getBranch?.();
-	if (Array.isArray(branch)) {
-		for (const entry of branch) if (entry?.type === "thinking_level_change") latest = entry;
-	}
-	if (typeof latest?.configured === "string") return latest.configured;
-	if (typeof latest?.thinkingLevel === "string") return latest.thinkingLevel;
-	const live = pi?.getThinkingLevel?.();
-	return typeof live === "string" ? live : "off";
-}
-
 export async function commitSelection(pi, ctx, draft) {
 	const model = draft?.model;
 	if (!model) return;
@@ -145,7 +133,6 @@ export async function commitSelection(pi, ctx, draft) {
 const paintEffort = (theme, level, active) => {
 	if (!active) return theme.fg("dim", level);
 	const style = data.efforts[level];
-	if (style?.mode === "ansi") return `\x1b[1m\x1b[38;5;${style.color}m${level}\x1b[39m\x1b[22m`;
 	const color = style?.color ?? "text";
 	const role = typeof theme.hasColor === "function" && !theme.hasColor(color) ? "thinkingXhigh" : color;
 	return theme.fg(role, theme.bold(level));
@@ -283,7 +270,7 @@ export async function openPicker(pi, ctx, isCurrent = () => true, patterns, firs
 		}
 		const current = ctx.models.current() ?? ctx.model;
 		const selected = models.find(model => sameModel(model, current)) ?? models[0];
-		const initial = { model: selected, effort: nearestLevel(selected, configuredEffort(ctx, pi)) };
+		const initial = { model: selected, effort: nearestLevel(selected, pi.getThinkingLevel?.()) };
 		const draft = await ctx.ui.custom((_tui, theme, _keybindings, done) => {
 			const picker = new ModelPicker(models, initial, theme, done);
 			// The opening Shift+arrow is also the first move.

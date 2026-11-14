@@ -4,7 +4,6 @@ import modelPicker, {
 	allowModels,
 	arrowDirection,
 	commitSelection,
-	configuredEffort,
 	filterModels,
 	levelsFor,
 	modelLabel,
@@ -26,13 +25,13 @@ const picker = (models, initial = {}) => {
 	return { instance, done };
 };
 
-test("levelsFor puts auto, off and the model efforts in picker order", () => {
-	expect(levelsFor(opus)).toEqual(["auto", "off", "minimal", "low", "medium", "high"]);
-	expect(levelsFor(model("x", "y", "Y", ["high", "low"]))).toEqual(["auto", "off", "low", "high"]);
-	expect(levelsFor(plain)).toEqual(["auto", "off"]);
+test("levelsFor keeps supported fixed efforts in picker order", () => {
+	expect(levelsFor(opus)).toEqual(["low", "medium", "high"]);
+	expect(levelsFor(model("x", "y", "Y", ["high", "low"]))).toEqual(["low", "high"]);
+	expect(levelsFor(plain)).toEqual([]);
 	expect(nearestLevel(opus, "max")).toBe("high");
-	expect(nearestLevel(opus, "auto")).toBe("auto");
-	expect(nearestLevel(plain, "high")).toBe("off");
+	expect(nearestLevel(opus, "auto")).toBe("high");
+	expect(nearestLevel(plain, "high")).toBeUndefined();
 });
 
 test("modelLabel drops the Claude prefix and control characters", () => {
@@ -62,7 +61,7 @@ test("arrows parse legacy, kitty and release forms", () => {
 test("Enter, Shift+Enter and Esc close the picker", () => {
 	const one = picker([opus], { model: opus });
 	one.instance.handleInput("\x1b[13;2u");
-	expect(one.done).toEqual([{ model: opus, effort: "auto" }]);
+	expect(one.done).toEqual([{ model: opus, effort: "high" }]);
 
 	const two = picker([opus], { model: opus });
 	two.instance.handleInput("\x1b[27;2;13~");
@@ -92,7 +91,7 @@ test("letters filter the list and Backspace restores it", () => {
 });
 
 test("arrows move model and effort without wrapping", () => {
-	const { instance } = picker([opus, flash], { model: opus, effort: "auto" });
+	const { instance } = picker([opus, flash], { model: opus, effort: "medium" });
 	instance.handleInput("\x1b[B");
 	expect(instance.current.model).toBe(flash);
 	instance.handleInput("\x1b[B");
@@ -103,11 +102,11 @@ test("arrows move model and effort without wrapping", () => {
 	expect(instance.current.model).toBe(opus);
 
 	instance.handleInput("\x1b[C");
-	expect(instance.current.effort).toBe("off");
+	expect(instance.current.effort).toBe("high");
 	instance.handleInput("\x1b[D");
-	expect(instance.current.effort).toBe("auto");
+	expect(instance.current.effort).toBe("medium");
 	instance.handleInput("\x1b[D");
-	expect(instance.current.effort).toBe("auto");
+	expect(instance.current.effort).toBe("low");
 
 	const lower = picker([opus, flash], { model: flash, effort: "max" });
 	lower.instance.handleInput("\x1b[A");
@@ -117,22 +116,22 @@ test("arrows move model and effort without wrapping", () => {
 });
 
 test("render marks the selection and paints every effort", () => {
-	const { instance } = picker([opus, flash], { model: opus, effort: "auto" });
+	const { instance } = picker([opus, flash], { model: opus, effort: "medium" });
 	const rows = instance.render(120).join("\n");
 	expect(rows).toContain("{accent|› }");
 	expect(rows).toContain("{text|**Opus 4.5**}");
-	expect(rows).toContain("\x1b[38;5;250m");
-	for (const level of ["minimal", "low", "medium", "high"]) expect(rows).toContain(level);
+	expect(rows).toContain("{thinkingMedium|**medium**}");
+	for (const level of ["low", "medium", "high"]) expect(rows).toContain(level);
 	instance.handleInput("\x1b[C");
-	expect(instance.render(120).join("\n")).toContain("\x1b[38;5;252m");
+	expect(instance.render(120).join("\n")).toContain("{thinkingHigh|**high**}");
 });
 
 test("a narrow width shortens the selected name and keeps the efforts", () => {
-	const { instance } = picker([opus, flash], { model: opus, effort: "auto" });
-	const rows = instance.render(40).join("\n");
-	expect(rows).toContain("{text|**Opus…**}");
+	const { instance } = picker([opus, flash], { model: opus, effort: "medium" });
+	const rows = instance.render(25).join("\n");
+	expect(rows).toContain("{text|**Opus 4…**}");
 	expect(rows).toContain("{dim|high}");
-	expect(instance.render(38).join("\n")).toContain("{error|Effort needs 39 columns}");
+	expect(instance.render(21).join("\n")).toContain("Effort needs 22 colum");
 });
 
 test("the selected model stays on the middle row, as in MyP", () => {
@@ -169,23 +168,6 @@ test("an empty list renders No models", () => {
 	expect(instance.current.model).toBeUndefined();
 	instance.handleInput("\x7f");
 	expect(instance.current.model).toBe(opus);
-});
-
-test("configuredEffort prefers the configured auto entry", () => {
-	const ctx = branch => ({ sessionManager: { getBranch: () => branch } });
-	const pi = { getThinkingLevel: () => "medium" };
-	expect(
-		configuredEffort(
-			ctx([
-				{ type: "thinking_level_change", configured: "high", thinkingLevel: "high" },
-				{ type: "message" },
-				{ type: "thinking_level_change", configured: "auto", thinkingLevel: "high" },
-			]),
-			pi,
-		),
-	).toBe("auto");
-	expect(configuredEffort(ctx([{ type: "thinking_level_change", thinkingLevel: "low" }]), pi)).toBe("low");
-	expect(configuredEffort(ctx([]), pi)).toBe("medium");
 });
 
 test("commitSelection switches model first, then effort", async () => {
@@ -251,6 +233,58 @@ function session({ models, custom }) {
 	};
 	return { handlers, inputs, pi, ctx };
 }
+
+test("fresh auto session shows only supported fixed efforts and Enter pins one", async () => {
+	let rows, finish;
+	const applied = new Promise(resolve => (finish = resolve));
+	const env = session({ models: [opus], custom: factory => new Promise(resolve => {
+		const component = factory({}, theme, {}, resolve);
+		rows = component.render(120).join("\n");
+		component.handleInput("\r");
+	}) });
+	env.pi.getThinkingLevel = () => "high";
+	env.pi.setThinkingLevel = finish;
+	env.handlers.session_start({}, env.ctx);
+	env.inputs[0]("\x1b[1;2A");
+	expect(rows).not.toMatch(/\b(auto|off|minimal)\b/);
+	expect(rows).toContain("high");
+	expect(await applied).toBe("high");
+});
+
+test("picker pins the live resolved effort or the clamped native default", async () => {
+	for (const [live, expected] of [["medium", "medium"], ["auto", "high"], ["off", "high"], ["minimal", "high"], ["unknown", "high"]]) {
+		let finish;
+		const applied = new Promise(resolve => (finish = resolve));
+		const env = session({ models: [opus], custom: factory => new Promise(resolve => factory({}, theme, {}, resolve).handleInput("\r")) });
+		env.ctx.sessionManager.getBranch = () => [{ type: "thinking_level_change", configured: "auto", thinkingLevel: "low" }];
+		env.pi.getThinkingLevel = () => live;
+		env.pi.setThinkingLevel = finish;
+		env.handlers.session_start({}, env.ctx);
+		env.inputs[0]("\x1b[1;2A");
+		expect(await applied).toBe(expected);
+	}
+	expect(nearestLevel(model("x", "y", "Y", ["xhigh", "max"]), "unknown")).toBe("xhigh");
+});
+
+test("a model without thinking renders and commits without effort", async () => {
+	let rows, finish;
+	const efforts = [];
+	const applied = new Promise(resolve => (finish = resolve));
+	const env = session({ models: [opus, plain], custom: factory => new Promise(resolve => {
+		const component = factory({}, theme, {}, resolve);
+		rows = component.render(120)[5];
+		component.handleInput("\r");
+	}) });
+	env.pi.setModel = value => (finish(value), Promise.resolve(true));
+	env.pi.setThinkingLevel = value => efforts.push(value);
+	env.handlers.session_start({}, env.ctx);
+	env.inputs[0]("\x1b[1;2B");
+	expect(rows).toContain("GPT Plain");
+	expect(rows).not.toMatch(/\b(auto|off|minimal|low|medium|high|xhigh|max)\b/);
+	expect(await applied).toBe(plain);
+	await Promise.resolve();
+	expect(efforts).toEqual([]);
+});
 
 test("the picker lists only enabledModels", async () => {
 	expect(allowModels([opus, flash, plain], ["anthropic/*", "openai/gpt-plain"])).toEqual([opus, plain]);
@@ -415,7 +449,7 @@ test("openPicker applies the choice and ignores stale dialogs", async () => {
 	await openPicker(pi, ctx);
 	expect(calls).toEqual([
 		["model", "deepseek-flash"],
-		["effort", "auto"],
+		["effort", "high"],
 	]);
 	expect(notes).toEqual([]);
 
