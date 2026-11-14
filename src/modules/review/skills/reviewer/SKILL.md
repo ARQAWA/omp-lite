@@ -42,7 +42,7 @@ Only the main session runs this. A subagent asked for a review tells its parent 
 3. The check returns a number: the answer is not a verdict. Repeat the round once. Incomplete again: stop and report to the owner.
 4. First line `BROKEN`: collect again from section 2, once. `BROKEN` again: stop and report to the owner.
 5. First line `FINDINGS`: work through section 4. Then go to step 1.
-6. First line `CLEAN`: go to section 5.
+6. First line `CLEAN`: write its notes to the journal (section 4, step 7), then go to section 5.
 
 ## 4. Findings
 1. Before you fix anything, open the place in the work yourself. The finding is right and it is about the order: fix it.
@@ -51,6 +51,7 @@ Only the main session runs this. A subagent asked for a review tells its parent 
 4. A fix is the smallest one. First remove, then change. Add only what the owner named. Do nothing for the reviewer, except the fix of a finding raised again.
 5. Append a `## Round <n>` block to `<dir>/updates.md`: for each finding its number and either what you fixed and where, or your objection. A fix touched a file outside `Work`: append the row `J1 <path>` to `updates.md`. The next such file is `J2`.
 6. The reviewer called `extra` a part you think is critical: the owner decides. Write to him what dies without this part. His answer goes to `updates.md` with its `id`. Ask the owner nothing else during the review.
+7. After every round, append to `## Journal` at the end of `<dir>/updates.md` one line for each finding of the round: `<round>.<n> <level> <kind> <row> <place>: fixed | objected | note`. A `note`: record it; do not fix it and do not object. Steps 1-6 are for `serious` findings.
 
 ## 5. Accepted
 1. Two rounds in a row gave `CLEAN`, the work did not change between them, the reviewers were different and fresh, and both answers were complete: accepted. Delete `<dir>`.
@@ -62,7 +63,7 @@ Only the main session runs this. A subagent asked for a review tells its parent 
 2. There is no round limit. The cycle runs until two clean rounds in a row.
 3. One call of this skill is one review. After acceptance, do not start a new review yourself.
 4. Do not bring the reviewer's doubts to the owner as questions.
-5. Report once, at the end: the verdict, the coverage numbers, the count by requirements, the number of rounds, and the objections, one line each.
+5. Report once, at the end: the verdict, the coverage numbers, the count by requirements, the number of rounds, the objections and the notes, one line each.
    Coverage numbers: requirement rows checked and files checked. Give each twice, for the two clean rounds.
 
 ## Rules
