@@ -99,6 +99,22 @@ test("a health timeout reports the wait", async () => {
 	await expect(memory.ensure()).rejects.toThrow("did not start in 2s");
 });
 
+test("slow health responses cannot extend the 60 second deadline", async () => {
+	let elapsed = 0, calls = 0;
+	const timeout = AbortSignal.timeout, fake = server([503]);
+	AbortSignal.timeout = ms => ({ ms });
+	try {
+		const memory = createMemory({
+			runtimeDir: "/runtime", model: "/model/model.gguf", spawnProcess: fake.spawnProcess, allocate: async () => 5004,
+			now: () => elapsed, sleep: async ms => { elapsed += ms; },
+			request: async (url, { signal }) => { calls++; elapsed += Math.min(950, signal.ms); throw new Error("timeout"); },
+		});
+		await expect(memory.ensure()).rejects.toThrow("did not start in 60s");
+		expect(elapsed).toBe(60000); expect(calls).toBe(42);
+		expect(fake.calls.spawn[0].process.killed).toBe(true);
+	} finally { AbortSignal.timeout = timeout; }
+});
+
 test("a server exit stops the wait and reports the code", async () => {
 	const fake = server([503]);
 	fake.spawnProcess = (file, args) => {

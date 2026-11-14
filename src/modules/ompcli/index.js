@@ -629,6 +629,7 @@ function createMemory(options = {}) {
 	const request = options.request ?? fetch;
 	const spawnProcess = options.spawnProcess;
 	const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
+	const now = options.now ?? (() => performance.now());
 	const attempts = options.attempts ?? 120;
 	const intervalMs = options.intervalMs ?? 500;
 	const dimensions = options.dimensions ?? MEMORY_DIM;
@@ -649,16 +650,17 @@ function createMemory(options = {}) {
 
 	async function start() {
 		const id = ++generation;
+		const deadline = now() + attempts * intervalMs;
 		for (let attempt = 1; ; attempt++) {
 			try {
-				return await attemptStart(id);
+				return await attemptStart(id, deadline);
 			} catch (error) {
-				if (id !== generation || attempt >= 3 || !error.retry) throw error;
+				if (id !== generation || attempt >= 3 || !error.retry || now() >= deadline) throw error;
 			}
 		}
 	}
 
-	async function attemptStart(id) {
+	async function attemptStart(id, deadline) {
 		const port = await acquire();
 		if (id !== generation) throw new Error(messages.memoryStopped);
 		const key = randomBytes(32).toString("hex");
@@ -688,24 +690,25 @@ function createMemory(options = {}) {
 		const health = `http://127.0.0.1:${port}/health`;
 		let healthy = false;
 		try {
-			for (let attempt = 0; attempt < attempts; attempt++) {
+			for (let attempt = 0; attempt < attempts && now() < deadline; attempt++) {
 				stop();
 				let response;
 				try {
-					response = await Promise.race([request(health, { signal: AbortSignal.timeout(1000) }), death]);
+					response = await Promise.race([request(health, { signal: AbortSignal.timeout(Math.max(1, Math.ceil(Math.min(1000, deadline - now())))) }), death]);
 				} catch (error) {
 					stop();
-					await Promise.race([sleep(intervalMs), death]);
+					await Promise.race([sleep(Math.max(0, Math.min(intervalMs, deadline - now()))), death]);
 					continue;
 				}
 				stop();
+				if (now() >= deadline) break;
 				if (response.ok) {
 					healthy = true;
 					break;
 				}
 				if (response.status !== 503) throw new Error(format(messages.memoryHealth, { status: response.status }));
 				if (attempt === attempts - 1) break;
-				await Promise.race([sleep(intervalMs), death]);
+				await Promise.race([sleep(Math.max(0, Math.min(intervalMs, deadline - now()))), death]);
 			}
 			if (!healthy) throw new Error(format(messages.memoryTimeout, { seconds: Math.round((attempts * intervalMs) / 1000) }));
 			stop();
