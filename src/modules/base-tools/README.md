@@ -2,7 +2,7 @@
 
 Тонкий тул `files`: карта проекта и широкий поиск одним вызовом. Закрывает потолок 200 путей у родного `glob` и страницу в 20 файлов у `grep`. Не зависит от git.
 
-**Вход:** `~/.omp/agent/extensions/base-tools.js` и `base-tools.descriptions.json`, ставятся по [манифесту](../../../install.manifest.json).
+**Вход:** `~/.omp/agent/extensions/base-tools.js`, `base-tools.descriptions.json`, `base-tools.texts.json` и `base-tools.reference.json`, ставятся по [манифесту](../../../install.manifest.json).
 
 **Настройки:** `base-tools.yml` в `config` манифеста с режимом `merge`: `edit.mode: apply_patch`, `grep.contextBefore: 3`, `grep.contextAfter: 3`, `tools.artifactSpillThreshold: 100`.
 
@@ -46,7 +46,7 @@
 - при маске с `node_modules` движок считает скрытые файлы; тул вычитает их из `K`;
 - символические ссылки в поиск и счёт `T` не идут;
 - все проходы движка делят один срок 30 секунд;
-- размер для `searched in part` берётся через `lstat`, не из `glob`;
+- размер для `searched in part` берётся через `lstat`, затем `stat`, не из `glob`;
 - бинарный файл совпадений не даёт; `K of T` меньше `T` значит, часть файлов не прочитана.
 
 **Поля:** `path`, `glob`, `pattern`, `case`, `hidden`, `gitignore`.
