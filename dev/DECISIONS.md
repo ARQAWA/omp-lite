@@ -1636,3 +1636,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-14. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 334 pass, 0 fail. Коммит `486b298`, слияние `cb642f1`. Резервная копия установки: `~/.omp/backups/install-contract-20261114-193527/agents/collector.md`.
 
 **Носители правила:** `src/modules/review/agents/collector.md`.
+
+## D-NEW-ompcli — восстановление и ожидание ompcli
+
+**Решение:** `Update` не требует модель и программы. Непроверенный указатель сохраняет журнал. Старый каталог модели удаляется после проверки модели, если перенос не сорвался. Ожидание памяти ограничено 60 секундами. Загрузчик использует имя файла из пина.
+
+**Основание:** заказ исправлений B-02, B-05, B-06, B-08 и B-10 после инвентаризации.
+
+**Границы:** OMP 18.18.8. Windows VDI не проверена; версия расширения не менялась.
+
+**Проверка:** `bun test dev/tests/harness/ompcli dev/tests/repository`: 119 pass, 0 fail.
+
+**Носители правила:** `src/modules/ompcli/index.js`, `dev/scripts/ompcli-runtime/index.js`, их README и тесты.
