@@ -1547,6 +1547,8 @@ Blind и high больше не различаются ни моделью, ни
 
 ## D-081 — часть, которая только повторяет другую часть, это extra
 
+**Отменено коммитом `df035cd`.** Слова владельца, сессия `01a1d13b-8491`: id `18d237b4` «запусти HiReview и убери всё, что не было заказано» и id `5ae227a7` «Самостоятельно ты решения принимать не можешь». Строку добавил агент без заказа владельца.
+
 **Решение:** в `agents/acceptor.md`, раздел `## Rows`. Было: «A part serves a requirement only when the requirement is not met without this part. A limit never orders a part.» Стало: «A part serves a requirement only when the requirement is not met without this part. A part that only repeats another part serves none. A limit never orders a part.»
 
 **Основание:** Владелец, сессия `01a1d13b-8491`: «да давай делай всю работу далее автономно до тех пор пока не посчитаешь ее выполненной полностью и дай краткий отчет потом». Статус: в силе, подтвердит тестовый прогон 2b.
@@ -1563,6 +1565,8 @@ Blind и high больше не различаются ни моделью, ни
 
 ## D-082 — после находки об ограничении на набор агент проходит весь набор сам
 
+**Отменено коммитом `df035cd`.** Слова владельца, сессия `01a1d13b-8491`: id `18d237b4` «запусти HiReview и убери всё, что не было заказано» и id `5ae227a7` «Самостоятельно ты решения принимать не можешь». Строку добавил агент без заказа владельца.
+
 **Решение:** в `skills/reviewer/SKILL.md`, раздел 4, шаг 1, в конце: «The finding is about a limit on a set (`only X`, `nothing beyond`, `minimal`): go through the whole set yourself and fix every element that breaks the limit, not only the named ones.»
 
 **Основание:** Владелец, сессия `01a1d13b-8491`: «да давай делай всю работу далее автономно до тех пор пока не посчитаешь ее выполненной полностью и дай краткий отчет потом». Статус: в силе, подтвердит тестовый прогон 2b.
@@ -1578,6 +1582,8 @@ Blind и high больше не различаются ни моделью, ни
 **Носители правила:** `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`.
 
 ## D-083 — поздние слова владельца, разрешающие запрещённое ограничением, цитируются под ограничением
+
+**Отменено коммитом `df035cd`.** Слова владельца, сессия `01a1d13b-8491`: id `18d237b4` «запусти HiReview и убери всё, что не было заказано» и id `5ae227a7` «Самостоятельно ты решения принимать не можешь». Строку добавил агент без заказа владельца.
 
 **Решение:** в `agents/collector.md`, шаг 2, строка про финальное состояние, в конце: «Later owner words that allow a thing a limit forbids: quote them under that limit, with their `id`, and let the limit line say what stands after them.»
 
