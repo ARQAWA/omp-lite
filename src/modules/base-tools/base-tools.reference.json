@@ -8,7 +8,7 @@
 	},
 	"settings": {
 		"read.defaultLimit": 4000,
-		"read.summarize.enabled": false,
+		"read.summarize.enabled": true,
 		"tools.outputMaxColumns": 0,
 		"edit.mode": "apply_patch",
 		"grep.contextBefore": 3,
