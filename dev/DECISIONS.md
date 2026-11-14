@@ -1872,3 +1872,13 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** другие модули и штатный OMP не меняются. До ответа команды чтения списка могут показываться все модели.
 
 **Носители правила:** `src/modules/model-picker/`, `dev/tests/harness/model-picker/`, `dev/history/model-picker.md`.
+
+## D-NEW-read-summary-mark
+
+**Решение:** описание `read` различает родную сводку и целый файл. Сторож `base-tools` ожидает `read.summarize.enabled: true`. Новая метка в коде не добавляется.
+
+**Основание:** слова владельца: «надо чето сделать с отметкой про файлы, агент должен понимать это сводка или норм файл».
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/tools/read.ts` и `read-format.ts`: родной хвост называет число скрытых строк и даёт примеры диапазонов.
+
+**Носители правила:** `src/modules/base-tools/`, `src/modules/runtime-config/README.md`, `dev/history/base-tools.md`.
