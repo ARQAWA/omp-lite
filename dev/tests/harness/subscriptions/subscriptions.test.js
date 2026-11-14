@@ -1,5 +1,8 @@
 import { expect, mock, test } from "bun:test";
-import subscriptions, { marks } from "../../../../src/modules/subscriptions/index.js";
+mock.module("@oh-my-pi/pi-coding-agent/slash-commands/helpers/active-oauth-account", () => ({
+	reportMatchesActiveAccount: (report, identity) => !!identity && report.metadata?.email === identity.email && report.metadata?.orgId === identity.orgId,
+}));
+const { default: subscriptions, marks } = await import("../../../../src/modules/subscriptions/index.js");
 
 const report = (provider, limits) => ({
 	provider,
@@ -77,6 +80,28 @@ test("a successful read paints every mark through the extension entry", async ()
 		["20-cx", "CX 62%"],
 		["30-go", "Go 73%/84%"],
 	]);
+});
+
+test("the session's active account wins in either report order", async () => {
+	const active = { ...report("anthropic", [["7d", 0.41]]), metadata: { email: "a@example.com", orgId: "active" } };
+	const other = { ...report("anthropic", [["7d", 0.82]]), metadata: { email: "a@example.com", orgId: "other" } };
+	const ctx = {
+		sessionManager: { getSessionId: () => "session" },
+		modelRegistry: { authStorage: { oauth: { accounts: (provider, session) =>
+			provider === "anthropic" && session === "session" ? [{ ...active.metadata, active: true }] : [] } } },
+	};
+	for (const reports of [[active, other], [other, active]]) {
+		const { painted } = mount(usage(reports), ctx);
+		await flush();
+		expect(painted).toContainEqual(["10-cc", "CC 41%"]);
+	}
+	const { painted } = mount(usage([active, other]), { ...ctx, modelRegistry: { authStorage: { oauth: { accounts: () => [] } } } });
+	await flush();
+	expect(painted).toContainEqual(["10-cc", "CC 82%"]);
+	const ambiguous = { ...other, metadata: active.metadata };
+	const unresolved = mount(usage([active, ambiguous]), ctx);
+	await flush();
+	expect(unresolved.painted).toContainEqual(["10-cc", "CC 82%"]);
 });
 
 test("a missing subscription clears its stale mark", async () => {

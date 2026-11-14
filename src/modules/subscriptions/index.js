@@ -1,6 +1,7 @@
 // Publishes subscription limits as status marks: CC, CX and Go.
 // Data comes from `omp usage --json`; subscriptions without a window stay silent.
 import { execFile } from "node:child_process";
+import { reportMatchesActiveAccount } from "@oh-my-pi/pi-coding-agent/slash-commands/helpers/active-oauth-account";
 
 const KEYS = ["10-cc", "20-cx", "30-go"];
 const INTERVAL_MS = 300000;
@@ -13,8 +14,14 @@ const percent = amount => {
 
 const windowOf = (report, id) => report?.limits?.find(limit => limit.scope?.shared && !limit.scope.tier && limit.window?.id === id);
 
-export function marks(reports) {
+export function marks(reports, activeAccount = () => undefined) {
 	const byProvider = new Map(reports.map(report => [report.provider, report]));
+	for (const provider of byProvider.keys()) {
+		const active = activeAccount(provider);
+		if (!active) continue;
+		const matches = reports.filter(report => report.provider === provider && reportMatchesActiveAccount(report, active));
+		if (matches.length === 1) byProvider.set(provider, matches[0]);
+	}
 	const out = [];
 	const cc = percent(windowOf(byProvider.get("anthropic"), "7d")?.amount);
 	if (cc) out.push(["10-cc", `CC ${cc}`]);
@@ -43,7 +50,7 @@ export default function subscriptions(pi, read = readUsage) {
 			busy = true;
 			try {
 				const reports = JSON.parse(await read()).reports ?? [];
-				const current = marks(reports);
+				const current = marks(reports, provider => ctx.modelRegistry?.authStorage.oauth.accounts(provider, ctx.sessionManager.getSessionId()).find(account => account.active));
 				const present = new Set(current.map(([key]) => key));
 				for (const key of KEYS) if (!present.has(key)) ctx.ui.setStatus(key, undefined);
 				for (const [key, text] of current) ctx.ui.setStatus(key, text);
