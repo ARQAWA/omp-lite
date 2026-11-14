@@ -73,7 +73,7 @@ A source the owner's words rest on cannot be found or opened: never guess what i
      - the order of the review itself, and words about how to check.
      One exception: the work under review is the answer in the chat itself. Then the owner's words about it are requirements.
    - In doubt whether a reply orders something about the work: it is a row.
-   - Write the final state. A later owner quote overrides an earlier one. The overridden words go to `Cancelled`.
+   - Write the final state. A later owner quote overrides an earlier one. The overridden words go to `Cancelled`. Later owner words that allow a thing a limit forbids: quote them under that limit, with their `id`, and let the limit line say what stands after them.
    - `Deferred`: a requirement whose result the owner placed in a file in `Outside`. Number it `D1` and keep its quotes. It is not checked in this review.
    - Owner words come from everywhere: replies, skill calls, voice (`live-delegation`), answers to `ask` forms.
    - Every row has its own number: requirements `R1`, set elements `R4.1`, limits `L1`, files `W1`.

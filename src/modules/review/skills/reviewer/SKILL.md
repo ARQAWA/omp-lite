@@ -45,7 +45,7 @@ Only the main session runs this. A subagent asked for a review tells its parent 
 6. First line `CLEAN`: go to section 5.
 
 ## 4. Findings
-1. Before you fix anything, open the place in the work yourself. The finding is right and it is about the order: fix it.
+1. Before you fix anything, open the place in the work yourself. The finding is right and it is about the order: fix it. The finding is about a limit on a set (`only X`, `nothing beyond`, `minimal`): go through the whole set yourself and fix every element that breaks the limit, not only the named ones.
 2. The finding is wrong or not about the order: write one objection to `updates.md`. Copy the finding text word for word and add your argument. An argument is a place in the work (file and line), owner words with their `id`, or a sign that the finding is not a finding: a "what if" scenario, a request to add what the owner did not name, the truth about the outside world, a method or a style the owner did not name, a step after the review, the repository rules. The finding calls `extra` an action that is done and cannot be undone: object with that fact.
 3. Any later reviewer raised it again: fix it with the smallest change, even if you disagree. There is no second objection. One exception: the critical part of step 6.
 4. A fix is the smallest one. First remove, then change. Add only what the owner named. Do nothing for the reviewer, except the fix of a finding raised again.
