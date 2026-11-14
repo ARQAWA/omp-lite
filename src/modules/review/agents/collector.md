@@ -137,4 +137,4 @@ Each `>` line is one exact fragment of one reply or document: no ellipsis, no pa
 - Do not spawn agents.
 
 ## Stop
-Answer with one line: `READY <dir>`, or `STOP <reason>` when the session cannot be read or the work cannot be found.
+Answer `READY <dir>`, or `STOP <reason>` when the session cannot be read or the work cannot be found.
