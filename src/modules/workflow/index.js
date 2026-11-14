@@ -21,7 +21,7 @@ function withHint(message) {
 
 export default function workflow(pi) {
 	pi.on("context", (event, ctx) => {
-		if (ctx.agent?.kind !== "main") return;
+		if (ctx.agent.kind !== "main") return;
 		let changed = false;
 		const messages = event.messages.map(message => {
 			if (message.role !== "user") return message;

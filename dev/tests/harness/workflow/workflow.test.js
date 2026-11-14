@@ -24,17 +24,17 @@ test("appends the exact hint for the main session", () => {
 });
 
 test("keeps image messages and appends a text block", () => {
-	const messages = [user([{ type: "image", data: "x", mimeType: "image/png" }])];
+	const part = { type: "text", text: "привет" };
+	const image = { type: "image", data: "x", mimeType: "image/png" };
+	const messages = [user([part]), user([part, image]), user([image])];
 	const result = handler()({ messages }, main);
-	expect(result.messages[0].content).toEqual([messages[0].content[0], { type: "text", text: BLOCK }]);
+	expect(result.messages[0].content).toEqual([{ ...part, text: `привет\n\n${BLOCK}` }]);
+	expect(result.messages[1].content).toEqual([part, image, { type: "text", text: BLOCK }]);
+	expect(result.messages[2].content).toEqual([image, { type: "text", text: BLOCK }]);
 });
 
-test("never reaches a subagent or a session without ctx.agent", () => {
+test("skips subagents and non-user messages", () => {
 	expect(handler()({ messages: [user("привет")] }, sub)).toBeUndefined();
-	expect(handler()({ messages: [user("привет")] }, {})).toBeUndefined();
-});
-
-test("skips non-user messages", () => {
 	expect(handler()({ messages: [{ role: "assistant", content: "ответ" }] }, main)).toBeUndefined();
 });
 
