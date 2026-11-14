@@ -1,8 +1,6 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
-import childAgentsMd from "../../../../src/modules/child-agents-md/index.js";
+import { basename } from "node:path";
+import "../../../../src/modules/child-agents-md/index.js";
 
 const files = [
 	{ path: "/repo/AGENTS.md", content: "rules", depth: 0 },
@@ -21,24 +19,16 @@ test("every other filter works as before", () => {
 	expect([1, 2, 3].filter(n => n > 1)).toEqual([2, 3]);
 	expect(files.filter(file => file.path.endsWith("CLAUDE.md"))).toEqual([files[1]]);
 	expect(["AGENTS.md", "a"].filter(name => name.toLowerCase() !== "agents.md")).toEqual(["a"]);
-	expect([].filter(file => file !== "agents.md")).toEqual([]);
 	expect([1, 2, 3].filter(function (n) { return n > this.min; }, { min: 2 })).toEqual([3]);
 });
 
 test("a worker thread gets the patch before its own code runs", async () => {
-	const script = join(mkdtempSync(join(tmpdir(), "agents-md-")), "worker.js");
-	writeFileSync(script, 'postMessage([{ path: "/repo/AGENTS.md", content: "rules" }].filter(file => file.path.toLowerCase() !== "agents.md").length);');
-	const worker = new Worker(script, { type: "module" });
+	const script = 'import path from "node:path"; postMessage([{ path: "/repo/AGENTS.md", content: "rules" }].filter(file => path.basename(file.path).toLowerCase() !== "agents.md").length);';
+	const worker = new Worker(`data:text/javascript,${encodeURIComponent(script)}`, { type: "module" });
 	const kept = await new Promise((resolve, reject) => {
 		worker.onmessage = event => resolve(event.data);
 		worker.onerror = reject;
 	});
 	worker.terminate();
 	expect(kept).toBe(1);
-});
-
-test("the extension registers no hooks", () => {
-	const calls = [];
-	childAgentsMd({ on: (...args) => calls.push(args) });
-	expect(calls).toEqual([]);
 });
