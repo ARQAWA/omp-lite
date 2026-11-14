@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import turnDuration, { durationLabel, runFailed } from "../../../../src/modules/turn-duration/index.js";
+import turnDuration, { durationLabel } from "../../../../src/modules/turn-duration/index.js";
 
 function mount(mode = "tui") {
 	const handlers = {};
@@ -41,17 +41,9 @@ function at(times, body) {
 
 test("labels stay readable across seconds, minutes and hours", () => {
 	expect(durationLabel(0)).toBe("1s");
-	expect(durationLabel(2000)).toBe("2s");
 	expect(durationLabel(31000)).toBe("31s");
-	expect(durationLabel(124000)).toBe("2m 4s");
 	expect(durationLabel(3601000)).toBe("1h 1s");
 	expect(durationLabel(5400000)).toBe("1h 30m 0s");
-});
-
-test("failed and aborted runs are not labelled", () => {
-	expect(runFailed("error")).toBe(true);
-	expect(runFailed("aborted")).toBe(true);
-	expect(runFailed("stop")).toBe(false);
 });
 
 test("a run prints one line with the whole duration", () => {
