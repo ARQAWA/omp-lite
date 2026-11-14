@@ -60,6 +60,13 @@ const reasonOf = name => `Failed to find expected lines in ${name}.txt`;
 const section = (name, text) => `[${name}.txt]: ${reasonOf(name)}\n${texts.skipped.section}\n${text}`;
 const failed = name => ({ path: resolve("/work", `${name}.txt`), diff: "", isError: true, errorText: reasonOf(name) });
 
+test("a failed file and its delete alias are both removed from the patch", async () => {
+	const handlers = hooks(dry(["a.txt"])), del = "*** Delete File: ./a.txt";
+	expect(await handlers.tool_call(call("edit", patch(a, del, c)), ctx)).toEqual({ input: { input: patch(c) } });
+	const message = handlers.tool_result(result("one")).content[0].text;
+	expect(message).toContain(`${a}\n${del}`);
+});
+
 test("several files written: the result is an error, the note keeps the removed sections, every skipped file gets a red entry", async () => {
 	const handlers = hooks(dry(["b.txt", "d.txt"]));
 	const done = [{ path: "/work/a.txt", diff: "+new a" }, { path: "/work/c.txt", diff: "+new c" }];

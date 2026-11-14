@@ -413,21 +413,23 @@ export function splitPatch(input) {
  * Undefined: the patch goes to the native edit as it is. `skipped` keeps every
  * left-out section as sent, so the model does not lose its text.
  */
-export async function partialPatch(input, dry) {
+export async function partialPatch(input, dry, cwd = process.cwd()) {
 	const sections = splitPatch(input) ?? [];
-	const paths = [...new Set(sections.map(section => section.path))];
 	// Internal URL targets resolve only inside the native edit.
-	if (paths.length < 2 || paths.some(path => /^\w+:\//.test(path))) return;
+	if (sections.some(section => /^\w+:\//.test(section.path))) return;
+	const key = section => resolve(cwd, section.path);
+	const paths = [...new Set(sections.map(key))];
+	if (paths.length < 2) return;
 	if (!(await dry(input)).isError) return;
 	const skipped = [];
 	for (const path of paths) {
-		const own = sections.filter(section => section.path === path);
+		const own = sections.filter(section => key(section) === path);
 		const outcome = await dry(wrapPatch(own));
-		if (outcome.isError) skipped.push({ path, reason: outcome.text, patch: own.flatMap(section => section.lines).join("\n") });
+		if (outcome.isError) skipped.push({ path: own[0].path, reason: outcome.text, patch: own.flatMap(section => section.lines).join("\n") });
 	}
 	if (skipped.length === 0 || skipped.length === paths.length) return;
-	const names = new Set(skipped.map(entry => entry.path));
-	return { input: wrapPatch(sections.filter(section => !names.has(section.path))), skipped };
+	const names = new Set(skipped.map(entry => resolve(cwd, entry.path)));
+	return { input: wrapPatch(sections.filter(section => !names.has(key(section)))), skipped };
 }
 
 // One staging pass of the native edit engine; the writer keeps the disk untouched.
@@ -537,7 +539,7 @@ export function install(pi, options = {}) {
 		if (canonicalName(event.toolName) !== "edit" || typeof input !== "string") return;
 		// Fail open: an error or a slow dry run leaves the patch to the native edit.
 		const work = (async () => {
-			const partial = await partialPatch(input, options.dry ?? (await dryRunner(pi, ctx.cwd)));
+			const partial = await partialPatch(input, options.dry ?? (await dryRunner(pi, ctx.cwd)), ctx.cwd);
 			// One red box per skipped file, with absolute paths like the native entries.
 			return partial && {
 				...partial,
