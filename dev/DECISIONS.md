@@ -1474,3 +1474,51 @@ Blind и high больше не различаются ни моделью, ни
 Установка по манифесту: владелец ответил «да» на «ставлю в рантайм?». Заменены три файла: `extensions/base-tools.js`, `base-tools.texts.json`, `base-tools.reference.json`; копии в `~/.omp/backups/install-contract-20261114-144036`. Сверка: 94 записи на месте, все байт в байт, кроме `stt.windows.json` вне сверки; конфиг равен слепку. Обычная сессия без флагов, модель по умолчанию: тот же патч на три файла дал тот же итог, stderr пуст.
 
 **Носители правила:** `src/modules/base-tools/index.js`, `base-tools.texts.json`, `base-tools.reference.json`, README модуля, тест `dev/tests/harness/base-tools/partial.test.js`.
+
+## D-077 — способ, названный для другого дела, не метод
+
+**Решение:** в `agents/collector.md`, шаг 2, строка про метод. Было: «A method is a requirement only when the owner named it. Mark it `[method]`.» Стало: «A method is a requirement only when the owner told the agent to work that way. Mark it `[method]`. A way he named for something else (how an installer, a user or a later step gets the result) is not a method.»
+
+**Основание:** Владелец, сессия `01a1d13b-8491`, на вопрос «готовлю эти три правки диффами? да или нет»: «да давай делай всю работу далее автономно до тех пор пока не посчитаешь ее выполненной полностью и дай краткий отчет потом».
+
+**Причина:** тестовый прогон 3 (задача: починка выбора модели, сессия `01a1c0cd`, ответ владельца `936c6f53`). Владелец сказал: «чтобы установщик, э-э, через Install MD это всё подхватил». Сборщик сделал из этого строку `R5.6 [method]` «perform the installation by INSTALL.md». Ревьюер во всех шести кругах требовал каждый шаг `INSTALL.md`: шесть находок вида «не находка», цикл не сошёлся.
+
+**Заменяет:** D-064 уточнён: слова о методе стали уже.
+
+**Границы:** Сборщик работает по инструкции и на доверии. На Windows VDI не проверено.
+
+**Проверка:** 2026-11-14, OMP 18.18.8. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 336 pass, 0 fail. Коммит `a2adc36`, слияние `c2bad31`. Отчёты прогонов: `omp-lite-audit/reviewer-redesign/mvp/run2/RESULT.md`, `omp-lite-audit/reviewer-redesign/mvp/run3/RESULT.md`.
+
+**Носители правила:** `src/modules/review/agents/collector.md`, `src/modules/review/README.md`.
+
+## D-078 — необратимое действие, названное extra, закрывается одним возражением
+
+**Решение:** в `agents/acceptor.md`, раздел `## updates.md`, первая строка: довод возражения теперь может быть ещё и фактом. Новые слова: «a sign that the finding is one of the not findings above, or the fact that an `extra` action is done and cannot be undone.» В `skills/reviewer/SKILL.md`, раздел 4, шаг 2, в конце: «The finding calls `extra` an action that is done and cannot be undone: object with that fact.» Владелец видит такое возражение в итоговом отчёте: скилл уже перечисляет там возражения.
+
+**Основание:** Владелец, сессия `01a1d13b-8491`, на вопрос «готовлю эти три правки диффами? да или нет»: «да давай делай всю работу далее автономно до тех пор пока не посчитаешь ее выполненной полностью и дай краткий отчет потом».
+
+**Причина:** в том же прогоне 3 действие `W9` (копия, удалённая во время задачи) названо `extra` во всех шести кругах. Исправить это было нельзя, у процедуры не было выхода.
+
+**Заменяет:** D-064 уточнён: список доводов возражения получил ещё один.
+
+**Границы:** Это одно возражение с фактом, не второй круг споров. На Windows VDI не проверено.
+
+**Проверка:** 2026-11-14, OMP 18.18.8. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 336 pass, 0 fail. Коммит `a2adc36`, слияние `c2bad31`. Отчёты прогонов: `omp-lite-audit/reviewer-redesign/mvp/run2/RESULT.md`, `omp-lite-audit/reviewer-redesign/mvp/run3/RESULT.md`.
+
+**Носители правила:** `src/modules/review/agents/acceptor.md`, `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`.
+
+## D-079 — сверка полноты берёт id агента из ответа вызова
+
+**Решение:** в `skills/reviewer/SKILL.md`, раздел 3, шаг 2. Было: «with your `dir` and the call's `name` in the first line:». Стало: «with your `dir` and the agent id from the call's result as `name` in the first line. A name already used in the session gets a suffix there: `AcceptorRound1-2`.»
+
+**Основание:** Владелец, сессия `01a1d13b-8491`, на вопрос «готовлю эти три правки диффами? да или нет»: «да давай делай всю работу далее автономно до тех пор пока не посчитаешь ее выполненной полностью и дай краткий отчет потом».
+
+**Причина:** OMP 18.18.8. `packages/coding-agent/src/task/output-manager.ts` (строки 84-92) даёт повторному имени id `<name>-2`. `packages/coding-agent/src/internal-urls/agent-protocol.ts` (`#findOutput`) находит ответ только по точному файлу `<id>.md`. Поэтому во втором ревью той же сессии `output("AcceptorRound1")` вернул ответ первого ревью. Видно в тестовых прогонах 2 и 3 (оба водителя получили по голому имени ответ другого прогона) и вживую: второй вызов `task` с именем `ReuseMechanics` получил id `ReuseMechanics-2`.
+
+**Заменяет:** D-064 уточнён: сверка полноты читает ответ по id, не по имени из вызова.
+
+**Границы:** Код сверки не менялся: только слова про `name`. На Windows VDI не проверено.
+
+**Проверка:** 2026-11-14, OMP 18.18.8. `bun test dev/tests/harness/review`: 5 pass, 0 fail. `bun test dev/tests`: 336 pass, 0 fail. Коммит `a2adc36`, слияние `c2bad31`. Отчёты прогонов: `omp-lite-audit/reviewer-redesign/mvp/run2/RESULT.md`, `omp-lite-audit/reviewer-redesign/mvp/run3/RESULT.md`.
+
+**Носители правила:** `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`.
