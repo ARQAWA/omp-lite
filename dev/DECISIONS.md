@@ -1378,6 +1378,6 @@ Blind и high больше не различаются ни моделью, ни
 
 **Границы:** две строки ни разу не доведены до результата: прогон правки 6 остановился в круге 1. Полный прогон ревьюера идёт сразу после этой доставки. На Windows VDI не проверено. Запущенной сессии OMP нужен перезапуск, чтобы увидеть новый профиль.
 
-**Проверка:** заполняется в конце доставки.
+**Проверка:** 2026-11-14, OMP 18.18.8, коммит `f9efadd`, слияние `22c90a2`. `bun test dev/tests`: 330 pass, 0 fail. Установка по манифесту: пять файлов ревью (`agents/acceptor.md`, `agents/collector.md`, `skills/reviewer/SKILL.md`, `skills/blindreview/SKILL.md`, `skills/highreview/SKILL.md`) скопированы, `cmp` молчит для всех пяти. В установленном `acceptor.md` «In doubt: kept» ровно одно совпадение. Ветка и worktree `reviewer-lenses` (HEAD `66b38a9`, чистый) удалены, на `origin` её не было. Живой запуск ревьюера не делался.
 
 **Носители правила:** `src/modules/review/agents/acceptor.md`, `src/modules/review/README.md`.
