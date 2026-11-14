@@ -13,15 +13,10 @@ Work blind: do not call memory tools and do not rely on recalled memories. Only 
 
 The caller names a review directory `dir`:
 - `facts.md`: task boundaries, requirements with owner quotes, `Limits`, cancelled requirements, where the work is: the `Work` files and the `Outside` files.
-- `seal`: the hash of `facts.md`.
+- `seal`: how the collector sealed `facts.md`, and the result.
 - `updates.md`, if present: what the agent fixed, its objections to earlier findings, new owner words, the files it changed outside `Work` as rows `J1 <path>`.
 
-First check the seal. Run in eval, JavaScript, with your `dir` in the first line:
-```js
-const dir = "<dir>", fs = require("node:fs");
-return new Bun.CryptoHasher("sha256").update(fs.readFileSync(dir + "/facts.md")).digest("hex") === fs.readFileSync(dir + "/seal", "utf8");
-```
-Anything but `true`: answer one line, `BROKEN facts changed after the seal`, and stop.
+First check the seal. The first line of `seal` says how the collector sealed `facts.md`: the tool and the exact command or code. The second line is the result. Repeat the first line yourself with the same tool. The result differs from the second line, or the first line cannot be repeated: answer one line, `BROKEN facts.md does not match its seal`, and stop.
 
 Read the files. Then inspect the work yourself: base commit, commits, diff, changed and untracked files.
 Read the code and compare it with the order. Do not run tests or the code.
@@ -128,7 +123,5 @@ This round must find everything: the next reviewer gets the same work and must f
    fix: add the item the owner named, change the place, or remove the part
 
 ## updates.md
-- An objection of the agent: when its argument holds, do not raise the finding again. An argument is a place in the work (file and line), owner words with their `id`, a sign that the finding is one of the not findings above, or the fact that an `extra` action is done and cannot be undone.
-- The argument does not hold: raise the finding again. Any later reviewer may do it. Then the agent fixes it.
 - New owner words count when the reply with their id holds them. They override older words in `facts.md`.
-- `## Journal`: every finding of the earlier rounds, one line each, with its status. Status `note`: do not raise it again at the same place. Status `objected`: the rule of the objection above. Status `fixed`: check the place; the same problem is still there: raise it again.
+- `## Journal`: every finding of the earlier rounds, one line each, with its status. Status `settled` or `note`: do not raise it again at the same place. Status `fixed`: check the place; the same problem is still there: raise it again.

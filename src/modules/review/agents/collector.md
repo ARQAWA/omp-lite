@@ -41,21 +41,13 @@ It lists the replies and the answers to `ask` forms, without other tool calls. A
 The task starts at the owner message `start` points at. If it is not there, take the first owner message about `scope`; failing that, the first owner message of the session. The task ends at the last reply.
 Sessions named in the task replies (by id or path) belong to it: find their `*_<id>.jsonl` files under the directory two levels above `session` and read them the same way. Replies of other tasks stay out.
 A subagent of the task keeps its session file at `<session without .jsonl>/<agent id>.jsonl`. Its tool calls show what the task changed and did. What a subagent or the main agent wrote in a task text is not owner words.
-When the owner's words point at a document (a plan, a skill, a task list, a ticket, a sample, a link, a file), find it yourself: in `repo`, elsewhere on the disk, or in the session (an attached file, the result of the tool call that fetched it). Read it whole. The part he ordered counts as his words: quote it with `file:line`.
+When the owner's words point at a document that holds the order (a plan, a task list, a ticket, a sample, a skill he told to follow, a link, a file), find it yourself: in `repo`, elsewhere on the disk, or in the session (an attached file, the result of the tool call that fetched it). Read it whole. The part he ordered counts as his words: quote it with `file:line`.
+A document that holds rules of work (repository rules, a process, standards, an install guide) is not the order: never take requirements from it. The owner named such a document for one result ("so that the installer picks it up"): one row with his words alone.
 A source without stable lines of its own (a page or a ticket that exists only in a tool result, an attached file that changed since): copy it exactly to `dir/sources/<name>` and quote it as `sources/<name>:<line>`.
 A source the owner's words rest on cannot be found or opened: never guess what it says. Name it in `Boundaries` as `not found: <what>, id <id>`.
 
 ## Steps
-1. Make the review folder. Run in eval, JavaScript, exactly:
-   ```js
-   const fs = require("node:fs"), path = require("node:path"), tmp = require("node:os").tmpdir();
-   for (const name of fs.readdirSync(tmp)) {
-   	const old = path.join(tmp, name);
-   	if (name.startsWith("omp-review-") && Date.now() - fs.statSync(old).mtimeMs > 864e5) fs.rmSync(old, { recursive: true, force: true });
-   }
-   return fs.mkdtempSync(path.join(tmp, "omp-review-")).replaceAll("\\", "/");
-   ```
-   The result is `dir`, your only writable place.
+1. Make the review folder: a new empty folder `omp-review-<random>` in the temporary directory of the operating system. Find the way yourself, with the tools you have. First delete the folders `omp-review-*` there that are older than one day. The new folder is `dir`, your only writable place. Write its full path with `/`, also on Windows.
 2. Requirements: every owner instruction of the task, cumulative.
    - A requirement is one checkable thing: what the work must be. It is one line with exact quotes and their `id`.
    - Quote the whole instruction. The words that say where the result goes, when and on what condition are part of it: never cut them off.
@@ -70,6 +62,7 @@ A source the owner's words rest on cannot be found or opened: never guess what i
      - a question of the owner that orders nothing;
      - a request to explain or to look into something, when the agent answered in the chat and the owner did not order to put the answer into the work;
      - words about how to answer in the chat;
+     - general words to follow rules or standards ("by our rules", "by the standards of the repository");
      - the order of the review itself, and words about how to check.
      One exception: the work under review is the answer in the chat itself. Then the owner's words about it are requirements.
    - In doubt whether a reply orders something about the work: it is a row.
@@ -85,12 +78,7 @@ A source the owner's words rest on cannot be found or opened: never guess what i
    - Every file changed in the task is in `Work` or in `Outside`.
 4. Write `dir/facts.md` in the format below.
 5. Self-check: every owner instruction of the task is a requirement or cancelled; every requirement has a quote; every quote is in the reply its id names or in the line its `file:line` names; the work facts match git; every owner reply of the task has its line in `Replies`, and every `none` has a reason; no quote is cut before the words about place, time or condition.
-6. Seal. Run in eval, JavaScript, with your `dir` in the first line:
-   ```js
-   const dir = "<dir>", fs = require("node:fs");
-   fs.writeFileSync(dir + "/seal", new Bun.CryptoHasher("sha256").update(fs.readFileSync(dir + "/facts.md")).digest("hex"));
-   ```
-   Never change `facts.md` after the seal.
+6. Seal `facts.md`: take a hash of the file with any tool this system has. Find the tool yourself. Write the file `dir/seal` in two lines. The first line says how you sealed: the tool and the exact command or code you ran, in one line. The second line is the result. The reviewer repeats the first line and compares. Never change `facts.md` after the seal.
 
 ## facts.md
 ```markdown
