@@ -1846,3 +1846,11 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests`.
 
 **Носители правила:** `src/modules/runtime-config/config.yml`, `src/modules/runtime-config/README.md`, `dev/history/runtime-config.md`.
+
+## D-NEW-process-no-length — процесс не ограничивает длину ответов
+
+**Решение:** убрать из `PROCESS.md` ограничения длины ответов и ссылки на правило дислексии. Правила размера кода и тестов остаются.
+
+**Основание:** владелец, 2026-11-14: «процесс мд не должен резать длину ответа».
+
+**Носители правила:** [PROCESS.md](PROCESS.md).
