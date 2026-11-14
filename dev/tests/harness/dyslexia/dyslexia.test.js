@@ -1,38 +1,26 @@
 import { expect, test } from "bun:test";
 import dyslexia, { BLOCK } from "../../../../src/modules/dyslexia/index.js";
 
-const main = { agent: { kind: "main" } };
-const sub = { agent: { kind: "sub" } };
-const part = text => ({ type: "text", text });
-const tail = `\n\n${BLOCK}`;
-
 function handler() {
-	const names = [];
 	let fn;
-	dyslexia({ on: (name, handle) => (names.push(name), (fn = handle)) });
-	expect(names).toEqual(["context"]);
+	dyslexia({ on: (name, handle) => { expect(name).toBe("before_agent_start"); fn = handle; } });
+	expect(fn).toBeDefined();
 	return fn;
 }
 
-test("every user message of a request ends with the rule once, other roles stay", () => {
-	const typed = { role: "user", content: [part("a")] };
-	const assistant = { role: "assistant", content: [part("x")] };
-	const legacy = { role: "user", content: "b" };
-	const pasted = { role: "user", content: [part("c"), { type: "image", data: "x", mimeType: "image/png" }] };
+test("delivers the unchanged rule as a hidden message", () => {
+	expect(BLOCK).toBe(`## Communication
+
+The user has dyslexia. Short sentences: at most 8 words. Paragraphs: at most 4 sentences. Bold main ideas. Short steps, clear words. Simple Russian, address the user as «ты». Numbered lists for many items, one line each. Prefer lowercase. Avoid special typographic characters. This overrides all other communication rules.
+
+Mixed or unclear message (a change plus a question, research, or report): do only the read-only part, change nothing, then ask one yes/no question about the change.`);
 	const run = handler();
-	const out = run({ messages: [typed, assistant, legacy, pasted] }, main).messages;
-	expect(out[0].content).toEqual([part(`a${tail}`)]);
-	expect(out[1]).toBe(assistant);
-	expect(out[2].content).toBe(`b${tail}`);
-	expect(out[3].content).toEqual([...pasted.content, part(BLOCK)]);
-	expect(run({ messages: out }, main)).toBeUndefined();
+	for (const kind of ["main", "other"]) for (const reason of ["prompt", "revive"]) {
+		expect(run({ reason }, { agent: { kind } })).toEqual({ message: { customType: "dyslexia", content: BLOCK, display: false } });
+	}
 });
 
 test("subagents get nothing", () => {
-	expect(handler()({ messages: [{ role: "user", content: "a" }] }, sub)).toBeUndefined();
-});
-
-test("the rule keeps every ordered item and ends with the mixed message line", () => {
-	for (const item of ["at most 8 words", "at most 4 sentences", "Bold", "Short steps", "«ты»", "Numbered lists", "lowercase", "special typographic", "overrides all other communication rules"]) expect(BLOCK).toContain(item);
-	expect(BLOCK.endsWith("then ask one yes/no question about the change.")).toBe(true);
+	const run = handler();
+	for (const reason of ["prompt", "revive"]) expect(run({ reason }, { agent: { kind: "sub" } })).toBeUndefined();
 });
