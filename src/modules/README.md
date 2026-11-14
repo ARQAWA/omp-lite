@@ -37,6 +37,7 @@ README модуля описывает:
 - `task-delegation` — правило Codex для `task`, Bun по умолчанию, фильтр прямого спавна в `eval`, профили `task` и `sonic` с пустой ролью, профиль `scout` с ролью `explore` из Cursor. Тест: `dev/tests/harness/task-delegation/`.
 - `child-agents-md` — патч рантайма: сабагент `task` получает `AGENTS.md` родным путём OMP. Тест: `dev/tests/harness/child-agents-md/`.
 - `ompcli` — расширение VS Code `arqawa.ompcli` для Windows VDI: вкладки OMP, комплектный runtime, локальная память, Update и установка харнеса по манифесту. Тест: `dev/tests/harness/ompcli/`.
+- `voice-stt` — диктовка Soniox: плагин `pi-voice-stt` v0.11.0 с нашей правкой запуска `ffmpeg` на VDI. Тест: `dev/tests/harness/voice-stt/`.
 
 Настройки без кода:
 
@@ -46,6 +47,7 @@ README модуля описывает:
 
 - `system-prompt` — системный промпт на базе Cursor 5.5, `SYSTEM.md`.
 - `communication` — правила общения: блоки для главного агента, заметка об отчёте для сабагентов. Тест: `dev/tests/harness/communication/`.
+- `short-task` — навык: размытая задача превращается в карточку из пяти строк, `SKILL.md`.
 
 Каждый README описывает свой модуль.
 

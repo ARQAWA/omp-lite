@@ -102,7 +102,7 @@
 |codex-transport|3|принят|
 |compaction-400k|3|принят|
 |compactions|2|принят|
-|cursor-tools|11|не принят: отменён владельцем в этой задаче, отложен в BACKLOG|
+|cursor-tools|11|не принят: отменён владельцем в этой задаче; модуль удалён D-040|
 |dyslexia|5|принят|
 |memory-tool-prompts|3|принят|
 |model-picker|4|принят|

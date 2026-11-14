@@ -33,7 +33,7 @@ PowerShell, затем Git Bash `--login -i -c`, затем `ffmpeg`. Правк
 
 ## Ключ и конфиг
 
-Ключ только в `SONIOX_API_KEY`. В репозитории и конфигах ключа нет.
+Ключа нет ни в репозитории, ни в конфигах. Mac берёт его из окружения `SONIOX_API_KEY`, VDI из файла. Заданный `SONIOX_API_KEY` главнее файла.
 
 - Mac: `export PI_STT_CONFIG=~/.omp/agent/extensions/pi-voice-stt/stt.json` и `SONIOX_API_KEY`
   в профиле оболочки, `ffmpeg` в `PATH` (`brew install ffmpeg`).
@@ -46,6 +46,6 @@ PowerShell, затем Git Bash `--login -i -c`, затем `ffmpeg`. Правк
 
 `/stt doctor`, затем `/stt start` и `/stt stop`. Текст встаёт в поле ввода.
 
-**Выключить:** удалить каталог `~/.omp/agent/extensions/pi-voice-stt/`.
+**Выключить:** удалить каталог `~/.omp/agent/extensions/pi-voice-stt/` и перезапустить OMP: запущенная сессия плагин не выгружает. На VDI каталог вернёт следующая вкладка `ompcli`: она ставит файлы манифеста заново.
 
 **Тесты:** `bun test dev/tests/harness/voice-stt`.
