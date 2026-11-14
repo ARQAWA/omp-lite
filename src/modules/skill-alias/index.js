@@ -1,7 +1,7 @@
 // Rewrites a leading /skill-name into the native /skill:name form.
 export default function skillAlias(pi) {
 	pi.on("input", event => {
-		const text = (event.text ?? "").trim();
+		const text = event.text.trim();
 		const match = /^\/([a-z0-9][a-z0-9_-]*)(?:\s+([\s\S]*))?$/.exec(text);
 		if (!match) return;
 		const [, name, rest] = match;

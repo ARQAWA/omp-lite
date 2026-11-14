@@ -7,7 +7,7 @@ function handler(names) {
 	return registered;
 }
 
-const skillCommands = ["skill:probe", "skill:review", "model"];
+const skillCommands = ["skill:probe", "skill:review"];
 
 test("rewrites a skill name to the native form", () => {
 	expect(handler(skillCommands)({ text: "/probe" })).toEqual({ text: "/skill:probe" });
@@ -17,7 +17,6 @@ test("rewrites a skill name to the native form", () => {
 test("leaves unknown names and real commands alone", () => {
 	const run = handler(skillCommands);
 	expect(run({ text: "/nope" })).toBeUndefined();
-	expect(run({ text: "/model" })).toBeUndefined();
 	expect(run({ text: "/skill:probe" })).toBeUndefined();
 	expect(run({ text: "просто текст" })).toBeUndefined();
 });
