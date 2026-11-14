@@ -1832,3 +1832,17 @@ Blind и high больше не различаются ни моделью, ни
 **Причина:** OMP 18.18.8, `packages/coding-agent/src/modes/controllers/input-controller.ts` и `session/agent-session.ts`: отменённая подготовка может не дать `agent_end`, а отправка метки проверяет занятость асинхронно.
 
 **Носители правила:** `src/modules/turn-duration/`, `dev/tests/harness/turn-duration/`, `dev/history/turn-duration.md`.
+
+## D-NEW-read-summarize — структурные сводки чтения
+
+**Решение:** включить `read.summarize.enabled` в рантайме и слепке.
+
+**Основание:** владелец, 2026-11-14: «включи 3й пункт»; пункт 3 — `read.summarize.enabled`.
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/tools/settings.ts`, `read.ts` и `read-summary.ts`: чтение кода без селектора может вернуть структурную сводку.
+
+**Границы:** сводка скрывает строки; диапазоны читаются отдельно. Сторож `base-tools` ожидает `false` и предупреждает об изменении.
+
+**Проверка:** `bun test dev/tests`.
+
+**Носители правила:** `src/modules/runtime-config/config.yml`, `src/modules/runtime-config/README.md`, `dev/history/runtime-config.md`.

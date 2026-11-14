@@ -208,7 +208,7 @@ tools:
 read:
   defaultLimit: 4000
   summarize:
-    enabled: false
+    enabled: true
 startup:
   quiet: true
   showSplash: false
