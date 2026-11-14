@@ -48,7 +48,7 @@ Answer for each row. Do not look for findings outside the rows.
 - Split it into parts. A part is the smallest piece with its own name or heading: a section, a table, a function, a test, a setting, a command, a conclusion. Work that is not a file is split the same way: an answer given in the chat, a command that was run.
 - A `W<n> action:` row: its parts are the things the action did.
 - Write one line for each part. Never join two parts in one line.
-- The part line names the requirement the part serves. A part serves a requirement only when the requirement is not met without this part. A limit never orders a part.
+- The part line names the requirement the part serves. A part serves a requirement only when the requirement is not met without this part. A part that only repeats another part serves none. A limit never orders a part.
 - No such requirement: write `no requirement`. The part is `extra`, unless the next line says it is not extra.
 - Not extra: the implementation of an ordered item itself, and what the repository rules require. Always extra: a separate thing beyond the item that the owner did not name: a function, an option, a mechanism, a guard, a file, a section. Whether it is critical is for the owner to decide, not for you.
 - For each part, also apply the bloat rule of Owner's words: a noticeably smaller way to the same result, shown in one line.
