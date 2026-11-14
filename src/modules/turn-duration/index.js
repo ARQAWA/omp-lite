@@ -16,10 +16,6 @@ export function durationLabel(ms) {
 	return left > 0 ? `${hours}h ${left}m ${rest}s` : `${hours}h ${rest}s`;
 }
 
-export function runFailed(stopReason) {
-	return stopReason === "aborted" || stopReason === "error";
-}
-
 class Mark {
 	constructor(text) {
 		this.text = text;
@@ -58,7 +54,7 @@ export default function turnDuration(pi) {
 		if (start === undefined || event.willContinue || ctx.mode !== "tui") return;
 		let last;
 		for (const message of event.messages ?? []) if (message?.role === "assistant") last = message;
-		if (!last || runFailed(last.stopReason)) return;
+		if (!last || last.stopReason === "aborted" || last.stopReason === "error") return;
 		const label = durationLabel(performance.now() - start);
 		const mark = { customType: TYPE, content: [{ type: "text", text: `⏱ ${label}` }], display: true };
 		// agent_end fires before the agent settles: a message sent now steers the run and the model answers it.
