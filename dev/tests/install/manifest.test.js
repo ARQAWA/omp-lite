@@ -66,6 +66,11 @@ test("config fragments form one snapshot without contradictions", () => {
 	expect(Object.keys(seen).filter(key => /token$|secret|password/i.test(key))).toEqual([]);
 });
 
+test("compaction threshold maps match", () => {
+	const load = path => Bun.YAML.parse(readFileSync(join(root, path), "utf8")).compaction.modelThresholds;
+	expect(load("src/modules/runtime-config/config.yml")).toEqual(load("src/modules/compaction-400k/thresholds.yml"));
+});
+
 test("mnemopi settings and the local embedding model are part of the contract", () => {
 	expect(manifest.mnemopi.settings).toEqual({
 		"memory.backend": "mnemopi",
