@@ -3,8 +3,32 @@
 	"target": "~/.omp/agent",
 	"files": [
 		{
-			"from": "src/modules/codex-transport/codex-parallel.js",
-			"to": "extensions/codex-parallel.js"
+			"from": "src/modules/rqw-codex-adapter/index.js",
+			"to": "extensions/rqw-codex-adapter/index.js"
+		},
+		{
+			"from": "src/modules/rqw-codex-adapter/agentsmd.js",
+			"to": "extensions/rqw-codex-adapter/agentsmd.js"
+		},
+		{
+			"from": "src/modules/rqw-codex-adapter/websearch.js",
+			"to": "extensions/rqw-codex-adapter/websearch.js"
+		},
+		{
+			"from": "src/modules/rqw-codex-adapter/web-run.schema.json",
+			"to": "extensions/rqw-codex-adapter/web-run.schema.json"
+		},
+		{
+			"from": "src/modules/rqw-codex-adapter/agents/task.md",
+			"to": "agents/task.md"
+		},
+		{
+			"from": "src/modules/rqw-codex-adapter/agents/sonic.md",
+			"to": "agents/sonic.md"
+		},
+		{
+			"from": "src/modules/rqw-codex-adapter/agents/scout.md",
+			"to": "agents/scout.md"
 		},
 		{
 			"from": "src/modules/compactions/index.js",
@@ -41,10 +65,6 @@
 		{
 			"from": "src/modules/base-tools/base-tools.reference.json",
 			"to": "extensions/base-tools.reference.json"
-		},
-		{
-			"from": "src/modules/child-agents-md/index.js",
-			"to": "extensions/child-agents-md.js"
 		},
 		{
 			"from": "src/modules/memory-guide/index.js",
@@ -99,26 +119,6 @@
 			"to": "extensions/subscriptions.js"
 		},
 		{
-			"from": "src/modules/task-delegation/index.js",
-			"to": "extensions/task-delegation.js"
-		},
-		{
-			"from": "src/modules/task-delegation/task-delegation.json",
-			"to": "extensions/task-delegation.json"
-		},
-		{
-			"from": "src/modules/task-delegation/agents/task.md",
-			"to": "agents/task.md"
-		},
-		{
-			"from": "src/modules/task-delegation/agents/sonic.md",
-			"to": "agents/sonic.md"
-		},
-		{
-			"from": "src/modules/task-delegation/agents/scout.md",
-			"to": "agents/scout.md"
-		},
-		{
 			"from": "src/modules/tool-summary/index.js",
 			"to": "extensions/tool-summary.js"
 		},
@@ -133,26 +133,6 @@
 		{
 			"from": "src/modules/turn-duration/LICENSE",
 			"to": "extensions/turn-duration.LICENSE"
-		},
-		{
-			"from": "src/modules/web-search/index.js",
-			"to": "extensions/codex-web-run/index.js"
-		},
-		{
-			"from": "src/modules/web-search/codex.js",
-			"to": "extensions/codex-web-run/codex.js"
-		},
-		{
-			"from": "src/modules/web-search/commands.js",
-			"to": "extensions/codex-web-run/commands.js"
-		},
-		{
-			"from": "src/modules/web-search/loop.js",
-			"to": "extensions/codex-web-run/loop.js"
-		},
-		{
-			"from": "src/modules/web-search/web-run.schema.json",
-			"to": "extensions/codex-web-run/web-run.schema.json"
 		},
 		{
 			"from": "src/modules/voice-stt/pi-voice-stt/LICENSE",
@@ -434,7 +414,16 @@
 		"rules/communication-subagent.md",
 		"extensions/dyslexia.js",
 		"extensions/workflow.js",
-		"extensions/workflow.json"
+		"extensions/workflow.json",
+		"extensions/codex-parallel.js",
+		"extensions/child-agents-md.js",
+		"extensions/task-delegation.js",
+		"extensions/task-delegation.json",
+		"extensions/codex-web-run/index.js",
+		"extensions/codex-web-run/codex.js",
+		"extensions/codex-web-run/commands.js",
+		"extensions/codex-web-run/loop.js",
+		"extensions/codex-web-run/web-run.schema.json"
 	],
 	"config": [
 		{

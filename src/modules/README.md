@@ -15,9 +15,7 @@ README модуля описывает:
 Ресурсы на основе снимков рантайма от 2026-11-08:
 
 - `runtime-config` — `config.yml` и штатная маршрутизация bash;
-- `compaction-400k` — 18 порогов `f400000`;
-- `web-search` — Codex-поиск, 5 файлов;
-- `codex-transport` — правка тела запроса, 16 строк.
+- `compaction-400k` — 18 порогов `f400000`.
 
 Написанный код:
 
@@ -32,8 +30,7 @@ README модуля описывает:
 - `compactions` — счётчик компакшенов сессии в статуслайне. Тест: `dev/tests/harness/compactions/`.
 - `turn-duration` — строка `⏱ 2m 4s` после каждого хода. Тест: `dev/tests/harness/turn-duration/`.
 - `base-tools` — тул `files`: карта проекта одним вызовом на движке OMP, без потолка 200 и без git; правка по файлам: несошедшийся файл патча пропускается, ответ идёт ошибкой и хранит убранную секцию, остальные пишет родной `edit`; настройки `apply_patch`, контекста `grep` и порога спилла в `base-tools.yml`. Тест: `dev/tests/harness/base-tools/`.
-- `task-delegation` — правило Codex для `task`, Bun по умолчанию, фильтр прямого спавна в `eval`, профили `task` и `sonic` с пустой ролью, профиль `scout` с ролью `explore` из Cursor. Тест: `dev/tests/harness/task-delegation/`.
-- `child-agents-md` — патч рантайма: сабагент `task` получает `AGENTS.md` родным путём OMP. Тест: `dev/tests/harness/child-agents-md/`.
+- `rqw-codex-adapter` — одно расширение: делегирование как в Codex и три профиля сабагентов, `AGENTS.md` для сабагентов, Codex-поиск `web_search`, тюнинг транспорта Codex. Тест: `dev/tests/harness/rqw-codex-adapter/`.
 - `ompcli` — расширение VS Code `arqawa.ompcli` для Windows VDI: вкладки OMP, комплектный runtime, локальная память, Update и установка харнеса по манифесту. Тест: `dev/tests/harness/ompcli/`.
 - `voice-stt` — диктовка Soniox: плагин `pi-voice-stt` v0.11.0 с нашей правкой запуска `ffmpeg` на VDI. Тест: `dev/tests/harness/voice-stt/`.
 
