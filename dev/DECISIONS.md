@@ -2045,3 +2045,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** ревизия payload `2659fb1ecb210ce401776edec6c43d8437159782`. VSIX 208212517 байт, sha256 `67f412d014a2488a6e5a77a0b40c1d939cb58856fc9035422aed0d300440e38f`. Ответ Marketplace: версия 0.0.14, `win32-x64`, `validated`. `bun test`: 129 pass, 0 fail.
 
 **Границы:** находки код-ревью Sol 6.1 High не исправлялись по слову владельца. Windows VDI не проверено.
+
+## D-119 — ревьюер: строка элемента набора не цитата
+
+**Решение:** в `agents/acceptor.md` после правила про цитаты добавлена строка: «A quote is a `>` line of `facts.md`. A set element row (`R4.1`) is not a quote: the collector names the element in its own words, and its `file:line` only says where the element lies. Never answer `BROKEN` for an element row.»
+
+**Основание:** слова владельца от 2026-11-15: «Надо разобраться, что за хуйня, и спроектировать фикс, хотфикс», на показанный дифф: «Да давай применяй и сразу в рантайм ее и пуш в репо».
+
+**Причина:** сессия `01a1dec2`: два сбора, два ответа `BROKEN quote ... is not in its source` на строке элемента `tools.artifactHeadBytes: 50 (config.yml:201)`; в файле там `  artifactHeadBytes: 50`. Сборщик пишет элемент по формату «имя и место», ревьюер читал его как цитату. Проект остался без проверки.
+
+**Границы:** строки `>` сверяются дословно, как раньше. Сборщик и скилл не менялись.
+
+**Носители правила:** `src/modules/rqw-reviewer/agents/acceptor.md`.

@@ -21,6 +21,7 @@ First check the seal. The first line of `seal` says how the collector sealed `fa
 Read the files. Then inspect the work yourself: base commit, commits, diff, changed and untracked files.
 Read the code and compare it with the order. Do not run tests or the code.
 Before you report a finding, check its quote. An `id` quote: read the session file with `?q=select(.id=="<id>")` appended to the path. A `file:line` quote: read that line of that file. A quote that is not there: answer one line, `BROKEN quote <requirement> is not in its source`, and stop.
+A quote is a `>` line of `facts.md`. A set element row (`R4.1`) is not a quote: the collector names the element in its own words, and its `file:line` only says where the element lies. Never answer `BROKEN` for an element row.
 
 ## Rows
 Rows are the requirements, the set elements, the limits and the files of `Work`. The files added to `updates.md` are rows too.
