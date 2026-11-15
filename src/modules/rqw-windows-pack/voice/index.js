@@ -68,7 +68,7 @@ export async function transcribe(audio, key, signal, request = fetch) {
 export default function voice(pi, { env = process.env, platform = process.platform, run = spawn, request } = {}) {
 	const bash = platform === "win32" && env.OMPCLI_GIT_BASH;
 	if (!bash) return;
-	let mode = "idle", tick = 0, timer, tui, live, job, unsubscribe;
+	let mode = "idle", tick = 0, timer, tui, box, live, job, unsubscribe;
 
 	const setMode = next => {
 		mode = next;
@@ -134,16 +134,10 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 		if (audio.length < MIN_BYTES || peak(audio) <= SILENCE) throw new Error(text.silent);
 		const words = await transcribe(audio, rec.key, rec.abort.signal, request);
 		if (job !== rec) return;
-		// The dictation is over before the prompt runs: sendUserMessage resolves when the whole turn ends.
 		release(rec);
 		ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${words} `);
-		const prompt = send && ctx.ui.getEditorText().trimEnd();
-		if (!prompt) return;
-		ctx.ui.setEditorText("");
-		await pi.sendUserMessage(prompt, ctx.isIdle() ? undefined : { deliverAs: "followUp" }).catch(error => {
-			ctx.ui.setEditorText(`${prompt} ${ctx.ui.getEditorText()}`);
-			throw error;
-		});
+		// The editor's own submit: it expands paste markers and queues the prompt as Enter does.
+		if (send) box.submit();
 	};
 	const cancel = async () => {
 		const rec = job;
@@ -155,13 +149,15 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 		await release(rec);
 	};
 	const press = (ctx, input) => {
-		const rec = job, stop = matchesKey(input, data.keybind);
+		const rec = job, stop = matchesKey(input, data.keybind), enter = matchesKey(input, "enter");
 		if (stop && !rec) start(ctx);
-		else if (rec && mode === "recording" && (stop || matchesKey(input, "enter"))) {
-			if (rec.child) guard(ctx, rec, finish(ctx, rec, !stop));
-			else rec.send = !stop;
-		} else if (rec && matchesKey(input, "escape")) void cancel();
-		else if (!(rec && stop)) return;
+		else if (!rec) return;
+		else if (matchesKey(input, "escape")) void cancel();
+		else if (!stop && !enter) return;
+		// While the text is on its way, alt+w and Enter are taken and do nothing.
+		else if (mode !== "recording") {}
+		else if (rec.child) guard(ctx, rec, finish(ctx, rec, enter));
+		else rec.send = enter;
 		return { consume: true };
 	};
 
@@ -177,7 +173,7 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 		if (previous?.voice) return;
 		const factory = (ui, theme, keys) => {
 			tui = ui;
-			const editor = previous?.(ui, theme, keys) ?? new CustomEditor(theme);
+			const editor = (box = previous?.(ui, theme, keys) ?? new CustomEditor(theme));
 			const render = editor.render.bind(editor);
 			editor.render = width => {
 				const lines = render(width);

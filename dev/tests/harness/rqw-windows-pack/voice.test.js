@@ -10,7 +10,7 @@ mock.module("@oh-my-pi/pi-tui", () => ({
 	visibleWidth: line => line.length,
 	extractSegments: (line, _end, start, length) => ({ after: line.slice(start, start + length) }),
 }));
-mock.module("@oh-my-pi/pi-tui/prompt/custom-editor", () => ({ CustomEditor: class { render(width) { return ["─".repeat(width), "text"]; } } }));
+mock.module("@oh-my-pi/pi-tui/prompt/custom-editor", () => ({ CustomEditor: class { render(width) { return ["─".repeat(width), "text"]; } submit() { this.onSubmit(); } } }));
 const { default: voice, launch } = await import("../../../../src/modules/rqw-windows-pack/voice/index.js");
 
 const bash = "C:\\Program Files\\Git\\bin\\bash.exe";
@@ -30,11 +30,10 @@ function world(platform = "win32", env = { OMPCLI_GIT_BASH: bash }) {
 	const pi = {
 		on: (name, handler) => (w.handlers[name] = handler),
 		registerCommand: (name, command) => (w.command = { name, ...command }),
-		sendUserMessage: async (...args) => w.sent.push(args),
 		exec: async (...args) => (w.calls.push(args), w.exec),
 	};
 	w.ctx = {
-		mode: "tui", hasUI: true, isIdle: () => true,
+		mode: "tui", hasUI: true,
 		ui: {
 			theme: { fg: (_color, line) => line },
 			onTerminalInput: handler => (w.input = handler, () => {}),
@@ -80,12 +79,13 @@ test("alt+w records and inserts, Enter sends, Esc cancels; the label stands on t
 	const w = world();
 	writeFileSync(w.keyFile, "secret\n");
 	w.handlers.session_start({}, w.ctx);
-	const tui = { requestRender() {} }, editor = w.factory(tui, {}, {});
-	const top = () => editor.render(40)[0];
-	expect(top()).toBe("voice alt+w " + "─".repeat(28));
-	// A second session wraps nothing twice.
+	const tui = { requestRender() {} }, first = w.factory(tui, {}, {}).render(40)[0];
+	expect(first).toBe("voice alt+w " + "─".repeat(28));
+	// A second session wraps nothing twice. Its editor is the live one.
 	w.handlers.session_switch({}, w.ctx);
-	expect(w.factory(tui, {}, {}).render(40)[0]).toBe(top());
+	const editor = w.factory(tui, {}, {}), top = () => editor.render(40)[0];
+	editor.onSubmit = () => { w.sent.push(w.editor); w.editor = ""; };
+	expect(top()).toBe(first);
 
 	expect(w.input("x")).toBeUndefined();
 	expect(w.input("alt+w")).toEqual({ consume: true });
@@ -104,9 +104,9 @@ test("alt+w records and inserts, Enter sends, Esc cancels; the label stands on t
 	await until(() => top().startsWith("voice"));
 	w.input("alt+w");
 	await until(() => w.spawned.length === 2);
-	expect(w.input("enter")).toEqual({ consume: true });
+	expect([w.input("enter"), w.input("enter")]).toEqual([{ consume: true }, { consume: true }]);
 	await until(() => w.sent.length);
-	expect([w.sent, w.editor]).toEqual([[["привет привет", undefined]], ""]);
+	expect([w.sent, w.editor]).toEqual([["привет привет "], ""]);
 
 	// Esc: ffmpeg is stopped, Soniox is not asked.
 	await until(() => top().startsWith("voice"));
