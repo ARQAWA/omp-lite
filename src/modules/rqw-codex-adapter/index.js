@@ -7,6 +7,8 @@ import { research } from "./websearch.js";
 
 const PICK = "omit `agent` by default; `scout` only for read-only search over unknown files; `sonic` only for mechanical edits with exact instructions.";
 const BLOCKED = "Direct agent() and workpool() calls are blocked in eval. Use the task tool for explicitly requested delegation.";
+const PLANNER =
+	"You gather web evidence. Call web.run to search or to open pages, read what it returns, and refine the queries until the evidence answers the question. Never answer from memory and never use another tool. When the evidence is sufficient, reply with one short line and no tool call.";
 const NO_LOGIN = "No openai-codex ChatGPT login. Run /login openai-codex (a ChatGPT subscription is required).";
 // Greedy head: only the last stock tip is replaced, a tip quoted inside a report stays.
 const TIP = /([\s\S]*)\n\nTip: this call spawned \d+ generic `\w+` workers\.[^\n]*/;
@@ -88,7 +90,7 @@ export default function rqwCodexAdapter(pi) {
 		approval: "read",
 		async execute(_id, { query }, signal, _onUpdate, ctx) {
 			// OMP's own retry: the session's account first; a 401 moves to the next account until none is left.
-			const found = await withOAuthAccess(ctx.modelRegistry.authStorage, "openai-codex", access => research(query, access, signal), {
+			const found = await withOAuthAccess(ctx.modelRegistry.authStorage, "openai-codex", access => research(query, PLANNER, access, signal), {
 				sessionId: ctx.sessionManager.getSessionId(),
 				signal,
 				isAuthError: error => error?.status === 401,

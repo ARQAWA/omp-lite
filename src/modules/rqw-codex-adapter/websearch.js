@@ -6,8 +6,6 @@ const MODEL = "gpt-6-luna";
 const ROUNDS = 4;
 const CALLS = 8;
 const BYTES = 2 * 1024 * 1024;
-const INSTRUCTIONS =
-	"You gather web evidence. Call web.run to search or to open pages, read what it returns, and refine the queries until the evidence answers the question. Never answer from memory and never use another tool. When the evidence is sufficient, reply with one short line and no tool call.";
 
 class PlannerError extends Error {}
 
@@ -71,9 +69,9 @@ function commands(raw, query) {
 	return out;
 }
 
-export async function research(query, access, signal) {
+export async function research(query, instructions, access, signal) {
 	const id = crypto.randomUUID();
-	const input = [{ type: "additional_tools", role: "developer", tools }, message("developer", INSTRUCTIONS), message("user", query)];
+	const input = [{ type: "additional_tools", role: "developer", tools }, message("developer", instructions), message("user", query)];
 	const full = () => Buffer.byteLength(JSON.stringify(input)) > BYTES;
 	const found = [];
 	let calls = 0;
