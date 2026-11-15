@@ -1,0 +1,13 @@
+edit:
+  mode: apply_patch
+grep:
+  contextBefore: 3
+  contextAfter: 3
+read:
+  defaultLimit: 4000
+  summarize:
+    enabled: true
+tools:
+  artifactSpillThreshold: 100
+  outputMaxColumns: 0
+inlineToolDescriptors: "off"
