@@ -2057,3 +2057,22 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** строки `>` сверяются дословно, как раньше. Сборщик и скилл не менялись.
 
 **Носители правила:** `src/modules/rqw-reviewer/agents/acceptor.md`.
+
+## D-120 — RQW Runtime Config: один плагин общих настроек, один ключ в одном месте
+
+**Решение:** модули `runtime-config` и `compaction-400k` заменены одним модулем [rqw-runtime-config](../src/modules/rqw-runtime-config/README.md): один `config.yml`, 57 значений, кода нет. Каждый плагин несёт свои настройки сам:
+
+1. `rqw-base-tools.yml` получил четыре ключа выноса ответа в файл, `find.enabled`, `astGrep.enabled` и `bashInterceptor`.
+2. `status-line.yml` получил `statusLine.compactThinkingLevel` и `statusLine.separator`.
+3. новый `rqw-codex-adapter.yml` несёт раздел `task`.
+4. память убрана из поставки: `memory.backend`, три ключа `mnemopi.*`, роль `modelRoles.memory`, её запасная цепочка, блок `mnemopi` манифеста, проверка эмбеддингов в `INSTALL.md`.
+
+Ни один ключ не лежит в двух фрагментах: это проверяет `dev/tests/install/manifest.test.js`. Сумма фрагментов равна прежней без шести ключей памяти: 95 значений.
+
+**Основание:** слова владельца от 2026-11-15: «Two artifacts, 4 ключа выноса, файл переносим в Base Tools, find enable TST grab enabled, тоже в Base Tools уносим», «Mnemopi вообще отовсюду удаляем», «делай плагин по проекту».
+
+**Причина:** OMP 18.18.8, `packages/coding-agent/src/memory-backend/settings.ts`: `memory.backend` по умолчанию `off`, без ключа памяти нет. `config/compaction-threshold.ts`: карта порогов читается из одного ключа конфига.
+
+**Границы:** `ollama` в `disabledProviders`, модель эмбеддингов и слой `memory.backend: off` в `rqw-windows-pack`, база памяти и Ollama на Mac не тронуты. Сторож `rqw-base-tools` сверяет прежние восемь настроек. Выпуск Windows Pack не делался. Решения D-046, D-065, D-072 описывают прежние модули.
+
+**Носители правила:** `src/modules/rqw-runtime-config/`, `rqw-base-tools.yml`, `status-line.yml`, `rqw-codex-adapter.yml`, `install.manifest.json`, `INSTALL.md`, `dev/tests/install/manifest.test.js`.

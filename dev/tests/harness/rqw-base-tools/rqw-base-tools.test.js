@@ -250,9 +250,9 @@ test("a subagent without a tool is not a change", async () => {
 	expect(seen).toEqual([]);
 });
 
-test("the settings file sets exactly the guarded settings", () => {
+test("the settings file sets every guarded setting", () => {
 	const flat = (node, prefix = "") => Object.entries(node).flatMap(([key, value]) => typeof value === "object" ? flat(value, `${prefix}${key}.`) : [[prefix + key, value]]);
-	expect(Object.fromEntries(flat(yml))).toEqual(reference.settings);
+	expect(Object.fromEntries(flat(yml))).toMatchObject(reference.settings);
 });
 
 // ---- per-file patches ----

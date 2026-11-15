@@ -393,7 +393,7 @@
 	],
 	"config": [
 		{
-			"from": "src/modules/runtime-config/config.yml",
+			"from": "src/modules/rqw-runtime-config/config.yml",
 			"to": "config.yml",
 			"mode": "merge"
 		},
@@ -403,36 +403,15 @@
 			"mode": "merge"
 		},
 		{
-			"from": "src/modules/compaction-400k/thresholds.yml",
-			"to": "config.yml",
-			"mode": "merge"
-		},
-		{
 			"from": "src/modules/rqw-harness-interface/status-line.yml",
 			"to": "config.yml",
 			"mode": "merge"
 		},
 		{
-			"from": "src/modules/runtime-config/mnemopi.yml",
+			"from": "src/modules/rqw-codex-adapter/rqw-codex-adapter.yml",
 			"to": "config.yml",
 			"mode": "merge"
 		}
 	],
-	"mnemopi": {
-		"api": "http://127.0.0.1:11434",
-		"model": "embeddinggemma-2:270m",
-		"settings": {
-			"memory.backend": "mnemopi",
-			"mnemopi.embeddingModel": "embeddinggemma-2:270m",
-			"mnemopi.embeddingApiUrl": "http://127.0.0.1:11434/v1",
-			"mnemopi.embeddingApiKey": "ollama"
-		},
-		"install": [
-			"brew install ollama",
-			"brew services start ollama",
-			"ollama pull embeddinggemma-2:270m"
-		],
-		"verify": "POST http://127.0.0.1:11434/v1/embeddings with the configured model and one input"
-	},
 	"configFallback": "config.yaml"
 }

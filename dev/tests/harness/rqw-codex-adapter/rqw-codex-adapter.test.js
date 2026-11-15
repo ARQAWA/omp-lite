@@ -168,3 +168,15 @@ test("profiles: task and sonic have an empty role at medium; scout lists only en
 	expect(scout.readSummarize).toBe(false);
 	expect(scout.body).toContain("Your report is the complete deliverable at the requested depth");
 });
+
+test("settings: any model per spawn, scout and sonic on Terra, the native reviewers off", async () => {
+	const { task } = Bun.YAML.parse(await Bun.file(new URL("../../../../src/modules/rqw-codex-adapter/rqw-codex-adapter.yml", import.meta.url)).text());
+	expect(task).toEqual({
+		showResolvedModelBadge: true,
+		maxConcurrency: 100,
+		perCallModel: "on",
+		enableEffort: false,
+		agentModelOverrides: { scout: "openai-codex/gpt-6.1-terra:xhigh", sonic: "openai-codex/gpt-6.1-terra:medium" },
+		disabledAgents: ["reviewer", "security-reviewer"],
+	});
+});

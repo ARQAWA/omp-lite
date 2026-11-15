@@ -1,7 +1,6 @@
 modelRoles:
   default: opencode-go/deepseek-v4.1-flash:max
   web: openai-codex/gpt-6-luna
-  memory: openai-codex/gpt-6.1-terra:xhigh
   perCall: >-
     anthropic/claude-fable-5, anthropic/claude-fable-5-1, anthropic/claude-fable-5-2, anthropic/claude-haiku-4-5, anthropic/claude-haiku-4-5-20251001, anthropic/claude-haiku-5-5, anthropic/claude-mythos-5, anthropic/claude-mythos-5-1, anthropic/claude-mythos-5-2, anthropic/claude-opus-4-5, anthropic/claude-opus-4-5-20251101, anthropic/claude-opus-4-6, anthropic/claude-opus-4-7, anthropic/claude-opus-4-8, anthropic/claude-opus-5, anthropic/claude-opus-5-5, anthropic/claude-sonnet-4-5, anthropic/claude-sonnet-4-5-20250929, anthropic/claude-sonnet-4-6, anthropic/claude-sonnet-5, anthropic/claude-sonnet-5-5,
     openai-codex/gpt-5.6-luna, openai-codex/gpt-5.6-sol, openai-codex/gpt-5.6-terra, openai-codex/gpt-6-astra, openai-codex/gpt-6-luna, openai-codex/gpt-6-sol, openai-codex/gpt-6.1-sol, openai-codex/gpt-6.1-terra,
@@ -116,8 +115,6 @@ disabledProviders:
 retry:
   fallbackChains:
     web: []
-    memory:
-      - openai-codex/gpt-6.1-terra:high
 compaction:
   modelThresholds:
     opencode-go/deepseek-v4.1-flash: f400000
@@ -143,7 +140,6 @@ composer:
   shape: claude
   predictions: true
   predictionAlternatives: false
-  tokenRate: true
 theme:
   dark: dark-copper
 update:
@@ -151,10 +147,6 @@ update:
 setupVersion: 3
 hideThinkingBlock: true
 proseOnlyThinking: false
-statusLine:
-  compactThinkingLevel: false
-  showHookStatus: false
-  separator: powerline-thin
 doubleEscapeAction: rewind
 spelling:
   typoDetection: false
@@ -162,14 +154,8 @@ spelling:
 emojiAutocomplete: false
 dev:
   autoqaConsent: denied
-memory:
-  backend: mnemopi
 autolearn:
   enabled: true
-astGrep:
-  enabled: false
-find:
-  enabled: "off"
 display:
   showTokenUsage: false
   hideToolActivity: false
@@ -180,28 +166,9 @@ display:
   collapseCompacted: false
 tui:
   imeSafeCursor: true
-task:
-  showResolvedModelBadge: true
-  maxConcurrency: 100
-  perCallModel: "on"
-  enableEffort: false
-  agentModelOverrides:
-    scout: openai-codex/gpt-6.1-terra:xhigh
-    sonic: openai-codex/gpt-6.1-terra:medium
-  disabledAgents:
-    - reviewer
-    - security-reviewer
 recap:
   idleSeconds: 600
-mnemopi:
-  embeddingModel: embeddinggemma-2:270m
-  embeddingApiUrl: http://127.0.0.1:11434/v1
-  embeddingApiKey: ollama
 tools:
-  artifactHeadBytes: 50
-  artifactTailBytes: 0
-  artifactMaxBytes: 32
-  artifactTailLines: 0
   approvalMode: yolo
 startup:
   quiet: true
@@ -212,45 +179,6 @@ edit:
     enabled: true
 lsp:
   diagnosticsOnEdit: true
-bashInterceptor:
-  enabled: true
-  patterns:
-    - pattern: "^\\s*(?:(?:head|tail|less|more)\\s+|cat\\s+(?!\\s|(?:[02-9]>{1,2}\\|?\\s*[^\\s>|]\\S*\\s+)*(?:<<|1?>(?!&)|&>)))"
-      tool: read
-      message: "Use the `read` tool instead of cat/head/tail. It provides better context and handles binary files."
-    - pattern: ^\s*(grep|rg|ripgrep|ag|ack)\s+
-      tool: grep
-      message: "Use the `grep` tool instead of grep/rg. It respects .gitignore and provides structured output."
-    - pattern: ^\s*(find|fd|locate)\s+
-      tool: glob
-      message: "Use the `glob` tool instead of find/fd. It respects .gitignore and is faster for glob patterns."
-    - pattern: ^\s*sed\s+(-i|--in-place)
-      tool: edit
-      message: "Use the `edit` tool instead of sed -i. It provides diff preview and fuzzy matching."
-    - pattern: "^\\s*perl\\s+.*-[pn]?i"
-      tool: edit
-      message: "Use the `edit` tool instead of perl -i. It provides diff preview and fuzzy matching."
-    - pattern: ^\s*awk\s+.*-i\s+inplace
-      tool: edit
-      message: "Use the `edit` tool instead of awk -i inplace. It provides diff preview and fuzzy matching."
-    - pattern: "^\\s*(?:(?:echo|printf)\\s+|cat\\s*<<|cat(?=\\s+(?:\\d+|&)?>)\\s+)(?:(?:\\\\[\\s\\S]|\\$\\((?:[^()\"'`]|\"[^\"]*\"|'[^']*'|`[^`]*`|\\([^()]*\\))*\\)|\\$\\{[^{}]*\\}|`[^`]*`|\\$(?!\\((?:[^()\"'`]|\"[^\"]*\"|'[^']*'|`[^`]*`|\\([^()]*\\))*\\)|\\{[^{}]*\\})|`(?![^`]*`)|[^\"'>;&|\\n\\\\$`]|(?<=[<>])&|(?<![<>])&(?=>)|(?<=(?:^|\\s)[02-9])>{1,2}\\|?|\"[^\"]*\"|'[^']*')|(?<!\\||>|(?:^|\\s)[02-9])>{1,2}\\|?\\s*(?:\"/dev/(?:null|tty|stdout|stderr)\"|'/dev/(?:null|tty|stdout|stderr)'|/dev/(?:null|tty|stdout|stderr))(?=[\\s;&|]|$))*(?<!\\||>|(?:^|\\s)[02-9])>{1,2}\\|?\\s*(?!(?:\"/dev/(?:null|tty|stdout|stderr)\"|'/dev/(?:null|tty|stdout|stderr)'|/dev/(?:null|tty|stdout|stderr))(?:[\\s;&|]|$))[$\\w./~\"'-]"
-      tool: write
-      message: "Use the `write` tool instead of echo/cat redirection. It handles encoding and provides confirmation. `write` replaces the whole file; to append to an existing file, use `edit` to insert after its last line."
-    - pattern: ^\s*nohup\s+|(?<!&)\&\s*$
-      tool: bash
-      message: "Use `bash` with `name` instead of nohup or background shell syntax so the service stays observable and managed."
-    - pattern: ^\s*(?:(?:bun|npm|pnpm|yarn)\s+(?:run\s+)?(?:dev|start)(?:\s|$)|(?:vite|next\s+dev|nuxt\s+dev|nodemon|lldb|gdb|tail\s+-f)(?:\s|$)|docker\s+compose\s+up(?!.*(?:\s-d(?:\s|$)|--detach))(?:\s|$))
-      tool: bash
-      message: "Use `bash` with `name` for services, watchers, and debuggers; inspect with `read proc://<name>`."
-    - pattern: ^\s*(?:(?:bun|npm|pnpm|yarn)\s+(?:run\s+)?\S+|cargo\s+watch|watchexec|pytest|vitest|jest|tsc)(?:.|\n)*(?:--watch|-w)(?:\s|$)
-      tool: bash
-      message: "Use `bash` with `name` for watch mode so its output, input, and lifecycle stay managed."
-    - pattern: ^\s*sed\s+-n\s+
-      tool: read
-      message: "Use the `read` tool with a line range in `path` instead of sed -n."
-    - pattern: '^\s*(?:ls|tree)(?:\s|$)'
-      tool: read
-      message: "Use the `read` tool for directory listings instead of ls/tree."
 claudeResets:
   autoRedeem5h: "no"
   autoRedeemWeekly: "no"

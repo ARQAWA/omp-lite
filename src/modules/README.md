@@ -12,18 +12,14 @@ README модуля описывает:
 - подключение и отключение;
 - соответствующие тесты в `dev/tests/harness/<module-name>/` согласно [правилам тестов](../../dev/tests/harness/README.md).
 
-Ресурсы на основе снимков рантайма от 2026-11-08:
+Модули:
 
-- `runtime-config` — `config.yml` и штатная маршрутизация bash;
-- `compaction-400k` — 18 порогов `f400000`.
-
-Написанный код:
-
+- `rqw-runtime-config` — общие настройки OMP одним `config.yml`: провайдеры, модели, роли, порог сжатия 400k. Кода нет. Тест: `dev/tests/harness/rqw-runtime-config/`.
 - `rqw-system-core` — основа: системный промпт, правила общения, памятка внутри каждого сообщения владельца. Тест: `dev/tests/harness/rqw-system-core/`.
 - `rqw-harness-interface` — пикер модели и усилия, статуслайн, лимиты, счётчики компакшенов и тулов, время хода. Тест: `dev/tests/harness/rqw-harness-interface/`.
 - `rqw-reviewer` — приёмка: профили сабагентов `collector` и `acceptor`, три скилла. Кода нет. Тест: `dev/tests/harness/rqw-reviewer/`.
-- `rqw-base-tools` — тулинг файлов одним расширением: тул `files` (карта проекта и широкий поиск), свои описания шести родных тулов, сторож, правка по файлам, метка целого файла; восемь настроек в `rqw-base-tools.yml`. Тест: `dev/tests/harness/rqw-base-tools/`.
-- `rqw-codex-adapter` — одно расширение: делегирование как в Codex и три профиля сабагентов, `AGENTS.md` для сабагентов, Codex-поиск `web_search`, тюнинг транспорта Codex. Тест: `dev/tests/harness/rqw-codex-adapter/`.
+- `rqw-base-tools` — тулинг файлов одним расширением: тул `files` (карта проекта и широкий поиск), свои описания шести родных тулов, сторож, правка по файлам, метка целого файла; настройки тулов и перехват bash в `rqw-base-tools.yml`. Тест: `dev/tests/harness/rqw-base-tools/`.
+- `rqw-codex-adapter` — одно расширение: делегирование как в Codex и три профиля сабагентов, `AGENTS.md` для сабагентов, Codex-поиск `web_search`, тюнинг транспорта Codex; настройки `task` в `rqw-codex-adapter.yml`. Тест: `dev/tests/harness/rqw-codex-adapter/`.
 - `rqw-windows-pack` — харнес на Windows VDI: расширение VS Code `arqawa.ompcli` (вкладки OMP, комплектные программы, Update, установка харнеса по манифесту) и диктовка Soniox, плагин `pi-voice-stt` v0.11.0. Тест: `dev/tests/harness/rqw-windows-pack/`.
 
 Каждый README описывает свой модуль.

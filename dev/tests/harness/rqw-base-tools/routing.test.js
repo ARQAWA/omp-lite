@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const config = Bun.YAML.parse(readFileSync(join(import.meta.dir, "../../../../src/modules/runtime-config/config.yml"), "utf8"));
+const config = Bun.YAML.parse(readFileSync(join(import.meta.dir, "../../../../src/modules/rqw-base-tools/rqw-base-tools.yml"), "utf8"));
 const route = command => config.bashInterceptor.patterns.find(rule => new RegExp(rule.pattern).test(command))?.tool;
 
 test("native bash routing is enabled for file reads and searches", () => {

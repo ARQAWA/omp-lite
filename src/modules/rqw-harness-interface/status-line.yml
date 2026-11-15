@@ -4,6 +4,8 @@ composer:
 statusLine:
   preset: custom
   showHookStatus: false
+  compactThinkingLevel: false
+  separator: powerline-thin
   leftSegments: [pi, model, mode, path, git, pr, subagents]
   rightSegments: [status, cache_hit, context_pct]
   segmentOptions:

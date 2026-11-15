@@ -14,12 +14,13 @@ RQW Codex Adapter: одно расширение OMP 18.18.8. Оно делае�
 - `websearch.js`: связь с Codex и цикл поиска.
 - `web-run.schema.json`: схема родного тула `web.run`.
 - `agents/task.md`, `agents/sonic.md`: профили с пустой ролью, уровень `medium`. `agents/scout.md`: роль исследователя, полный отчёт.
+- `rqw-codex-adapter.yml`: раздел настроек `task`. `perCallModel: "on"` включает поле `model` в `task`, уровень идёт хвостом `:level`. Кавычки нужны: голое `on` YAML читает как `true`. `scout` и `sonic` закреплены на Terra. Родные `reviewer` и `security-reviewer` выключены.
 
 ## Вход
 
-`~/.omp/agent/extensions/rqw-codex-adapter/` и три профиля в `~/.omp/agent/agents/`. Состав: [install.manifest.json](../../../install.manifest.json).
+`~/.omp/agent/extensions/rqw-codex-adapter/` и три профиля в `~/.omp/agent/agents/`. `rqw-codex-adapter.yml` сливается в `config.yml`. Состав: [install.manifest.json](../../../install.manifest.json).
 
-Нужно от окружения: вход `openai-codex` для поиска; `task.perCallModel: on`, чтобы работало поле `model` в `task`.
+Нужно от окружения: вход `openai-codex` для поиска.
 
 ## Механика OMP 18.18.8
 

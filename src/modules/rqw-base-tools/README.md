@@ -15,7 +15,11 @@
 
 **установка:** три файла в `~/.omp/agent/extensions/rqw-base-tools/`. `rqw-base-tools.yml` вливается в `config.yml`. записи в `install.manifest.json`.
 
-**выключение:** `extension-module:rqw-base-tools` в `disabledExtensions`. восемь настроек убрать из конфига руками.
+**настройки:** `rqw-base-tools.yml`, 16 значений. восемь из них сверяет сторож. четыре ключа выноса ответа в файл: `tools.artifactHeadBytes`, `tools.artifactTailBytes`, `tools.artifactTailLines`, `tools.artifactMaxBytes`. `find.enabled: "off"` и `astGrep.enabled: false`. перехват bash: `bashInterceptor.enabled: true` и 12 правил.
+
+**перехват bash:** чтение, поиск, списки и правка на месте уходят родным тулам. свои `patterns` заменяют встроенный список OMP, не дополняют. это предпочтение, не изоляция: пайпы и код интерпретаторов проходят.
+
+**выключение:** `extension-module:rqw-base-tools` в `disabledExtensions`. настройки файла убрать из конфига руками.
 
 **тест:** `bun test dev/tests/harness/rqw-base-tools`.
 

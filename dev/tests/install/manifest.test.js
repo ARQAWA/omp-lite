@@ -58,9 +58,10 @@ test("targets stay inside the agent root and are unique", () => {
 		expect(entry.to).toBe("config.yml");
 		expect(entry.mode).toBe("merge");
 	}
+	expect(manifest.configFallback).toBe("config.yaml");
 });
 
-test("config fragments form one snapshot without contradictions", () => {
+test("every setting lives in one config fragment", () => {
 	const flat = (node, prefix = "", out = {}) => {
 		for (const [key, value] of Object.entries(node ?? {})) {
 			const id = prefix ? prefix + "." + key : key;
@@ -72,7 +73,7 @@ test("config fragments form one snapshot without contradictions", () => {
 	const seen = {};
 	for (const entry of manifest.config) {
 		for (const [key, value] of Object.entries(flat(Bun.YAML.parse(readFileSync(join(root, entry.from), "utf8"))))) {
-			if (key in seen) expect([key, value]).toEqual([key, seen[key]]);
+			expect(Object.keys(seen)).not.toContain(key);
 			seen[key] = value;
 		}
 	}
@@ -80,23 +81,6 @@ test("config fragments form one snapshot without contradictions", () => {
 	expect(seen["claudeResets.autoRedeemWeekly"]).toBe('"no"');
 	expect(seen["read.summarize.enabled"]).toBe("true");
 	expect(Object.keys(seen).filter(key => /token$|secret|password/i.test(key))).toEqual([]);
-});
-
-test("compaction threshold maps match", () => {
-	const load = path => Bun.YAML.parse(readFileSync(join(root, path), "utf8")).compaction.modelThresholds;
-	expect(load("src/modules/runtime-config/config.yml")).toEqual(load("src/modules/compaction-400k/thresholds.yml"));
-});
-
-test("mnemopi settings and the local embedding model are part of the contract", () => {
-	expect(manifest.mnemopi.settings).toEqual({
-		"memory.backend": "mnemopi",
-		"mnemopi.embeddingModel": "embeddinggemma-2:270m",
-		"mnemopi.embeddingApiUrl": "http://127.0.0.1:11434/v1",
-		"mnemopi.embeddingApiKey": "ollama",
-	});
-	expect(manifest.mnemopi.install).toContain("ollama pull embeddinggemma-2:270m");
-	expect(manifest.config.some(entry => entry.from === "src/modules/runtime-config/mnemopi.yml" && entry.mode === "merge")).toBe(true);
-	expect(manifest.configFallback).toBe("config.yaml");
 });
 
 test("the VS Code section ships the four extension files and no license", () => {
