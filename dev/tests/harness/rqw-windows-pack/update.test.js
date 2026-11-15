@@ -111,3 +111,14 @@ test("a broken download, archive or install leaves nothing behind and does not b
 	await w.run("ompcli.update");
 	expect(w.state.messages.at(-1)).toBe("omp-lite updated. Open a new tab.");
 });
+
+test("an Update cut after the pointer is undone before the next tab picks its payload", async () => {
+	const w = world({ request: github().request, files: installed });
+	await w.run("ompcli.update");
+	// The state of a cut Update: new files, new pointer, and the journal still there.
+	const backups = join(w.agent, ".ompcli-backups");
+	write(join(backups, "journal.json"), JSON.stringify([{ path: join(w.agent, "extensions/a.js"), backup: null }, { path: join(base(w), "current.json"), backup: null }]));
+	await w.tab();
+	expect([existsSync(join(base(w), "current.json")), existsSync(join(w.agent, "extensions/a.js")), existsSync(backups)]).toEqual([false, false, false]);
+	expect(w.state.spawned.at(-1).options.env.PI_CONFIG_FILES).not.toContain(sha);
+});

@@ -340,6 +340,8 @@ async function unpack({ archive, stage, extensionPath }) {
 async function updateHarness({ extensionPath, storageDir, version, agentDir, web }) {
 	const { sha } = await web.json(`https://api.github.com/repos/${REPO}/commits/main`, { accept: "application/vnd.github+json", "user-agent": "arqawa-ompcli" });
 	if (!SHA.test(sha)) throw fail("revision");
+	// An interrupted install is undone first: its journal may hold the pointer.
+	await rollback(agentDir);
 	// A broken pointer stops here: nothing is written.
 	const current = await selectPayload({ extensionPath, storageDir, version });
 	const builtIn = ((await readText(path.join(extensionPath, "payload", ".revision"))) ?? "").trim();
@@ -600,6 +602,8 @@ function createCli(host) {
 
 	async function prepare(env, write) {
 		if ((await stat(omp))?.size !== assets.omp.size) throw fail("bundle", { file: assets.omp.file });
+		// An interrupted install is undone first: its journal may hold the pointer.
+		await rollback(env.agentDir);
 		const payload = await selectPayload(host);
 		const { layers } = await installHarness({ sourceDir: payload.dir, agentDir: env.agentDir }).catch(error => {
 			throw fail("installFailed", { reason: error.message });
