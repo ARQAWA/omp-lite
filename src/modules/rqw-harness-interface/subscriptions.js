@@ -23,8 +23,7 @@ export default function subscriptions(pi, read = readUsage) {
 					const values = windows.map(id => selected.get(provider)?.limits?.find(limit => limit.scope?.shared && !limit.scope.tier && limit.window?.id === id)?.amount?.remainingFraction).filter(value => typeof value === "number").map(value => `${Math.round(value * 100)}%`);
 					return [key, values.length ? `${label} ${values.join("/")}` : undefined];
 				});
-				for (const [key, value] of marks.filter(([, value]) => !value)) ctx.ui.setStatus(key, value);
-				for (const [key, value] of marks.filter(([, value]) => value)) ctx.ui.setStatus(key, value);
+				for (const [key, value] of marks) ctx.ui.setStatus(key, value);
 			} catch {} finally { busy = false; }
 		};
 		void paint();

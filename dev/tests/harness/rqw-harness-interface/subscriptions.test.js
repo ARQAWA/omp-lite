@@ -22,7 +22,7 @@ test("main TUI refreshes shared windows, chooses active account and clears absen
 	m.tick(); await flush();
 	expect(m.painted.slice(3)).toEqual([["10-cc", undefined], ["20-cx", undefined], ["30-go", "Go 50%"]]);
 	reports = [report("anthropic", [["7d", .2]], active), report("anthropic", [["7d", .8]], active)];
-	m.tick(); await flush(); expect(m.painted.at(-1)).toEqual(["10-cc", "CC 80%"]);
+	m.tick(); await flush(); expect(m.painted.at(-3)).toEqual(["10-cc", "CC 80%"]);
 });
 
 test("failed and overlapping reads leave marks intact; other sessions do not read", async () => {
