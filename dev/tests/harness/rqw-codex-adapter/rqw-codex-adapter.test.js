@@ -43,10 +43,11 @@ const RULE = "Do not spawn sub-agents unless the user or applicable AGENTS.md/sk
 test("task: the rule goes under the first line once, scout pushes go, both names and shapes work", () => {
 	const description = "Spawn `tasks[]` concurrently.\n\n# Delegation\nUse most specific agent. Read-only research MUST use `scout` only when files unknown. Prefer one agent.\n- `scout`: MUST be used for exploratory codebase research, rapid code analysis, and broad pattern searches. Read-only scout.";
 	const flat = { name: "_task", description };
-	const nested = { type: "function", function: { name: "task", description } };
+	const nested = { type: "function", function: { name: "_task", description } };
 	const other = { name: "read", description: "Use most specific agent." };
 	request([flat, nested, other]);
-	request([flat]);
+	request([flat, nested]);
+	request([flat, nested]);
 	for (const text of [flat.description, nested.function.description]) {
 		expect(text).toBe(`Spawn \`tasks[]\` concurrently.\n${RULE}\n\n# Delegation\nOmit \`agent\` by default: a general worker equal to you. \`scout\` only for read-only search over unknown files; \`sonic\` only for mechanical edits with exact instructions. The user names an agent type: pass it in \`agent\`. The user names a model or effort: set \`model\` to \`provider/id:level\` (your own model if none named), no \`agent\`. Levels: \`low\`, \`medium\`, \`high\`, \`xhigh\` (extra high), \`max\`; pass exactly the level the user says. In every task say how thorough to be and exactly what to return. Prefer one agent.\n- \`scout\`: Read-only scout.`);
 	}
@@ -130,22 +131,22 @@ test("web search: a 401 moves to the next account; only text commands are sent o
 	await expect(search(() => new Response("no", { status: 500 }), [{ accessToken: "a" }, { accessToken: "b" }])).rejects.toThrow("500");
 });
 
-test("web search: a planner failure after the first fetch keeps the evidence; a cancel rejects", async () => {
+test("web search: a timeout after the first fetch keeps the evidence; a cancel rejects", async () => {
 	let planned = false;
 	const fetch = url => {
 		if (url.endsWith("/alpha/search")) return Response.json({ output: "source" });
-		if (planned) return sse({ type: "response.failed", response: { error: { message: "planner failed" } } });
+		if (planned) throw new DOMException("timed out", "TimeoutError");
 		planned = true;
 		return plan({ open: [{ ref_id: "turn0search0" }] });
 	};
-	expect((await search(fetch)).content[0].text).toBe("[fetch 1]\nsource\n\n[fetch 2]\n[incomplete] planner failed");
+	expect((await search(fetch)).content[0].text).toBe("[fetch 1]\nsource\n\n[fetch 2]\n[incomplete] timed out");
 	const controller = new AbortController();
 	planned = false;
 	globalThis.fetch = url => {
 		if (planned && !url.endsWith("/alpha/search")) controller.abort();
 		return fetch(url);
 	};
-	await expect(load().tool.execute("id", { query: "q" }, controller.signal, undefined, { modelRegistry: { authStorage: [{ accessToken: "a" }] }, sessionManager: { getSessionId: () => "s" } })).rejects.toThrow("planner failed");
+	await expect(load().tool.execute("id", { query: "q" }, controller.signal, undefined, { modelRegistry: { authStorage: [{ accessToken: "a" }] }, sessionManager: { getSessionId: () => "s" } })).rejects.toThrow("timed out");
 });
 
 test("web search off: by the setting", () => {
