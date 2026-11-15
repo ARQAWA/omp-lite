@@ -1,4 +1,4 @@
-// Ported from pi-response-duration 1.0.1 (MIT, copyright 2026 tech-msc); see LICENSE.
+// Ported from pi-response-duration 1.0.1 (copyright 2026 tech-msc).
 const TYPE = "omp-lite.turn-duration";
 const label = ms => {
 	const seconds = Math.max(1, Math.ceil(ms / 1000)), minutes = Math.floor(seconds / 60), hours = Math.floor(minutes / 60);

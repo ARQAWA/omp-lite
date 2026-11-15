@@ -103,10 +103,6 @@
 			"to": "extensions/rqw-harness-interface/turn-duration.js"
 		},
 		{
-			"from": "src/modules/rqw-harness-interface/LICENSE",
-			"to": "extensions/rqw-harness-interface/LICENSE"
-		},
-		{
 			"from": "src/modules/rqw-reviewer/agents/acceptor.md",
 			"to": "agents/acceptor.md"
 		},
@@ -407,7 +403,8 @@
 		"extensions/tool-summary.js",
 		"extensions/tool-summary.json",
 		"extensions/turn-duration.js",
-		"extensions/turn-duration.LICENSE"
+		"extensions/turn-duration.LICENSE",
+		"extensions/rqw-harness-interface/LICENSE"
 	],
 	"config": [
 		{
