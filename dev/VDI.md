@@ -1,6 +1,6 @@
 # Windows VDI: факты и правило запуска
 
-Читай этот файл до любой правки запуска в `src/modules/ompcli/`.
+Читай этот файл до любой правки запуска в `src/modules/rqw-windows-pack/`.
 Здесь собрано всё, что известно о VDI владельца и о трёх расширениях для неё.
 У каждого факта стоит метка. Догадку нельзя выдавать за факт.
 
@@ -37,8 +37,8 @@ node-pty из VS Code
 С 0.0.6 в ompcli таких программ две: `omp.exe` и `llama-server.exe`. С 0.0.9 третья: `ffmpeg.exe` для диктовки. Её запускает не extension host, а сам OMP, той же цепочкой PowerShell -> Git Bash. Установка харнеса и распаковка обновления идут внутри extension host, без программ.
 Extension host сам запускает только две вещи: `curl.exe` из `System32` (видел: работает) и сам VS Code как Node (так делает CCLI; код).
 
-Так запускают все три расширения: PCLI `pi.exe`, CCLI `codex.exe`, ompcli `omp.exe` и `llama-server.exe`.
-Носители в коде: `bashCommand`, `chatCommand`, `bundledStarter`, `bundledChild` в `src/modules/ompcli/index.js`.
+Так запускают все три расширения: PCLI `pi.exe`, CCLI `codex.exe`, ompcli `omp.exe`. `llama-server.exe` ompcli запускал до D-117; теперь файл лежит в поставке без запуска.
+Носители в коде: `psArgs`, `words`, `openTab` в `src/modules/rqw-windows-pack/vscode/index.js`; `launch` в `src/modules/rqw-windows-pack/voice/src/audio/launch.ts`.
 Образец: `~/ai-project/my-pi/pcli-vscode/extension.js`, функция `makePty`. Владелец сказал «как PCLI»? Сначала прочти образец и повтори форму буквально.
 
 ## Что известно о VDI
@@ -89,7 +89,7 @@ Extension host сам запускает только две вещи: `curl.exe
 
 |что|PCLI `arqawa.pcli`|CCLI `arqawa.ccli`|ompcli `arqawa.ompcli`|
 |---|---|---|---|
-|исходники|`~/ai-project/my-pi/pcli-vscode`, ветка `origin/pcli`|`~/Documents/ChatGPT/my-codex-harness/codex-cli-vscode`|`src/modules/ompcli`|
+|исходники|`~/ai-project/my-pi/pcli-vscode`, ветка `origin/pcli`|`~/Documents/ChatGPT/my-codex-harness/codex-cli-vscode`|`src/modules/rqw-windows-pack/vscode`|
 |версия в Marketplace|0.0.10|0.0.1|0.0.6|
 |программа|`pi.exe` в VSIX|`codex.exe` ставит npm в каталог расширения|`omp.exe`, `llama-server.exe` в VSIX|
 |запуск программы|цепочка|цепочка|цепочка с 0.0.5|

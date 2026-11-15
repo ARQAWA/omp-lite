@@ -41,7 +41,7 @@
   ],
   "pi": {
     "extensions": [
-      "./src/index.ts"
+      "./index.ts"
     ],
     "image": "https://raw.githubusercontent.com/cgarrot/pi-voice-stt/main/assets/preview.gif"
   },

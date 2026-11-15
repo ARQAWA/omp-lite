@@ -31,9 +31,9 @@ test("the removed memory description patch is not installed", () => {
 test("the removed Luna patch is removed from installations", () => expect(manifest.remove).toContain("extensions/codex-luna-search.js"));
 
 test("interface files replace the old installed extensions", () => {
-	for (const name of ["index.js", "model-picker.js", "model-picker.json", "subscriptions.js", "compactions.js", "tool-summary.js", "tool-summary.json", "turn-duration.js", "LICENSE"])
+	for (const name of ["index.js", "model-picker.js", "model-picker.json", "subscriptions.js", "compactions.js", "tool-summary.js", "tool-summary.json", "turn-duration.js"])
 		expect(manifest.files).toContainEqual({ from: `src/modules/rqw-harness-interface/${name}`, to: `extensions/rqw-harness-interface/${name}` });
-	for (const name of ["model-picker.js", "model-picker.json", "subscriptions.js", "compactions.js", "tool-summary.js", "tool-summary.json", "turn-duration.js", "turn-duration.LICENSE"])
+	for (const name of ["model-picker.js", "model-picker.json", "subscriptions.js", "compactions.js", "tool-summary.js", "tool-summary.json", "turn-duration.js", "turn-duration.LICENSE", "rqw-harness-interface/LICENSE"])
 		expect(manifest.remove).toContain(`extensions/${name}`);
 	expect(manifest.config).toContainEqual({ from: "src/modules/rqw-harness-interface/status-line.yml", to: "config.yml", mode: "merge" });
 });
@@ -99,7 +99,7 @@ test("mnemopi settings and the local embedding model are part of the contract", 
 	expect(manifest.configFallback).toBe("config.yaml");
 });
 
-test("the VS Code section ships the extension files and their licenses", () => {
+test("the VS Code section ships the four extension files and no license", () => {
 	expect(manifest.vscode.target).toBe("win32-x64");
 	const targets = new Set();
 	for (const entry of manifest.vscode.files) {
@@ -107,6 +107,5 @@ test("the VS Code section ships the extension files and their licenses", () => {
 		expect(targets.has(entry.to)).toBe(false);
 		targets.add(entry.to);
 	}
-	for (const name of ["index.js", "package.json", "runtime.json", "messages.json"]) expect(targets.has(name)).toBe(true);
-	expect([...targets].filter(name => name.startsWith("licenses/")).length).toBeGreaterThanOrEqual(6);
+	expect([...targets].sort()).toEqual(["index.js", "messages.json", "package.json", "runtime.json"]);
 });

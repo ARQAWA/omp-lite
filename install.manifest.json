@@ -99,10 +99,6 @@
 			"to": "extensions/rqw-harness-interface/turn-duration.js"
 		},
 		{
-			"from": "src/modules/rqw-harness-interface/LICENSE",
-			"to": "extensions/rqw-harness-interface/LICENSE"
-		},
-		{
 			"from": "src/modules/rqw-reviewer/agents/acceptor.md",
 			"to": "agents/acceptor.md"
 		},
@@ -135,215 +131,215 @@
 			"to": "extensions/subagent-reuse.js"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/LICENSE",
-			"to": "extensions/pi-voice-stt/LICENSE"
+			"from": "src/modules/rqw-windows-pack/voice/index.ts",
+			"to": "extensions/pi-voice-stt/index.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/package.json",
+			"from": "src/modules/rqw-windows-pack/voice/package.json",
 			"to": "extensions/pi-voice-stt/package.json"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/bridge-recorder.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/audio/bridge-recorder.ts",
 			"to": "extensions/pi-voice-stt/src/audio/bridge-recorder.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/factory.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/audio/factory.ts",
 			"to": "extensions/pi-voice-stt/src/audio/factory.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/ffmpeg-recorder.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/audio/ffmpeg-recorder.ts",
 			"to": "extensions/pi-voice-stt/src/audio/ffmpeg-recorder.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/file.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/audio/file.ts",
 			"to": "extensions/pi-voice-stt/src/audio/file.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/launch.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/audio/launch.ts",
 			"to": "extensions/pi-voice-stt/src/audio/launch.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/stream-recorder.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/audio/stream-recorder.ts",
 			"to": "extensions/pi-voice-stt/src/audio/stream-recorder.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/types.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/audio/types.ts",
 			"to": "extensions/pi-voice-stt/src/audio/types.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/audio/wav.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/audio/wav.ts",
 			"to": "extensions/pi-voice-stt/src/audio/wav.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/cleanup/factory.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/cleanup/factory.ts",
 			"to": "extensions/pi-voice-stt/src/cleanup/factory.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/cleanup/openai-compatible.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/cleanup/openai-compatible.ts",
 			"to": "extensions/pi-voice-stt/src/cleanup/openai-compatible.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/cleanup/prompt.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/cleanup/prompt.ts",
 			"to": "extensions/pi-voice-stt/src/cleanup/prompt.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/cleanup/repo-context.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/cleanup/repo-context.ts",
 			"to": "extensions/pi-voice-stt/src/cleanup/repo-context.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/cleanup/types.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/cleanup/types.ts",
 			"to": "extensions/pi-voice-stt/src/cleanup/types.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/config/defaults.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/config/defaults.ts",
 			"to": "extensions/pi-voice-stt/src/config/defaults.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/config/endpoint.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/config/endpoint.ts",
 			"to": "extensions/pi-voice-stt/src/config/endpoint.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/config/load-config.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/config/load-config.ts",
 			"to": "extensions/pi-voice-stt/src/config/load-config.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/config/profiles.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/config/profiles.ts",
 			"to": "extensions/pi-voice-stt/src/config/profiles.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/config/startup.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/config/startup.ts",
 			"to": "extensions/pi-voice-stt/src/config/startup.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/config/types.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/config/types.ts",
 			"to": "extensions/pi-voice-stt/src/config/types.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/core/dictation-controller.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/core/dictation-controller.ts",
 			"to": "extensions/pi-voice-stt/src/core/dictation-controller.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/core/modes.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/core/modes.ts",
 			"to": "extensions/pi-voice-stt/src/core/modes.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/core/output.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/core/output.ts",
 			"to": "extensions/pi-voice-stt/src/core/output.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/core/realtime-controller.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/core/realtime-controller.ts",
 			"to": "extensions/pi-voice-stt/src/core/realtime-controller.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/core/replacements.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/core/replacements.ts",
 			"to": "extensions/pi-voice-stt/src/core/replacements.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/core/transcribe.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/core/transcribe.ts",
 			"to": "extensions/pi-voice-stt/src/core/transcribe.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/core/voice-commands.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/core/voice-commands.ts",
 			"to": "extensions/pi-voice-stt/src/core/voice-commands.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/i18n/strings.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/i18n/strings.ts",
 			"to": "extensions/pi-voice-stt/src/i18n/strings.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/index.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/index.ts",
 			"to": "extensions/pi-voice-stt/src/index.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/assemblyai-stream.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/assemblyai-stream.ts",
 			"to": "extensions/pi-voice-stt/src/providers/assemblyai-stream.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/assemblyai.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/assemblyai.ts",
 			"to": "extensions/pi-voice-stt/src/providers/assemblyai.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/deepgram.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/deepgram.ts",
 			"to": "extensions/pi-voice-stt/src/providers/deepgram.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/elevenlabs.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/elevenlabs.ts",
 			"to": "extensions/pi-voice-stt/src/providers/elevenlabs.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/factory.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/factory.ts",
 			"to": "extensions/pi-voice-stt/src/providers/factory.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/gladia.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/gladia.ts",
 			"to": "extensions/pi-voice-stt/src/providers/gladia.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/helpers.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/helpers.ts",
 			"to": "extensions/pi-voice-stt/src/providers/helpers.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/mistral.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/mistral.ts",
 			"to": "extensions/pi-voice-stt/src/providers/mistral.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/multipart.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/multipart.ts",
 			"to": "extensions/pi-voice-stt/src/providers/multipart.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/openai-compatible.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/openai-compatible.ts",
 			"to": "extensions/pi-voice-stt/src/providers/openai-compatible.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/readiness.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/readiness.ts",
 			"to": "extensions/pi-voice-stt/src/providers/readiness.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/soniox.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/soniox.ts",
 			"to": "extensions/pi-voice-stt/src/providers/soniox.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/providers/types.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/providers/types.ts",
 			"to": "extensions/pi-voice-stt/src/providers/types.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/secrets/keychain.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/secrets/keychain.ts",
 			"to": "extensions/pi-voice-stt/src/secrets/keychain.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/secrets/resolve-api-key.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/secrets/resolve-api-key.ts",
 			"to": "extensions/pi-voice-stt/src/secrets/resolve-api-key.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/ui/input-indicator.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/ui/input-indicator.ts",
 			"to": "extensions/pi-voice-stt/src/ui/input-indicator.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/utils/coerce.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/utils/coerce.ts",
 			"to": "extensions/pi-voice-stt/src/utils/coerce.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/utils/keybind.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/utils/keybind.ts",
 			"to": "extensions/pi-voice-stt/src/utils/keybind.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/utils/merge.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/utils/merge.ts",
 			"to": "extensions/pi-voice-stt/src/utils/merge.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/utils/path.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/utils/path.ts",
 			"to": "extensions/pi-voice-stt/src/utils/path.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/pi-voice-stt/src/utils/text.ts",
+			"from": "src/modules/rqw-windows-pack/voice/src/utils/text.ts",
 			"to": "extensions/pi-voice-stt/src/utils/text.ts"
 		},
 		{
-			"from": "src/modules/voice-stt/stt.json",
+			"from": "src/modules/rqw-windows-pack/voice/stt.json",
 			"to": "extensions/pi-voice-stt/stt.json"
 		},
 		{
-			"from": "src/modules/voice-stt/stt.windows.json",
+			"from": "src/modules/rqw-windows-pack/voice/stt.windows.json",
 			"to": "extensions/pi-voice-stt/stt.windows.json"
 		}
 	],
@@ -351,48 +347,20 @@
 		"target": "win32-x64",
 		"files": [
 			{
-				"from": "src/modules/ompcli/index.js",
+				"from": "src/modules/rqw-windows-pack/vscode/index.js",
 				"to": "index.js"
 			},
 			{
-				"from": "src/modules/ompcli/package.json",
+				"from": "src/modules/rqw-windows-pack/vscode/package.json",
 				"to": "package.json"
 			},
 			{
-				"from": "src/modules/ompcli/runtime.json",
+				"from": "src/modules/rqw-windows-pack/vscode/runtime.json",
 				"to": "runtime.json"
 			},
 			{
-				"from": "src/modules/ompcli/messages.json",
+				"from": "src/modules/rqw-windows-pack/vscode/messages.json",
 				"to": "messages.json"
-			},
-			{
-				"from": "src/modules/ompcli/licenses/LICENSE-omp.txt",
-				"to": "licenses/LICENSE-omp.txt"
-			},
-			{
-				"from": "src/modules/ompcli/licenses/LICENSE-llama.cpp.txt",
-				"to": "licenses/LICENSE-llama.cpp.txt"
-			},
-			{
-				"from": "src/modules/ompcli/licenses/LICENSE-LLVM-OpenMP.txt",
-				"to": "licenses/LICENSE-LLVM-OpenMP.txt"
-			},
-			{
-				"from": "src/modules/ompcli/licenses/LICENSE-apache-2.0.txt",
-				"to": "licenses/LICENSE-apache-2.0.txt"
-			},
-			{
-				"from": "src/modules/ompcli/licenses/LICENSE-bun.md",
-				"to": "licenses/LICENSE-bun.md"
-			},
-			{
-				"from": "src/modules/ompcli/licenses/LICENSE-msvc-runtime.txt",
-				"to": "licenses/LICENSE-msvc-runtime.txt"
-			},
-			{
-				"from": "src/modules/ompcli/licenses/LICENSE-ffmpeg.txt",
-				"to": "licenses/LICENSE-ffmpeg.txt"
 			}
 		]
 	},
@@ -435,7 +403,8 @@
 		"extensions/base-tools.js",
 		"extensions/base-tools.descriptions.json",
 		"extensions/base-tools.texts.json",
-		"extensions/base-tools.reference.json"
+		"extensions/base-tools.reference.json",
+		"extensions/rqw-harness-interface/LICENSE"
 	],
 	"config": [
 		{
