@@ -2129,3 +2129,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** ревизия payload `f32821d16235bb989abb0f2f069945f3f831f74c`. VSIX 209571621 байт, sha256 `528a82b88f830b86e361cc6cc7434149cd1948e5ed3bed3bfeef9f1db9ba538f`. Ответ Marketplace: версия 0.0.15, `win32-x64`, `validated`. `bun test dev/tests`: 96 pass, 0 fail.
 
 **Границы:** Windows VDI не проверено.
+
+## D-124 — обновление OMP вместе со сборкой и всем вокруг
+
+**Решение:** в `dev/PROCESS.md` правило 38: обновление OMP идёт вместе с обновлением сборки VSIX; обновление OMP или сборки обновляет и всё вокруг, навыки тоже. По нему после D-122 и D-123 обновлены навык `release-ompcli-vsix` (модуль `rqw-windows-pack`, сборщик, три программы, запись выпуска, отказ `Update` на новом `runtime.json`) и комментарий версии в тесте `rqw-system-core`.
+
+**Основание:** слова владельца от 2026-11-15: «Надо всё вокруг обновить, и в процесс вписать обновление вместе с обновлением билда, обновлять ещё и все сопутствующие материалы, все всякие скилы, всё, что их касается вокруг.»
+
+**Проверка:** `rg -n '18\.18\.8|ompcli-build|ompcli-runtime|src/modules/ompcli|modules/ompcli' . ~/.omp/agent/managed-skills ~/.omp/agent/skills --glob '!dev/DECISIONS.md' --glob '!dev/history/**'` из корня репозитория: пусто. `bun test dev/tests/harness/rqw-system-core`: 6 pass, 0 fail.
+
+**Границы:** прошлые записи `DECISIONS.md`, `dev/history/` и факты `dev/VDI.md` не менялись. Навык лежит вне репозитория.
+
+**Носители правила:** `dev/PROCESS.md`, `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`, `~/.omp/agent/managed-skills/release-ompcli-vsix/SKILL.md`.
