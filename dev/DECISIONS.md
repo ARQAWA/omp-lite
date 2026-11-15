@@ -1924,3 +1924,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-15. `bun test dev/tests/harness/review`: 2 pass, 0 fail. `bun test dev/tests`: 342 pass, 0 fail. Коммит `74905a8`, слияние `432e13d`. Файлы в main и в установке равны (`cmp`). Резервная копия: `~/.omp/backups/install-contract-20261115-012228/`. OMP 18.18.8, `packages/coding-agent/src/prompts/tools/task.md`: имя задачи необязательно. `/highreview` этой работы на ветке-снимке: принято за 3 круга (находки, чисто, чисто). Правки круга 1: коммит `458977b`, слияние `8fa1fd8`, резервная копия `~/.omp/backups/install-contract-20261115-014113/`.
 
 **Носители правила:** `src/modules/review/agents/collector.md`, `src/modules/review/agents/acceptor.md`, `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`, `dev/tests/harness/review/review.test.js`.
+
+## D-111 — единый интерфейс харнеса
+
+**Решение:** шесть модулей `model-picker`, `status-line`, `subscriptions`, `compactions`, `tool-summary`, `turn-duration` объединены в `rqw-harness-interface`. Метка провайдера убрана из пикера; для двух DeepSeek показаны алиасы `DeepSeek Flash OpenCodeGo` и `DeepSeek Flash OpenRouter`. Цвета пикера фиксированы по MyP. В счётчике тулов `files` относится к search, `ast_edit` к edit.
+
+**Основание:** заказ владельца от 2026-11-15.
+
+**Причина:** единый интерфейс с минимальным кодом и тестами. OMP 18.18.8: `packages/coding-agent/src/discovery/helpers.ts`, `extensibility/extensions/types.ts`, `slash-commands/helpers/active-oauth-account.ts`.
+
+**Границы:** принятые ограничения интерфейса описаны в README модуля. Старые пути удаляются при установке через манифест.
+
+**Носители правила:** `src/modules/rqw-harness-interface/`, `dev/tests/harness/rqw-harness-interface/`, `install.manifest.json`, `INSTALL.md`.

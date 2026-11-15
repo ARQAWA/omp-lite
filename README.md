@@ -2,7 +2,7 @@
 
 omp-lite — модульный обвес для OMP: расширения, навыки, системный промпт и настройки.
 
-В [`src/modules/`](src/modules/README.md) лежат 24 модуля, каждый описан своим README. Харнес ставится в установленный OMP по [INSTALL.md](INSTALL.md). Состав поставки задаёт [install.manifest.json](install.manifest.json).
+В [`src/modules/`](src/modules/README.md) лежат 19 модулей, каждый описан своим README. Харнес ставится в установленный OMP по [INSTALL.md](INSTALL.md). Состав поставки задаёт [install.manifest.json](install.manifest.json).
 
 Сборки харнеса нет: файлы копируются из `src/`. Отдельно собирается только расширение VS Code `arqawa.ompcli` для Windows VDI, модуль [`ompcli`](src/modules/ompcli/README.md).
 

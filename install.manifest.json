@@ -7,10 +7,6 @@
 			"to": "extensions/codex-parallel.js"
 		},
 		{
-			"from": "src/modules/compactions/index.js",
-			"to": "extensions/compactions.js"
-		},
-		{
 			"from": "src/modules/communication/rules/communication-main.md",
 			"to": "rules/communication-main.md"
 		},
@@ -59,12 +55,40 @@
 			"to": "extensions/memory-guide.json"
 		},
 		{
-			"from": "src/modules/model-picker/index.js",
-			"to": "extensions/model-picker.js"
+			"from": "src/modules/rqw-harness-interface/index.js",
+			"to": "extensions/rqw-harness-interface/index.js"
 		},
 		{
-			"from": "src/modules/model-picker/model-picker.json",
-			"to": "extensions/model-picker.json"
+			"from": "src/modules/rqw-harness-interface/model-picker.js",
+			"to": "extensions/rqw-harness-interface/model-picker.js"
+		},
+		{
+			"from": "src/modules/rqw-harness-interface/model-picker.json",
+			"to": "extensions/rqw-harness-interface/model-picker.json"
+		},
+		{
+			"from": "src/modules/rqw-harness-interface/subscriptions.js",
+			"to": "extensions/rqw-harness-interface/subscriptions.js"
+		},
+		{
+			"from": "src/modules/rqw-harness-interface/compactions.js",
+			"to": "extensions/rqw-harness-interface/compactions.js"
+		},
+		{
+			"from": "src/modules/rqw-harness-interface/tool-summary.js",
+			"to": "extensions/rqw-harness-interface/tool-summary.js"
+		},
+		{
+			"from": "src/modules/rqw-harness-interface/tool-summary.json",
+			"to": "extensions/rqw-harness-interface/tool-summary.json"
+		},
+		{
+			"from": "src/modules/rqw-harness-interface/turn-duration.js",
+			"to": "extensions/rqw-harness-interface/turn-duration.js"
+		},
+		{
+			"from": "src/modules/rqw-harness-interface/LICENSE",
+			"to": "extensions/rqw-harness-interface/LICENSE"
 		},
 		{
 			"from": "src/modules/review/agents/acceptor.md",
@@ -99,10 +123,6 @@
 			"to": "extensions/subagent-reuse.js"
 		},
 		{
-			"from": "src/modules/subscriptions/index.js",
-			"to": "extensions/subscriptions.js"
-		},
-		{
 			"from": "src/modules/system-prompt/SYSTEM.md",
 			"to": "SYSTEM.md"
 		},
@@ -125,22 +145,6 @@
 		{
 			"from": "src/modules/task-delegation/agents/scout.md",
 			"to": "agents/scout.md"
-		},
-		{
-			"from": "src/modules/tool-summary/index.js",
-			"to": "extensions/tool-summary.js"
-		},
-		{
-			"from": "src/modules/tool-summary/tool-summary.json",
-			"to": "extensions/tool-summary.json"
-		},
-		{
-			"from": "src/modules/turn-duration/index.js",
-			"to": "extensions/turn-duration.js"
-		},
-		{
-			"from": "src/modules/turn-duration/LICENSE",
-			"to": "extensions/turn-duration.LICENSE"
 		},
 		{
 			"from": "src/modules/web-search/index.js",
@@ -425,6 +429,14 @@
 		]
 	},
 	"remove": [
+		"extensions/model-picker.js",
+		"extensions/model-picker.json",
+		"extensions/subscriptions.js",
+		"extensions/compactions.js",
+		"extensions/tool-summary.js",
+		"extensions/tool-summary.json",
+		"extensions/turn-duration.js",
+		"extensions/turn-duration.LICENSE",
 		"extensions/codex-luna-search.js",
 		"extensions/cursor-tools/index.js",
 		"extensions/cursor-tools/descriptions.json",
@@ -456,7 +468,7 @@
 			"mode": "merge"
 		},
 		{
-			"from": "src/modules/status-line/status-line.yml",
+			"from": "src/modules/rqw-harness-interface/status-line.yml",
 			"to": "config.yml",
 			"mode": "merge"
 		},

@@ -112,13 +112,14 @@ mkdir -p "$(dirname "$HOME/.omp/agent/<to>")"
 cp "<from>" "$HOME/.omp/agent/<to>"
 ```
 
-**Удаление старых файлов.** Список `remove` манифеста называет файлы прежних версий: старую обёртку, `codex-luna-search`, подмену текстов памяти `memory-tool-prompts`, скрипт и оверлеи прежнего ревьюера, тексты прежнего `child-agents-md`. Каталог `~/.omp/agent/extensions/cursor-tools/`, если он есть, сначала скопируй целиком: `mkdir -p "$backup/extensions"`, затем `cp -R "$HOME/.omp/agent/extensions/cursor-tools" "$backup/extensions/"`. Потом удали его целиком: в нём могли лежать файлы вне `remove`. Для остальных путей: файл `~/.omp/agent/<путь>` есть — создай каталог `$(dirname "$backup/<путь>")` через `mkdir -p`, скопируй файл в `$backup/<путь>` и удали. Копия не удалась — остановись, ничего не удаляй. Файла нет — ничего не делай. Расширение `ompcli` удаляет только перечисленные файлы, а их каталог убирает, когда он опустел.
+**Удаление старых файлов.** Список `remove` манифеста называет файлы прежних версий: прежние части интерфейса харнеса, старую обёртку, `codex-luna-search`, подмену текстов памяти `memory-tool-prompts`, скрипт и оверлеи прежнего ревьюера, тексты прежнего `child-agents-md`. Каталог `~/.omp/agent/extensions/cursor-tools/`, если он есть, сначала скопируй целиком: `mkdir -p "$backup/extensions"`, затем `cp -R "$HOME/.omp/agent/extensions/cursor-tools" "$backup/extensions/"`. Потом удали его целиком: в нём могли лежать файлы вне `remove`. Для остальных путей: файл `~/.omp/agent/<путь>` есть — создай каталог `$(dirname "$backup/<путь>")` через `mkdir -p`, скопируй файл в `$backup/<путь>` и удали. Копия не удалась — остановись, ничего не удаляй. Файла нет — ничего не делай. Расширение `ompcli` удаляет только перечисленные файлы, а их каталог убирает, когда он опустел.
 
 Правила:
 
 - `<from>` — путь от корня этого репозитория.
 - `<to>` — путь от `~/.omp/agent`; выходить за его пределы нельзя.
 - Каталог `extensions/codex-web-run/` создаётся как каталог: расширение грузит `index.js` рядом с ресурсами.
+- Каталог `extensions/rqw-harness-interface/` хранит интерфейс харнеса: OMP грузит его `index.js`, соседние файлы подключает сам модуль.
 - `agents/` хранит профили сабагентов: `collector.md` и `acceptor.md` приёмки, `task.md` и `sonic.md` с пустой ролью, `scout.md` с ролью `explore` из Cursor.
 - `rules/` хранит правила общения: `communication-main.md` для главного агента, `communication-subagent.md` для сабагентов.
 - `extensions/pi-voice-stt/` хранит плагин диктовки с его `package.json`: OMP грузит его по `pi.extensions`.
@@ -135,7 +136,7 @@ cp "<from>" "$HOME/.omp/agent/<to>"
 | --- | --- |
 | `merge` | выставляет ключи из фрагмента; список заменяется целиком |
 
-Порядок: `runtime-config`, затем `base-tools`, затем `compaction-400k`, затем `status-line`, затем `mnemopi`. Более поздний фрагмент уточняет совпавшие ключи.
+Порядок: `runtime-config`, затем `base-tools`, затем `compaction-400k`, затем `rqw-harness-interface/status-line.yml`, затем `mnemopi`. Более поздний фрагмент уточняет совпавшие ключи.
 
 `mnemopi` выставляет четыре обязательных ключа:
 
