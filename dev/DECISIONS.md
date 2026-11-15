@@ -2012,6 +2012,6 @@ Blind и high больше не различаются ни моделью, ни
 
 **Причина:** один плагин с минимальным кодом и тестами. Ревью кода: 12 кругов, два последних чистые. OMP 18.18.8: `packages/coding-agent/src/extensibility/extensions/types.ts`, `extensibility/extensions/wrapper.ts`, `tools/read.ts`, `tools/output-meta.ts`, `config/inline-tool-descriptors-mode.ts`, `session/settings.ts`, `packages/agent/src/agent-loop.ts`, `crates/pi-edit/src/path_policy.rs`, `crates/pi-walker/src/glob.rs`.
 
-**Границы:** описаны в README модуля. Костыль один: импорт движка `@oh-my-pi/pi-natives` из расширения, сторож сверяет его экспорты. Не проверено: Windows VDI, красная карточка пропуска глазами. Старые файлы `extensions/base-tools.*` удаляются при установке через манифест.
+**Границы:** описаны в README модуля. Костыль один: импорт движка `@oh-my-pi/pi-natives` из расширения, сторож сверяет его экспорты. Имена пакетов OMP в `import()` пишутся буквально: имя из переменной загрузчик расширений не находит (живая проверка). Не проверено: Windows VDI, красная карточка пропуска глазами. Старые файлы `extensions/base-tools.*` удаляются при установке через манифест.
 
 **Носители правила:** `src/modules/rqw-base-tools/`, `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`, `src/modules/runtime-config/config.yml`, `install.manifest.json`.
