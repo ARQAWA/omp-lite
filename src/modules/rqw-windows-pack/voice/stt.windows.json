@@ -1,13 +1,30 @@
 {
-  "keybind": "alt+w",
-  "profileKeybind": "alt+shift+s",
-  "provider": {
-    "type": "soniox",
-    "model": "stt-async-v5",
-    "apiKeyEnv": "SONIOX_API_KEY"
-  },
-  "capture": {
-    "inputFormat": "dshow",
-    "input": "audio=Remote Audio"
-  }
+	"keybind": "alt+w",
+	"input": "audio=Remote Audio",
+	"soniox": {
+		"baseUrl": "https://api.soniox.com",
+		"pollMs": 250,
+		"timeoutMs": 60000,
+		"model": "stt-async-v6",
+		"language_hints": ["ru", "en"],
+		"language_hints_strict": false,
+		"enable_language_identification": true,
+		"enable_speaker_diarization": false,
+		"context": {
+			"text": "Техническая диктовка на русском языке. В речи часто встречаются английские названия инструментов, моделей и команд. Сохраняй их как английские слова, не переводи и не заменяй кириллицей. Не заменяй обычные слова аббревиатурами и не вставляй случайные сокращения."
+		}
+	},
+	"texts": {
+		"title": "voice",
+		"idle": "voice",
+		"recording": "recording",
+		"recordingHint": "· enter send · esc cancel",
+		"transcribing": "transcribing",
+		"transcribingHint": "· esc cancel",
+		"command": "Voice dictation check: /stt doctor",
+		"ready": "voice: ready (ffmpeg, Soniox key)",
+		"noKey": "no Soniox API key in ",
+		"noAudio": "ffmpeg wrote no audio.",
+		"silent": "the recording is silent: check the microphone and the audio redirection of the VDI client"
+	}
 }

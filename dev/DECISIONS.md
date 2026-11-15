@@ -2076,3 +2076,24 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** `ollama` в `disabledProviders`, модель эмбеддингов и слой `memory.backend: off` в `rqw-windows-pack`, база памяти и Ollama на Mac не тронуты. Сторож `rqw-base-tools` сверяет прежние восемь настроек. Выпуск Windows Pack не делался. Решения D-046, D-065, D-072 описывают прежние модули.
 
 **Носители правила:** `src/modules/rqw-runtime-config/`, `rqw-base-tools.yml`, `status-line.yml`, `rqw-codex-adapter.yml`, `install.manifest.json`, `INSTALL.md`, `dev/tests/install/manifest.test.js`.
+
+## D-121 — диктовка переписана с нуля: один файл, только OMP CLI на Windows
+
+**Решение:** копия плагина `pi-voice-stt` v0.11.0 (54 файла, 5464 строки) заменена своим кодом: `voice/index.js`, 191 строка, и `voice/stt.windows.json`. Тест: 145 строк.
+
+1. Плагин включается только при Windows и переменной `OMPCLI_GIT_BASH`. На Mac он ничего не регистрирует, тула `transcribe_audio` нет нигде.
+2. Надпись и анимация стоят в левом краю верхней рамки поля ввода.
+3. Осталось: `alt+w`, `Enter`, `Esc`, запись `ffmpeg` цепочкой, Soniox, ключ из файла, проверка тишины, `/stt doctor`.
+4. Настройки Soniox взяты из прокси `~/ai-project/fork-superwhisper`: `stt-async-v6`, подсказки `ru` и `en`, определение языка, без разделения говорящих, текст контекста из `profiles/soniox-context.json`, опрос 250 мс, без списков слов.
+5. Убрано: семь сервисов, потоковый режим, профили, режимы, чистка текста моделью, голосовые команды, перевод, связка ключей, мост записи, расшифровка файлов, прочие команды `/stt`, предел записи 120 секунд, цвет рамки по режиму, конфиг Mac.
+6. Старые файлы плагина перечислены в `remove` манифеста. Папка в рантайме прежняя: `extensions/pi-voice-stt/`. Код расширения VS Code не менялся: VDI берёт плагин командой `Update`, выпуск в Marketplace не нужен.
+
+**Основание:** слова владельца от 2026-11-15: «надпись Voice Alt плюс W была не с правой стороны, а с левой», «чтоб он был включен только на OMP CLI, только на виндовой тачке», «абсолютно полностью переписать. с нуля, на минимальное количество кода», «убрать transcribe audio», «лишнее повыбрасывать, оставить только проверку тишины и доктора», «Там есть настройки самые топовые Soniox, вот такие же настройки должны быть».
+
+**Проверка:** `bun test dev/tests/harness/rqw-windows-pack`. OMP 18.18.8 грузит плагин и его импорты `@oh-my-pi/pi-tui`, `@oh-my-pi/pi-tui/prompt/custom-editor`. Живая проба кода `transcribe` на трёх записях владельца: ответ за 3 секунды, 90-94% слов совпали с прежней расшифровкой; неверный ключ даёт `Soniox 401`.
+
+**Причина:** OMP 18.18.8: `packages/coding-agent/src/discovery/helpers.ts`, `modes/interactive-mode.ts` (`setEditorComponent`), `extensibility/extensions/types.ts` (`onTerminalInput`), `packages/tui/src/utils.ts` (`extractSegments`).
+
+**Границы:** Windows VDI не проверено: запись `ffmpeg` и вид надписи за владельцем. Решения D-117 и D-118 описывают прежнюю копию плагина.
+
+**Носители правила:** `src/modules/rqw-windows-pack/voice/`, `dev/tests/harness/rqw-windows-pack/voice.test.js`, `install.manifest.json`, `INSTALL.md`.

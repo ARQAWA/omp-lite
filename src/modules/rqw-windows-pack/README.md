@@ -3,7 +3,7 @@
 RQW Windows Pack переносит харнес на Windows VDI без прав администратора. Для OMP 18.18.8.
 
 1. **OMP во вкладке VS Code.** Расширение `arqawa.ompcli` несёт `omp.exe` и ставит харнес само.
-2. **Диктовка.** `alt+w` начинает запись, второй `alt+w` ставит текст в конец поля ввода. Работает на VDI и на Mac.
+2. **Диктовка.** `alt+w` начинает запись, второй `alt+w` ставит текст в конец поля ввода. Работает только во вкладке OMP CLI на Windows.
 
 **До правки запуска прочти [dev/VDI.md](../../../dev/VDI.md): правило запуска и факты о VDI.**
 
@@ -12,8 +12,8 @@ RQW Windows Pack переносит харнес на Windows VDI без пра�
 - `vscode/index.js`: весь код расширения VS Code. `vscode/package.json`: три команды и две клавиши.
 - `vscode/runtime.json`: закреплённые программы и модель, с размером и SHA-256. Единственное место пинов.
 - `vscode/messages.json`: все видимые тексты, английский.
-- `voice/`: копия плагина [pi-voice-stt](https://github.com/cgarrot/pi-voice-stt) `v0.11.0`, коммит `1e134b919275b7c7b7840fbb59c0adbd4f6b2379`.
-- `voice/stt.json`: конфиг Mac. `voice/stt.windows.json`: конфиг VDI. Отличие машин одно: блок `capture`, микрофон.
+- `voice/index.js`: весь код диктовки, свой, 191 строка.
+- `voice/stt.windows.json`: клавиша, микрофон, настройки Soniox, тексты.
 
 В рантайме мест два. `vscode/` это расширение VS Code. `voice/` это расширение OMP в `~/.omp/agent/extensions/pi-voice-stt/`. На VDI второе место заполняет первое: ставится только расширение VS Code.
 
@@ -65,14 +65,18 @@ node-pty из VS Code
 
 ## Диктовка
 
-Распознаёт Soniox `stt-async-v5`, звук пишет `ffmpeg`. `Enter` во время записи сразу отправляет текст, `Esc` отменяет, `alt+shift+s` открывает профили. Текст приходит через 2-5 секунд после остановки.
+Плагин включается при двух условиях: система Windows и переменная `OMPCLI_GIT_BASH`, её ставит вкладка. Иначе он ничего не регистрирует: на Mac нет надписи, клавиш, команды и тулов.
 
-Правок в копии плагина две:
+1. `alt+w` начинает запись, второй `alt+w` ставит текст в конец поля ввода. `Enter` во время записи сразу отправляет текст. `Esc` отменяет запись и распознавание.
+2. Надпись стоит в левом краю верхней рамки поля ввода: `voice alt+w`, при записи мигающая точка и `recording`, потом `transcribing`.
+3. Звук пишет `ffmpeg` из поставки: `dshow`, микрофон `audio=Remote Audio`, WAV 16 кГц моно. Запуск цепочкой PowerShell, Git Bash, программа. Остановка: `q` в stdin, через три секунды `taskkill` по дереву процессов.
+4. Проверка тишины: файл меньше 4096 байт или пик не выше 3 даёт ошибку, запрос в Soniox не идёт.
+5. Распознаёт Soniox, модель `stt-async-v6`. Настройки взяты из прокси `superwhisper-soniox-proxy`: подсказки языков `ru`, `en`, определение языка включено, разделение говорящих выключено, текст контекста про техническую диктовку, опрос раз в 250 мс. Списков слов нет. Файл и заказ в Soniox удаляются после ответа.
+6. `/stt doctor` проверяет файл ключа и запуск `ffmpeg` цепочкой.
 
-1. Запуск `ffmpeg` на VDI цепочкой: `src/audio/launch.ts` и строки запуска в `ffmpeg-recorder.ts`, `stream-recorder.ts`, `index.ts`. Включает переменная `OMPCLI_GIT_BASH`, её ставит вкладка. Слеши меняются только в путях Windows. Остановка снимает дерево процессов через `taskkill`.
-2. Имя для OMP: корневой `index.ts` и `pi.extensions: ["./index.ts"]`. OMP видит плагин как `pi-voice-stt`, не как `src`.
+Ключа нет в репозитории и в поставке. Вкладка пишет `globalStorage/stt.json` из `stt.windows.json` и пути к файлу ключа `%APPDATA%\Code\User\globalStorage\arqawa.ompcli\ad591530-694c-42f1-9f01-f03bee4cca1c.txt`. В файле одна строка: ключ. Плагин читает его при каждой записи; файла нет: ошибка называет путь.
 
-Ключа нет в репозитории и в поставке. Mac: `SONIOX_API_KEY`, `export PI_STT_CONFIG=~/.omp/agent/extensions/pi-voice-stt/stt.json` и `ffmpeg` в `PATH`; Option работает как Meta. VDI: вкладка пишет `globalStorage/stt.json` из `stt.windows.json` и пути к файлу ключа `%APPDATA%\Code\User\globalStorage\arqawa.ompcli\ad591530-694c-42f1-9f01-f03bee4cca1c.txt`. В файле одна строка: ключ. Плагин читает его при каждой записи; файла нет: ошибка называет путь. Проверка: `/stt doctor`, потом `/stt start` и `/stt stop`.
+Чего нет: других сервисов, потокового режима, профилей, чистки текста моделью, голосовых команд, расшифровки файлов, тула `transcribe_audio`, предела длины записи, цвета рамки по режиму.
 
 ## Выключение
 
@@ -83,9 +87,11 @@ node-pty из VS Code
 Каталог исходников: `packages/coding-agent/src`.
 
 - `config/settings.ts`: слои настроек из `PI_CONFIG_FILES` и `--config`, поздний побеждает.
-- `discovery/helpers.ts`, `discoverExtensionModulePaths`: папка с `package.json` и полем `pi.extensions` грузит названный файл. `getExtensionNameFromPath`: для `index.ts` имя это папка-родитель.
+- `discovery/helpers.ts`, `discoverExtensionModulePaths`: папка `extensions/<имя>/` с `index.js` это одно расширение. `getExtensionNameFromPath`: его имя это папка, `pi-voice-stt`.
 - `extensibility/extensions/loader.ts`, `discoverExtensionPaths`: выключение по строке `extension-module:<имя>`.
-- `extensibility/legacy-pi-coding-agent-shim.ts`: подмена импортов `@earendil-works/*`.
+- `modes/interactive-mode.ts`, `setEditorComponent`: расширение ставит фабрику поля ввода; диктовка оборачивает его `render`.
+- `extensibility/extensions/types.ts`, `onTerminalInput`: расширение видит клавиши до поля ввода и может их забрать.
+- `packages/tui/src/utils.ts`, `extractSegments`: остаток строки после надписи сохраняет цвета.
 - `packages/tui/src/keys.ts`: разбор `ESC[13;2u` и `ESC[13;5u`.
 
 ## Известные проблемы
@@ -99,8 +105,8 @@ node-pty из VS Code
 - Второе окно VS Code во время `Update` или первой вкладки после обновления может сломать установку.
 - Любая правка `runtime.json` блокирует `Update`, правка адреса модели тоже.
 - Заметка о новой версии может выйти зря, когда код в `main` правили без выпуска.
-- В коде плагина диктовки: зависший запрос удаления в Soniox, ключ со знаком `=` в файле, склейка слов без пробела.
 - `/stt doctor` микрофон не проверяет. Клиент VDI без проброса звука даёт пустую запись.
+- Вид надписи слева на VDI проверяется только глазами: на Mac плагин выключен.
 
 ## Тест и сборка
 

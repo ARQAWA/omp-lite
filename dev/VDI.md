@@ -38,7 +38,7 @@ node-pty из VS Code
 Extension host сам запускает только две вещи: `curl.exe` из `System32` (видел: работает) и сам VS Code как Node (так делает CCLI; код).
 
 Так запускают все три расширения: PCLI `pi.exe`, CCLI `codex.exe`, ompcli `omp.exe`. `llama-server.exe` ompcli запускал до D-117; теперь файл лежит в поставке без запуска.
-Носители в коде: `psArgs`, `words`, `openTab` в `src/modules/rqw-windows-pack/vscode/index.js`; `launch` в `src/modules/rqw-windows-pack/voice/src/audio/launch.ts`.
+Носители в коде: `psArgs`, `words`, `openTab` в `src/modules/rqw-windows-pack/vscode/index.js`; `launch` в `src/modules/rqw-windows-pack/voice/index.js`.
 Образец: `~/ai-project/my-pi/pcli-vscode/extension.js`, функция `makePty`. Владелец сказал «как PCLI»? Сначала прочти образец и повтори форму буквально.
 
 ## Что известно о VDI
