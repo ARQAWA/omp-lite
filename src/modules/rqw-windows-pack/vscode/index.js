@@ -391,7 +391,7 @@ function hidden(pty, bash) {
 			output = (output + data).slice(-4000);
 		});
 		const tail = () => output.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07/g, "").split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(-3).join(" | ");
-		return { kill: () => kill(proc), onExit: handler => proc.onExit(({ exitCode }) => handler(exitCode, tail())) };
+		return { kill: () => kill(proc), tail, onExit: handler => proc.onExit(({ exitCode }) => handler(exitCode, tail())) };
 	};
 }
 
@@ -443,6 +443,8 @@ function createMemory({ serverDir, model, start, onExit, request = fetch, port =
 			return { port: number, key };
 		} catch (error) {
 			proc.kill();
+			// The reason carries the last lines of the server terminal; an exit reason already has them.
+			if (error !== dead && proc.tail?.()) error.message += " | " + proc.tail();
 			throw error;
 		}
 	}
@@ -483,9 +485,8 @@ const pickProxy = (setting, env) => setting || envGet(env, "HTTPS_PROXY") || env
 
 function tabEnv({ base, setting, insecure, runtimeDir, files, stt, gitBash }) {
 	const env = { ...base };
-	if (setting) for (const name of ["HTTP_PROXY", "HTTPS_PROXY"]) envSet(env, name, setting);
 	const proxy = pickProxy(setting, env);
-	if (proxy && !envGet(env, "PI_PROXY")) envSet(env, "PI_PROXY", proxy);
+	if (proxy) for (const name of ["HTTP_PROXY", "HTTPS_PROXY", "PI_PROXY"]) envSet(env, name, proxy);
 	if (insecure) envSet(env, "NODE_TLS_REJECT_UNAUTHORIZED", "0");
 	// The profile of Git Bash may wipe these: the tab command puts them back from the OMPCLI_ copies.
 	for (const name of PROXY_VARS) if (envGet(env, name)) envSet(env, "OMPCLI_" + name, envGet(env, name));
@@ -680,7 +681,7 @@ function createCli(host) {
 		const env = ready();
 		if (terminals.size) throw fail("closeTabs");
 		const result = await queued(() => updateHarness({ extensionPath, storageDir, version: host.version, agentDir: env.agentDir, web: env.web }));
-		if (result.changed) void vscode.window.showInformationMessage(messages.updated);
+		void vscode.window.showInformationMessage(messages.updated);
 		if (result.stale) void vscode.window.showInformationMessage(messages.stale);
 		return result;
 	}

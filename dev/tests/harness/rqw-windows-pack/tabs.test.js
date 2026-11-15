@@ -54,7 +54,7 @@ test("the terminal tab is Git Bash with an rc file; a workspace folder is the wo
 	expect(read(rc)).toContain("[ -f ~/.bashrc ] && . ~/.bashrc\nunset http_proxy");
 	expect(read(rc)).toContain("export PATH=$(cygpath -u '" + join(w.ext, "runtime") + "'):$PATH\n");
 	// An empty `http.proxy` takes the proxy VS Code was started with.
-	expect([proc.options.cwd, proc.options.env.PI_PROXY, proc.options.env.HTTPS_PROXY]).toEqual(["C:\\work", "http://vdi:1", undefined]);
+	expect([proc.options.cwd, proc.options.env.PI_PROXY, proc.options.env.HTTPS_PROXY]).toEqual(["C:\\work", "http://vdi:1", "http://vdi:1"]);
 	await w.tab();
 	expect(w.state.spawned.at(-1).args[3]).not.toContain("--allow-home");
 	// Two tabs share one memory server.

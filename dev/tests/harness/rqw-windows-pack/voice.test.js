@@ -34,7 +34,7 @@ test("stopping a recording kills the process tree; a failed taskkill falls back 
 test("OMP sees the plugin as pi-voice-stt: the entry file sits in the plugin root", () => {
 	expect(json("package.json").pi.extensions).toEqual(["./index.ts"]);
 	expect(json("package.json").version).toBe("0.11.0");
-	expect(readFileSync(join(voice, "index.ts"), "utf8")).toContain('export { default } from "./src/index.ts";');
+	expect(readFileSync(join(voice, "index.ts"), "utf8")).toBe('export { default } from "./src/index.ts";\n');
 });
 
 test("both configs use the free chords and Soniox, keep the key out, and differ in the microphone only", () => {

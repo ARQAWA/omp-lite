@@ -17,7 +17,7 @@ function server({ health = [200], vector = Array(768).fill(0.1), probe = () => {
 		onExit: () => state.stopped++,
 		start(file, args, options) {
 			const exits = [];
-			const proc = { file, args, options, onExit: handler => exits.push(handler), kill: () => (proc.killed = true), exit: (code, tail) => exits.forEach(handler => handler(code, tail)) };
+			const proc = { file, args, options, tail: () => "server log", onExit: handler => exits.push(handler), kill: () => (proc.killed = true), exit: (code, tail) => exits.forEach(handler => handler(code, tail)) };
 			state.procs.push(proc);
 			return proc;
 		},
@@ -61,7 +61,7 @@ test("a server that dies gets three attempts on fresh ports and names the reason
 test("a server that is not ready, not healthy or answers wrongly is killed", async () => {
 	const cases = [
 		[{ health: [503] }, "Local memory did not start in 60s."],
-		[{ health: [500] }, "Local memory is not healthy: HTTP 500"],
+		[{ health: [500] }, "Local memory is not healthy: HTTP 500 | server log"],
 		[{ vector: [1, 2, 3] }, "Local memory returned 3 dimensions, expected 768."],
 		[{ vector: Array(768).fill(null) }, "Local memory returned 768 dimensions, expected 768."],
 		[{ probe: () => new Response("", { status: 401 }) }, "Local memory is not healthy: HTTP 401"],
