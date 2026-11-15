@@ -47,20 +47,16 @@
 			"to": "extensions/rqw-system-core.js"
 		},
 		{
-			"from": "src/modules/base-tools/index.js",
-			"to": "extensions/base-tools.js"
+			"from": "src/modules/rqw-base-tools/index.js",
+			"to": "extensions/rqw-base-tools/index.js"
 		},
 		{
-			"from": "src/modules/base-tools/base-tools.descriptions.json",
-			"to": "extensions/base-tools.descriptions.json"
+			"from": "src/modules/rqw-base-tools/rqw-base-tools.texts.json",
+			"to": "extensions/rqw-base-tools/rqw-base-tools.texts.json"
 		},
 		{
-			"from": "src/modules/base-tools/base-tools.texts.json",
-			"to": "extensions/base-tools.texts.json"
-		},
-		{
-			"from": "src/modules/base-tools/base-tools.reference.json",
-			"to": "extensions/base-tools.reference.json"
+			"from": "src/modules/rqw-base-tools/rqw-base-tools.reference.json",
+			"to": "extensions/rqw-base-tools/rqw-base-tools.reference.json"
 		},
 		{
 			"from": "src/modules/memory-guide/index.js",
@@ -404,6 +400,10 @@
 		"extensions/tool-summary.json",
 		"extensions/turn-duration.js",
 		"extensions/turn-duration.LICENSE",
+		"extensions/base-tools.js",
+		"extensions/base-tools.descriptions.json",
+		"extensions/base-tools.texts.json",
+		"extensions/base-tools.reference.json",
 		"extensions/rqw-harness-interface/LICENSE"
 	],
 	"config": [
@@ -413,7 +413,7 @@
 			"mode": "merge"
 		},
 		{
-			"from": "src/modules/base-tools/base-tools.yml",
+			"from": "src/modules/rqw-base-tools/rqw-base-tools.yml",
 			"to": "config.yml",
 			"mode": "merge"
 		},

@@ -37,7 +37,7 @@ node-pty из VS Code
 С 0.0.6 в ompcli таких программ две: `omp.exe` и `llama-server.exe`. С 0.0.9 третья: `ffmpeg.exe` для диктовки. Её запускает не extension host, а сам OMP, той же цепочкой PowerShell -> Git Bash. Установка харнеса и распаковка обновления идут внутри extension host, без программ.
 Extension host сам запускает только две вещи: `curl.exe` из `System32` (видел: работает) и сам VS Code как Node (так делает CCLI; код).
 
-Так запускают все три расширения: PCLI `pi.exe`, CCLI `codex.exe`, ompcli `omp.exe`. `llama-server.exe` ompcli запускал до D-116; теперь файл лежит в поставке без запуска.
+Так запускают все три расширения: PCLI `pi.exe`, CCLI `codex.exe`, ompcli `omp.exe`. `llama-server.exe` ompcli запускал до D-117; теперь файл лежит в поставке без запуска.
 Носители в коде: `psArgs`, `words`, `openTab` в `src/modules/rqw-windows-pack/vscode/index.js`; `launch` в `src/modules/rqw-windows-pack/voice/src/audio/launch.ts`.
 Образец: `~/ai-project/my-pi/pcli-vscode/extension.js`, функция `makePty`. Владелец сказал «как PCLI»? Сначала прочти образец и повтори форму буквально.
 
