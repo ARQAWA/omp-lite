@@ -11,12 +11,20 @@
 			"to": "extensions/compactions.js"
 		},
 		{
-			"from": "src/modules/communication/rules/communication-main.md",
-			"to": "rules/communication-main.md"
+			"from": "src/modules/rqw-system-core/SYSTEM.md",
+			"to": "SYSTEM.md"
 		},
 		{
-			"from": "src/modules/communication/rules/communication-subagent.md",
-			"to": "rules/communication-subagent.md"
+			"from": "src/modules/rqw-system-core/rules/rqw-system-core-main.md",
+			"to": "rules/rqw-system-core-main.md"
+		},
+		{
+			"from": "src/modules/rqw-system-core/rules/rqw-system-core-subagent.md",
+			"to": "rules/rqw-system-core-subagent.md"
+		},
+		{
+			"from": "src/modules/rqw-system-core/index.js",
+			"to": "extensions/rqw-system-core.js"
 		},
 		{
 			"from": "src/modules/base-tools/index.js",
@@ -33,18 +41,6 @@
 		{
 			"from": "src/modules/base-tools/base-tools.reference.json",
 			"to": "extensions/base-tools.reference.json"
-		},
-		{
-			"from": "src/modules/dyslexia/index.js",
-			"to": "extensions/dyslexia.js"
-		},
-		{
-			"from": "src/modules/workflow/index.js",
-			"to": "extensions/workflow.js"
-		},
-		{
-			"from": "src/modules/workflow/workflow.json",
-			"to": "extensions/workflow.json"
 		},
 		{
 			"from": "src/modules/child-agents-md/index.js",
@@ -101,10 +97,6 @@
 		{
 			"from": "src/modules/subscriptions/index.js",
 			"to": "extensions/subscriptions.js"
-		},
-		{
-			"from": "src/modules/system-prompt/SYSTEM.md",
-			"to": "SYSTEM.md"
 		},
 		{
 			"from": "src/modules/task-delegation/index.js",
@@ -437,7 +429,12 @@
 		"skills/reviewer/collector.yml",
 		"skills/reviewer/reviewer.md",
 		"skills/reviewer/reviewer.yml",
-		"extensions/child-agents-md.json"
+		"extensions/child-agents-md.json",
+		"rules/communication-main.md",
+		"rules/communication-subagent.md",
+		"extensions/dyslexia.js",
+		"extensions/workflow.js",
+		"extensions/workflow.json"
 	],
 	"config": [
 		{
