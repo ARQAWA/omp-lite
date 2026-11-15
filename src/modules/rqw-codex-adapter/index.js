@@ -77,7 +77,8 @@ export default function rqwCodexAdapter(pi) {
 
 	pi.on("tool_result", event => {
 		if (bare(event.toolName) !== "task") return;
-		return { content: event.content.map(part => (part.type === "text" ? { ...part, text: part.text.replace(TIP, `$1\n\nTip: ${PICK}`) } : part)) };
+		const last = event.content.findLastIndex(part => part.type === "text" && TIP.test(part.text));
+		return { content: event.content.map((part, index) => (index === last ? { ...part, text: part.text.replace(TIP, `$1\n\nTip: ${PICK}`) } : part)) };
 	});
 
 	// An empty `disabled` file here brings the built-in web_search back; `web_search.enabled: false` turns search off.

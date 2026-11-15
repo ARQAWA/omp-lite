@@ -76,11 +76,12 @@ test("eval: Bun by default, no agent and workpool hints, direct calls blocked", 
 
 test("task result: only the last stock tip becomes ours", () => {
 	const tip = "\n\nTip: this call spawned 2 generic `task` workers. Check the agent list for a closer specialist type.";
-	const content = [{ type: "text", text: `The child reported:${tip}\n\nEnd.${tip}\n\nTail.` }, { type: "image", data: "x" }];
+	const content = [{ type: "text", text: `Quoted:${tip}` }, { type: "text", text: `The child reported:${tip}\n\nEnd.${tip}\n\nTail.` }, { type: "image", data: "x" }];
 	const { hooks } = load();
 	expect(hooks.tool_result({ toolName: "_task", content }).content).toEqual([
+		content[0],
 		{ type: "text", text: `The child reported:${tip}\n\nEnd.\n\nTip: omit \`agent\` by default; \`scout\` only for read-only search over unknown files; \`sonic\` only for mechanical edits with exact instructions.\n\nTail.` },
-		content[1],
+		content[2],
 	]);
 	expect(hooks.tool_result({ toolName: "read", content })).toBeUndefined();
 });
@@ -109,7 +110,7 @@ const search = (fetch, accounts = [{ accessToken: "a" }]) => {
 };
 
 test("web search: a 401 moves to the next account; only text commands are sent on", async () => {
-	const search_query = [{ q: "a" }];
+	const kept = { search_query: [{ q: "a" }], open: [{ ref_id: "r" }], click: [{ ref_id: "r", id: 1 }], find: [{ ref_id: "r", pattern: "p" }], response_length: "long" };
 	let planned = false;
 	let sent;
 	const result = await search(
@@ -121,12 +122,12 @@ test("web search: a 401 moves to the next account; only text commands are sent o
 			}
 			if (planned) return sse({ type: "response.completed", response: { output: [] } });
 			planned = true;
-			return plan({ search_query, response_length: "long", weather: [{}] });
+			return plan({ ...kept, weather: [{}] });
 		},
 		[{ accessToken: "a" }, { accessToken: "b" }],
 	);
 	expect(result.content[0].text).toBe("[fetch 1]\nsource");
-	expect(sent).toEqual({ search_query, response_length: "long" });
+	expect(sent).toEqual(kept);
 	await expect(search(() => new Response("no", { status: 401 }), [{ accessToken: "a" }, { accessToken: "b" }])).rejects.toThrow("Codex /responses failed: 401 no");
 	await expect(search(() => new Response("no", { status: 500 }), [{ accessToken: "a" }, { accessToken: "b" }])).rejects.toThrow("500");
 });
