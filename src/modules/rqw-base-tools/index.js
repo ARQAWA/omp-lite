@@ -12,6 +12,13 @@ import texts from "./rqw-base-tools.texts.json";
 
 const TIMEOUT_MS = 30000, DRY_RUN_MS = 10000, MAX_FILE_BYTES = 4 * 1024 * 1024, MAX_LINE_BYTES = 512, RESERVE_KB = 5;
 const NATIVES = "@oh-my-pi/pi-natives", OMP = "@oh-my-pi/pi-coding-agent/", SPILL = "tools.artifactSpillThreshold";
+// OMP resolves its own packages for an extension only when the specifier is written out.
+const MODULES = {
+	[NATIVES]: () => import("@oh-my-pi/pi-natives"),
+	[`${OMP}config/registry`]: () => import("@oh-my-pi/pi-coding-agent/config/registry"),
+	[`${OMP}tools/approval-cache`]: () => import("@oh-my-pi/pi-coding-agent/tools/approval-cache"),
+	[`${OMP}tools/approval-targets`]: () => import("@oh-my-pi/pi-coding-agent/tools/approval-targets"),
+};
 const size = text => Buffer.byteLength(text);
 const slashes = path => path.replace(/\\/g, "/");
 const rel = (root, path) => slashes(relative(root, resolve(root, path)));
@@ -344,7 +351,7 @@ function wholeFile(event) {
 }
 
 /** `load` imports an OMP module; tests replace it. */
-export default function rqwBaseTools(pi, load = name => import(name)) {
+export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 	const z = pi.zod, text = z.string().optional(), flag = z.boolean().optional();
 	let session, keys;
 	pi.on("session_start", async (_event, ctx) => {
