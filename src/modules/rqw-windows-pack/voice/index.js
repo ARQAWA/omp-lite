@@ -110,6 +110,8 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 			if (job !== rec) return release(rec);
 			const child = (rec.child = run(...ffmpeg(["-hide_banner", "-loglevel", "warning", "-f", "dshow", "-audio_buffer_size", "20", "-i", data.input, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", "-y", rec.file]), { stdio: ["pipe", "ignore", "pipe"] }));
 			child.stderr.on("data", chunk => (rec.log = (rec.log + chunk).slice(-2000)));
+			// A write to a dead ffmpeg must not become an uncaught error: OMP ends the session on one.
+			child.stdin.on("error", () => {});
 			rec.closed = new Promise(done => child.once("close", done).once("error", done));
 			// ffmpeg died by itself: no microphone, no access.
 			rec.closed.then(() => job === rec && mode === "recording" && guard(ctx, rec, Promise.reject(new Error(`${text.noAudio} ${rec.log}`))));
@@ -117,13 +119,14 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 			if ("send" in rec) return finish(ctx, rec, rec.send);
 		})());
 	};
-	const halt = async rec => {
+	// Runs once per recording: alt+w and Esc may both ask for it.
+	const halt = rec => (rec.halted ??= (async () => {
 		try { rec.child.stdin.end("q\n"); } catch {}
 		// Killing PowerShell alone can leave ffmpeg holding the microphone.
 		const kill = setTimeout(() => spawnSync("taskkill", ["/T", "/F", "/PID", String(rec.child.pid)], { windowsHide: true }), 3000);
 		await rec.closed;
 		clearTimeout(kill);
-	};
+	})());
 	const finish = async (ctx, rec, send) => {
 		setMode("transcribing");
 		await halt(rec);

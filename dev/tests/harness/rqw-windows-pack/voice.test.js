@@ -48,7 +48,7 @@ function world(platform = "win32", env = { OMPCLI_GIT_BASH: bash }) {
 	const run = (file, args) => {
 		const listeners = {}, target = /''([^']+rec\.wav)''/.exec(args[3])[1];
 		w.spawned.push([file, args[3], listeners]);
-		return { pid: 7, stderr: { on() {} }, once(name, fn) { listeners[name] = fn; return this; }, stdin: { end: () => { writeFileSync(target, w.sound); listeners.close(); } } };
+		return { pid: 7, stderr: { on() {} }, once(name, fn) { listeners[name] = fn; return this; }, stdin: { on() {}, end: () => { writeFileSync(target, w.sound); listeners.close(); } } };
 	};
 	const request = async (url, init = {}) => {
 		const path = url.replace(data.soniox.baseUrl, ""), method = init.method ?? "GET";
