@@ -43,7 +43,7 @@ node-pty из VS Code
 
 В VSIX лежат `runtime/omp.exe`, `runtime/llama/` и `runtime/ffmpeg.exe`. Скачивается только модель памяти, это данные: `globalStorage/model/`, проверка размера и SHA-256 при каждой вкладке.
 
-Прокси берётся из `http.proxy`; настройка пуста: из окружения VS Code (`HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY`). С прокси всё идёт через `curl.exe` с тремя повторами загрузки, без прокси через `fetch`. `http.proxyStrictSSL: false` добавляет `--insecure`. Пароль прокси идёт только через окружение.
+Прокси берётся из `http.proxy`; настройка пуста: из окружения VS Code (`HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY`). С прокси всё идёт через `curl.exe` с тремя повторами загрузки, без прокси через `fetch`. `http.proxyStrictSSL: false` добавляет `--insecure` и ставит вкладке `NODE_TLS_REJECT_UNAUTHORIZED=0`; без этой настройки проверка TLS не выключается. Пароль прокси идёт только через окружение.
 
 ## Установка харнеса
 
