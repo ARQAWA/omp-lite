@@ -8,6 +8,7 @@ import data from "../../../../src/modules/rqw-windows-pack/voice/stt.windows.jso
 mock.module("@oh-my-pi/pi-tui", () => ({
 	matchesKey: (input, key) => input === key,
 	visibleWidth: line => line.length,
+	truncateToWidth: (line, width) => line.slice(0, width),
 	extractSegments: (line, _end, start, length) => ({ after: line.slice(start, start + length) }),
 }));
 mock.module("@oh-my-pi/pi-tui/prompt/custom-editor", () => ({ CustomEditor: class { render(width) { return ["─".repeat(width), "text"]; } submit() { this.onSubmit(); } } }));
@@ -93,6 +94,7 @@ test("alt+w records and inserts, Enter sends, Esc cancels; the label stands on t
 	expect(w.spawned[0][1]).toContain("''-f'' ''dshow'' ''-audio_buffer_size'' ''20'' ''-i'' ''audio=Remote Audio''");
 	expect(top()).toMatch(/^[●○] recording · enter send · esc cancel ─/);
 	expect(top()).toHaveLength(40);
+	expect(editor.render(12)[0]).toMatch(/^[●○] recordin ─$/);
 	w.input("alt+w");
 	await until(() => w.editor);
 	expect(w.editor).toBe("привет ");

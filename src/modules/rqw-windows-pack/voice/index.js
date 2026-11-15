@@ -3,7 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { extractSegments, matchesKey, visibleWidth } from "@oh-my-pi/pi-tui";
+import { extractSegments, matchesKey, truncateToWidth, visibleWidth } from "@oh-my-pi/pi-tui";
 import { CustomEditor } from "@oh-my-pi/pi-tui/prompt/custom-editor";
 import data from "./stt.windows.json";
 
@@ -30,10 +30,12 @@ export const peak = audio => {
 	return 0;
 };
 
-// The label takes the left end of the top border; the rest of the line keeps its colors.
+// The label takes the left end of the top border, cut to fit; the rest of the line keeps its colors.
 export const inject = (line, width, label) => {
+	if (width < 3) return line;
+	label = truncateToWidth(label, width - 2);
 	const used = visibleWidth(label) + 1;
-	return used >= width ? line : `${label} ${extractSegments(line, 0, used, width - used, false).after}`;
+	return `${label} ${extractSegments(line, 0, used, width - used, false).after}`;
 };
 
 // Soniox async: upload, order, poll, read, delete. The recognition settings come from the JSON as they are.
@@ -119,13 +121,14 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 			if ("send" in rec) return finish(ctx, rec, rec.send);
 		})());
 	};
+	// Killing PowerShell alone can leave ffmpeg holding the microphone.
+	const kill = rec => spawnSync("taskkill", ["/T", "/F", "/PID", String(rec.child.pid)], { windowsHide: true });
 	// Runs once per recording: alt+w and Esc may both ask for it.
 	const halt = rec => (rec.halted ??= (async () => {
 		try { rec.child.stdin.end("q\n"); } catch {}
-		// Killing PowerShell alone can leave ffmpeg holding the microphone.
-		const kill = setTimeout(() => spawnSync("taskkill", ["/T", "/F", "/PID", String(rec.child.pid)], { windowsHide: true }), 3000);
+		const timer = setTimeout(kill, 3000, rec);
 		await rec.closed;
-		clearTimeout(kill);
+		clearTimeout(timer);
 	})());
 	const finish = async (ctx, rec, send) => {
 		setMode("transcribing");
@@ -186,7 +189,8 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 		ctx.ui.setEditorComponent(factory);
 	};
 	for (const event of ["session_start", "session_switch", "session_branch"]) pi.on(event, attach);
-	pi.on("session_shutdown", () => { unsubscribe?.(); unsubscribe = undefined; return cancel(); });
+	// OMP gives a shutdown handler two seconds: ffmpeg is killed at once.
+	pi.on("session_shutdown", () => { unsubscribe?.(); unsubscribe = undefined; if (job?.child) kill(job); return cancel(); });
 
 	pi.registerCommand("stt", {
 		description: text.command,
