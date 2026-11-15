@@ -4,7 +4,7 @@
 	"soniox": {
 		"baseUrl": "https://api.soniox.com",
 		"pollMs": 250,
-		"timeoutMs": 60000,
+		"timeoutMs": 22000,
 		"model": "stt-async-v6",
 		"language_hints": ["ru", "en"],
 		"language_hints_strict": false,
