@@ -4,5 +4,5 @@ description: General-purpose subagent with full capabilities for delegated multi
 spawns: "*"
 model:
   - "@task"
-thinkingLevel: auto
+thinkingLevel: medium
 ---

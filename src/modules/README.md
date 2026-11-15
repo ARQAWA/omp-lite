@@ -15,29 +15,23 @@ README модуля описывает:
 Ресурсы на основе снимков рантайма от 2026-11-08:
 
 - `runtime-config` — `config.yml` и штатная маршрутизация bash;
-- `compaction-400k` — 18 порогов `f400000`;
-- `web-search` — Codex-поиск, 5 файлов;
-- `codex-transport` — правка тела запроса, 16 строк.
+- `compaction-400k` — 18 порогов `f400000`.
 
 Написанный код:
 
-- `dyslexia` — правило дислексии скрытым сообщением на каждом ходе. Тест: `dev/tests/harness/dyslexia/`.
-- `workflow` — подсказка о порядке работы скрытым сообщением, только основному агенту. Тест: `dev/tests/harness/workflow/`.
+- `rqw-system-core` — основа: системный промпт, правила общения, памятка внутри каждого сообщения владельца. Тест: `dev/tests/harness/rqw-system-core/`.
 - `skill-alias` — короткий `/имя` вместо `/skill:имя`. Тест: `dev/tests/harness/skill-alias/`.
 - `memory-guide` — короткий блок про память в системном промпте, пока включён Mnemopi. Тест: `dev/tests/harness/memory-guide/`.
 - `rqw-harness-interface` — пикер модели и усилия, статуслайн, лимиты, счётчики компакшенов и тулов, время хода. Тест: `dev/tests/harness/rqw-harness-interface/`.
-- `review` — приёмка: профили сабагентов `collector` и `acceptor`, три скилла. Кода нет. Тест: `dev/tests/harness/review/`.
+- `rqw-reviewer` — приёмка: профили сабагентов `collector` и `acceptor`, три скилла. Кода нет. Тест: `dev/tests/harness/rqw-reviewer/`.
 - `subagent-reuse` — инструмент `reuse`: та же сессия сабагента, история с нуля через `newSession()`. Тест: `dev/tests/harness/subagent-reuse/`.
 - `base-tools` — тул `files`: карта проекта одним вызовом на движке OMP, без потолка 200 и без git; правка по файлам: несошедшийся файл патча пропускается, ответ идёт ошибкой и хранит убранную секцию, остальные пишет родной `edit`; настройки `apply_patch`, контекста `grep` и порога спилла в `base-tools.yml`. Тест: `dev/tests/harness/base-tools/`.
-- `task-delegation` — правило Codex для `task`, Bun по умолчанию, фильтр прямого спавна в `eval`, профили `task` и `sonic` с пустой ролью, профиль `scout` с ролью `explore` из Cursor. Тест: `dev/tests/harness/task-delegation/`.
-- `child-agents-md` — патч рантайма: сабагент `task` получает `AGENTS.md` родным путём OMP. Тест: `dev/tests/harness/child-agents-md/`.
+- `rqw-codex-adapter` — одно расширение: делегирование как в Codex и три профиля сабагентов, `AGENTS.md` для сабагентов, Codex-поиск `web_search`, тюнинг транспорта Codex. Тест: `dev/tests/harness/rqw-codex-adapter/`.
 - `ompcli` — расширение VS Code `arqawa.ompcli` для Windows VDI: вкладки OMP, комплектный runtime, локальная память, Update и установка харнеса по манифесту. Тест: `dev/tests/harness/ompcli/`.
 - `voice-stt` — диктовка Soniox: плагин `pi-voice-stt` v0.11.0 с нашей правкой запуска `ffmpeg` на VDI. Тест: `dev/tests/harness/voice-stt/`.
 
 Промпт без кода:
 
-- `system-prompt` — системный промпт на базе Cursor 5.5, `SYSTEM.md`.
-- `communication` — правила общения: блоки для главного агента, заметка об отчёте для сабагентов. Тест: `dev/tests/harness/communication/`.
 - `short-task` — навык: размытая задача превращается в карточку из пяти строк, `SKILL.md`.
 
 Каждый README описывает свой модуль.

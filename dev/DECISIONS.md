@@ -1925,7 +1925,55 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители правила:** `src/modules/review/agents/collector.md`, `src/modules/review/agents/acceptor.md`, `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`, `dev/tests/harness/review/review.test.js`.
 
-## D-111 — единый интерфейс харнеса
+## D-111 — RQW System Core: один плагин, памятка внутри сообщения владельца
+
+**Решение:** модули `system-prompt`, `communication`, `dyslexia`, `workflow` объединены в `src/modules/rqw-system-core/`. `SYSTEM.md` и два правила перенесены без правок текста. Тексты дислексии и workflow стали одной памяткой `REMINDER`. Расширение на событии `context` дописывает её последним блоком в каждое сообщение `user` главного агента. История и экран не меняются. Заменяет доставку скрытым сообщением из D-057 и решений по `workflow`. Память (`memory-guide`) в плагин не входит.
+
+**Костыли, согласованы владельцем:** 1. Пустой setter на `kPerCallContextMessage`: OMP не ставит пометку разового сообщения, Claude ставит точку кеша на сообщение как у обычного. 2. `PI_ANTHROPIC_MESSAGE_THREADS=0`: threads выключены у всего процесса.
+
+**Основание:** слова владельца, сессия `01a1dc37-5f28`: «заметка вот эта вот для workflow, для дислексия, она должна быть частью сообщения моего, не отдельным, блядь, сообщением»; «Никаких не должно быть пометок»; «не должно быть никаких тредс»; «найти самый простой, самый короткий путь»; «Ну всё, давай делать плагин тогда».
+
+**Причина:** OMP 18.18.8. `coding-agent/src/extensibility/extensions/runner.ts`, `emitContext`: изменённое сообщение получает `markPerCallContextMessage`. `ai/src/utils/block-symbols.ts`: пометка это присваивание символьному полю. `ai/src/providers/anthropic.ts`: с пометкой нет точки кеша на сообщении и нет threads. `ai/src/providers/anthropic-threads.ts`, `wantsAnthropicThreads`: флаг главнее настроек модели. Событие `input` не подошло: текст виден на экране (`modes/utils/ui-helpers.ts`).
+
+**Границы:** обход пометки держится на внутреннем поле OMP: после обновления OMP перепроверить. Памятки нет в истории, сжатие её не видит. Без threads вся история уходит в каждом запросе. На моделях 5.5 и Fable 5.2 живьём не проверено, на Windows VDI не проверено. В рантайм не установлено.
+
+**Проверка:** 2026-11-15. `bun test dev/tests`: 340 pass, 0 fail. Коммит `098a0b1`, слияние `2529696`. Пробник на бинарнике 18.18.8 до сборки, запрос к модели не уходил: памятка внутри одного сообщения, с setter точка кеша стоит, с флагом `0` threads выключены. `/blindreview`: принято за 2 круга (чисто, чисто), 34 требования из 34.
+
+**Носители правила:** `src/modules/rqw-system-core/`, `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`, `install.manifest.json`.
+
+## D-112 — RQW Codex Adapter: четыре модуля слиты в одно расширение и переписаны с нуля
+
+**Решение:** модули `task-delegation`, `child-agents-md`, `web-search`, `codex-transport` заменены одним модулем [rqw-codex-adapter](../src/modules/rqw-codex-adapter/README.md). Одна папка, одно расширение, один тест. Тексты для модели лежат в коде, отдельного JSON нет. Поведение четырёх частей прежнее, кроме пяти правок по ответам владельца:
+
+1. профиль `task`: `thinkingLevel: medium`, было `auto`;
+2. профиль `scout`: из списка тулов убраны выключенные `find` и `ast_grep`;
+3. `web_search.enabled: false` теперь выключает и наш поиск;
+4. срок запроса поиска 180 секунд записан как норма;
+5. поиск берёт аккаунт сессии и при 401 идёт по остальным аккаунтам штатным `withOAuthAccess`.
+
+**Основание:** слова владельца, 2026-11-15: «Да оставляем», «1. медиум», «3 починить», «4 180», «Пусть выбирает, э-э-э, всегда выбранный аккаунт. Если там 401-ый, переключается на другой, пока все не дадут 401-ый. Только тогда ошибку выдаёт», «бери у скаута эти две-- э-э-э, э-э-э, эти два тула», «весь код проекта был полностью переписан ... Должно быть минимальное количество кода, минимальное количество строк кода, минимальное количество тестов».
+
+**Механика:** OMP 18.18.8. `packages/coding-agent/src/discovery/helpers.ts`, `discoverExtensionModulePaths`: папка с `index.js` это одно расширение. `packages/ai/src/auth-retry.ts`, `withOAuthAccess`: штатный перебор аккаунтов; при 401 он сначала обновляет токен того же аккаунта. `packages/coding-agent/src/tools/settings.ts`: настройка `web_search.enabled`.
+
+**Границы:** известные проблемы перечислены в README модуля. На Windows VDI не проверено. В `~/.omp/agent` не установлено.
+
+**Проверка:** 2026-11-15. `bun test dev/tests/harness/rqw-codex-adapter`: 8 pass, 0 fail. `bun test dev/tests` после слияния с main: 326 pass, 0 fail. Старый и новый код дали одинаковые описания `task` и `eval` на шаблонах OMP `prompts/tools/task.md` и `eval.md`. Живьём через `omp --no-extensions -e`: `web_search` вернул `[fetch 1]`; сабагент назвал слово из `AGENTS.md`; без просьбы `task` не вызван; по просьбе вызов `task` без поля `agent`; в запросе Codex `parallel_tool_calls: true`. `/blindreview`: принято за 10 кругов, 248 требований из 248; одна находка закрыта возражением: сходство трёх мест с прежним кодом задано самим проектом.
+
+**Носители правила:** `src/modules/rqw-codex-adapter/`, `dev/tests/harness/rqw-codex-adapter/rqw-codex-adapter.test.js`, `install.manifest.json`.
+
+## D-113 — RQW Reviewer: модуль `review` стал `rqw-reviewer`, README и тест сведены к минимуму
+
+**Решение:** модуль `src/modules/review/` переименован в `src/modules/rqw-reviewer/`, тест переехал в `dev/tests/harness/rqw-reviewer/`. Пять принятых текстов перенесены байт в байт: `agents/collector.md`, `agents/acceptor.md`, `skills/reviewer/SKILL.md`, `skills/blindreview/SKILL.md`, `skills/highreview/SKILL.md`. README модуля написан заново: 141 строка стала 22. Тест написан заново: 25 строк стали 23, три проверки: профили на Terra `xhigh` и `acceptor` без `write` и `edit`; шапки трёх скиллов; в модуле только тексты. В манифесте поменялись пять путей `from`.
+
+**Основание:** слова владельца, сессия `01a1d13b-8491`, id `959607dc`: «Так давай переделаем плагин в RQW Reviewer Extension»; «весь код проекта был полностью переписан ... Должно быть минимальное количество кода, минимальное количество строк кода, минимальное количество тестов, минимальное количество строк тестов. Только минимально достаточное покрытие ... При этом должны быть соблюдены все, э-э-э, детали проекта»; «При этом принятые промпты не трогаем».
+
+**Границы:** кода в модуле нет: переписаны README и тест. Имена профилей, скиллов и установленных файлов прежние: их называют принятые промпты. Цели `to` в манифесте те же, установка не менялась. Записи до D-112 называют прежний путь `src/modules/review/`. История модуля осталась в `dev/history/review.md`.
+
+**Проверка:** 2026-11-15. `bun test dev/tests/harness/rqw-reviewer`: 3 pass, 0 fail. `bun test dev/tests`: 327 pass, 0 fail. Коммит `27b0c8a`, слияние `a7e5736`. Пять текстов равны прежним (`git diff -M`: `R100`) и установленным в `~/.omp/agent` (`cmp`).
+
+**Носители правила:** `src/modules/rqw-reviewer/`, `dev/tests/harness/rqw-reviewer/rqw-reviewer.test.js`, `install.manifest.json`.
+
+## D-114 — единый интерфейс харнеса
 
 **Решение:** шесть модулей `model-picker`, `status-line`, `subscriptions`, `compactions`, `tool-summary`, `turn-duration` объединены в `rqw-harness-interface`. Метка провайдера убрана из пикера; для двух DeepSeek показаны алиасы `DeepSeek Flash OpenCodeGo` и `DeepSeek Flash OpenRouter`. Цвета пикера фиксированы по MyP. В счётчике тулов `files` относится к search, `ast_edit` к edit.
 
