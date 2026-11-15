@@ -157,7 +157,7 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 		// While the text is on its way, alt+w and Enter are taken and do nothing.
 		else if (mode !== "recording") {}
 		else if (rec.child) guard(ctx, rec, finish(ctx, rec, enter));
-		else rec.send = enter;
+		else rec.send ??= enter;
 		return { consume: true };
 	};
 
