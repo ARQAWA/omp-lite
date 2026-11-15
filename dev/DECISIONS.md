@@ -2119,3 +2119,13 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** VDI не проверено; VSIX 0.0.15 публикуется только по слову владельца; строка `task` «Omit `agent` by default» появляется только там, где OMP показывает строку про `scout` (scout можно запустить), как и прежний вырез.
 
 **Носители правила:** изменённые файлы: `src/modules/rqw-codex-adapter/index.js`, `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.reference.json`, `rqw-base-tools.texts.json`, `src/modules/rqw-system-core/index.js`, `src/modules/rqw-runtime-config/config.yml`, `src/modules/rqw-windows-pack/vscode/runtime.json`, `vscode/package.json`, `INSTALL.md` и четыре изменённых тестовых файла.
+
+## D-123 — выпуск RQW Windows Pack 0.0.15
+
+**Решение:** расширение `arqawa.ompcli` 0.0.15 опубликовано в Marketplace под именем `RQW Windows Pack`. В нём `omp.exe` 18.20.2 и харнес D-122.
+
+**Основание:** слово владельца от 2026-11-15 на вопрос «выпускать vsix 0.0.15?»: «да давай». `Update` на VDI новый `runtime.json` не ставит: новый `omp.exe` приходит только через магазин.
+
+**Проверка:** ревизия payload `f32821d16235bb989abb0f2f069945f3f831f74c`. VSIX 209571621 байт, sha256 `528a82b88f830b86e361cc6cc7434149cd1948e5ed3bed3bfeef9f1db9ba538f`. Ответ Marketplace: версия 0.0.15, `win32-x64`, `validated`. `bun test dev/tests`: 96 pass, 0 fail.
+
+**Границы:** Windows VDI не проверено.
