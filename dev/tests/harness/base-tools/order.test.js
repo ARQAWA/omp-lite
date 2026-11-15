@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import descriptions from "../../../../src/modules/base-tools/base-tools.descriptions.json";
 
-const system = await Bun.file(new URL("../../../../src/modules/system-prompt/SYSTEM.md", import.meta.url)).text();
+const system = await Bun.file(new URL("../../../../src/modules/rqw-system-core/SYSTEM.md", import.meta.url)).text();
 
 test("the work order lives once, in the system prompt", () => {
 	expect(system).toContain("First response: `files` for the map, plus 3-6 `files` calls with `pattern`");
