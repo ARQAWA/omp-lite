@@ -1924,3 +1924,19 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-15. `bun test dev/tests/harness/review`: 2 pass, 0 fail. `bun test dev/tests`: 342 pass, 0 fail. Коммит `74905a8`, слияние `432e13d`. Файлы в main и в установке равны (`cmp`). Резервная копия: `~/.omp/backups/install-contract-20261115-012228/`. OMP 18.18.8, `packages/coding-agent/src/prompts/tools/task.md`: имя задачи необязательно. `/highreview` этой работы на ветке-снимке: принято за 3 круга (находки, чисто, чисто). Правки круга 1: коммит `458977b`, слияние `8fa1fd8`, резервная копия `~/.omp/backups/install-contract-20261115-014113/`.
 
 **Носители правила:** `src/modules/review/agents/collector.md`, `src/modules/review/agents/acceptor.md`, `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`, `dev/tests/harness/review/review.test.js`.
+
+## D-111 — RQW System Core: один плагин, памятка внутри сообщения владельца
+
+**Решение:** модули `system-prompt`, `communication`, `dyslexia`, `workflow` объединены в `src/modules/rqw-system-core/`. `SYSTEM.md` и два правила перенесены без правок текста. Тексты дислексии и workflow стали одной памяткой `REMINDER`. Расширение на событии `context` дописывает её последним блоком в каждое сообщение `user` главного агента. История и экран не меняются. Заменяет доставку скрытым сообщением из D-057 и решений по `workflow`. Память (`memory-guide`) в плагин не входит.
+
+**Костыли, согласованы владельцем:** 1. Пустой setter на `kPerCallContextMessage`: OMP не ставит пометку разового сообщения, Claude ставит точку кеша на сообщение как у обычного. 2. `PI_ANTHROPIC_MESSAGE_THREADS=0`: threads выключены у всего процесса.
+
+**Основание:** слова владельца, сессия `01a1dc37-5f28`: «заметка вот эта вот для workflow, для дислексия, она должна быть частью сообщения моего, не отдельным, блядь, сообщением»; «Никаких не должно быть пометок»; «не должно быть никаких тредс»; «найти самый простой, самый короткий путь»; «Ну всё, давай делать плагин тогда».
+
+**Причина:** OMP 18.18.8. `coding-agent/src/extensibility/extensions/runner.ts`, `emitContext`: изменённое сообщение получает `markPerCallContextMessage`. `ai/src/utils/block-symbols.ts`: пометка это присваивание символьному полю. `ai/src/providers/anthropic.ts`: с пометкой нет точки кеша на сообщении и нет threads. `ai/src/providers/anthropic-threads.ts`, `wantsAnthropicThreads`: флаг главнее настроек модели. Событие `input` не подошло: текст виден на экране (`modes/utils/ui-helpers.ts`).
+
+**Границы:** обход пометки держится на внутреннем поле OMP: после обновления OMP перепроверить. Памятки нет в истории, сжатие её не видит. Без threads вся история уходит в каждом запросе. На моделях 5.5 и Fable 5.2 живьём не проверено, на Windows VDI не проверено. В рантайм не установлено.
+
+**Проверка:** 2026-11-15. `bun test dev/tests`: 340 pass, 0 fail. Коммит `098a0b1`, слияние `2529696`. Пробник на бинарнике 18.18.8 до сборки, запрос к модели не уходил: памятка внутри одного сообщения, с setter точка кеша стоит, с флагом `0` threads выключены. `/blindreview`: принято за 2 круга (чисто, чисто), 34 требования из 34.
+
+**Носители правила:** `src/modules/rqw-system-core/`, `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`, `install.manifest.json`.
