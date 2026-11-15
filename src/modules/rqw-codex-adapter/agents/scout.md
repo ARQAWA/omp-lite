@@ -3,10 +3,8 @@ name: scout
 description: "MUST be used for exploratory codebase research, rapid code analysis, and broad pattern searches. Read-only scout returning a full report for handoff."
 tools:
   - read
-  - find
   - grep
   - glob
-  - ast_grep
   - web_search
 model:
   - "@smol"

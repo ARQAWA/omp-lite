@@ -1924,3 +1924,23 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-15. `bun test dev/tests/harness/review`: 2 pass, 0 fail. `bun test dev/tests`: 342 pass, 0 fail. Коммит `74905a8`, слияние `432e13d`. Файлы в main и в установке равны (`cmp`). Резервная копия: `~/.omp/backups/install-contract-20261115-012228/`. OMP 18.18.8, `packages/coding-agent/src/prompts/tools/task.md`: имя задачи необязательно. `/highreview` этой работы на ветке-снимке: принято за 3 круга (находки, чисто, чисто). Правки круга 1: коммит `458977b`, слияние `8fa1fd8`, резервная копия `~/.omp/backups/install-contract-20261115-014113/`.
 
 **Носители правила:** `src/modules/review/agents/collector.md`, `src/modules/review/agents/acceptor.md`, `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`, `dev/tests/harness/review/review.test.js`.
+
+## D-111 — RQW Codex Adapter: четыре модуля слиты в одно расширение и переписаны с нуля
+
+**Решение:** модули `task-delegation`, `child-agents-md`, `web-search`, `codex-transport` заменены одним модулем [rqw-codex-adapter](../src/modules/rqw-codex-adapter/README.md). Одна папка, одно расширение, один тест. Тексты для модели лежат в коде, отдельного JSON нет. Поведение четырёх частей прежнее, кроме пяти правок по ответам владельца:
+
+1. профиль `task`: `thinkingLevel: medium`, было `auto`;
+2. профиль `scout`: из списка тулов убраны выключенные `find` и `ast_grep`;
+3. `web_search.enabled: false` теперь выключает и наш поиск;
+4. срок запроса поиска 180 секунд записан как норма;
+5. поиск берёт аккаунт сессии и при 401 идёт по остальным аккаунтам штатным `withOAuthAccess`.
+
+**Основание:** слова владельца, 2026-11-15: «Да оставляем», «1. медиум», «3 починить», «4 180», «Пусть выбирает, э-э-э, всегда выбранный аккаунт. Если там 401-ый, переключается на другой, пока все не дадут 401-ый. Только тогда ошибку выдаёт», «бери у скаута эти две-- э-э-э, э-э-э, эти два тула», «весь код проекта был полностью переписан ... Должно быть минимальное количество кода, минимальное количество строк кода, минимальное количество тестов».
+
+**Механика:** OMP 18.18.8. `packages/coding-agent/src/discovery/helpers.ts`, `discoverExtensionModulePaths`: папка с `index.js` это одно расширение. `packages/ai/src/auth-retry.ts`, `withOAuthAccess`: штатный перебор аккаунтов; при 401 он сначала обновляет токен того же аккаунта. `packages/coding-agent/src/tools/settings.ts`: настройка `web_search.enabled`.
+
+**Границы:** известные проблемы перечислены в README модуля. На Windows VDI не проверено. В `~/.omp/agent` не установлено.
+
+**Проверка:** 2026-11-15. `bun test dev/tests/harness/rqw-codex-adapter`: 8 pass, 0 fail. `bun test dev/tests`: 328 pass, 0 fail. Старый и новый код дали одинаковые описания `task` и `eval` на шаблонах OMP `prompts/tools/task.md` и `eval.md`. Живьём через `omp --no-extensions -e`: `web_search` вернул `[fetch 1]`; сабагент назвал слово из `AGENTS.md`.
+
+**Носители правила:** `src/modules/rqw-codex-adapter/`, `dev/tests/harness/rqw-codex-adapter/rqw-codex-adapter.test.js`, `install.manifest.json`.
