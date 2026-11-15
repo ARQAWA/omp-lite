@@ -83,23 +83,23 @@
 			"to": "extensions/model-picker.json"
 		},
 		{
-			"from": "src/modules/review/agents/acceptor.md",
+			"from": "src/modules/rqw-reviewer/agents/acceptor.md",
 			"to": "agents/acceptor.md"
 		},
 		{
-			"from": "src/modules/review/agents/collector.md",
+			"from": "src/modules/rqw-reviewer/agents/collector.md",
 			"to": "agents/collector.md"
 		},
 		{
-			"from": "src/modules/review/skills/blindreview/SKILL.md",
+			"from": "src/modules/rqw-reviewer/skills/blindreview/SKILL.md",
 			"to": "skills/blindreview/SKILL.md"
 		},
 		{
-			"from": "src/modules/review/skills/highreview/SKILL.md",
+			"from": "src/modules/rqw-reviewer/skills/highreview/SKILL.md",
 			"to": "skills/highreview/SKILL.md"
 		},
 		{
-			"from": "src/modules/review/skills/reviewer/SKILL.md",
+			"from": "src/modules/rqw-reviewer/skills/reviewer/SKILL.md",
 			"to": "skills/reviewer/SKILL.md"
 		},
 		{
