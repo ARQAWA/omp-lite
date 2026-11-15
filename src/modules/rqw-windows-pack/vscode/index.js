@@ -244,12 +244,14 @@ async function installHarness({ sourceDir, agentDir, pointer }) {
 				await fsp.rmdir(path.dirname(change.target)).catch(() => {});
 			}
 		}
-		// Dropping the journal ends the transaction: a failure here undoes the install as well.
-		await drop(base);
+		// Removing the journal is the commit, one step: before it everything can be undone.
+		await fsp.rm(path.join(base, "journal.json"));
 	} catch (error) {
 		await rollback(agentDir);
 		throw error;
 	}
+	// Backups without a journal are dead: what stays here is dropped by the next install.
+	await drop(base).catch(() => {});
 	return { changed: true, layers };
 }
 
