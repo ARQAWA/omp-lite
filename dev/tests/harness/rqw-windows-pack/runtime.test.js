@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { readFileSync, readdirSync, rmSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { sweep, transport } from "../../../../src/modules/rqw-windows-pack/vscode/index.js";
 import { temp, world, write } from "./helpers.js";
@@ -15,22 +15,23 @@ test("the storage keeps its own short list and loses everything else", async () 
 	expect(readdirSync(dir, { recursive: true }).filter(name => statSync(join(dir, name)).isFile()).sort()).toEqual([...own].sort());
 });
 
-test("a damaged omp.exe stops the tab; the cleanup has already run", async () => {
-	const w = world({ files: { "storage/junk.tmp": "x" } });
+test("a damaged omp.exe opens no tab", async () => {
+	const w = world();
 	write(join(w.ext, "runtime/omp.exe"), "damaged");
 	await w.tab();
 	expect(w.state.messages).toEqual(["OMP CLI is damaged: omp.exe. Reinstall the extension."]);
-	expect(w.state.spawned).toEqual([]);
-	expect(readdirSync(w.storage)).toEqual(["model"]);
+	expect([w.state.terminals, w.state.spawned]).toEqual([[], []]);
 });
 
 test("the model is the only download: checked, kept, and its failure never stops the tab", async () => {
 	const answers = { "https://model": "model-bytes" };
-	const w = world({ request: async url => (new Response(answers[url], { status: answers[url] ? 200 : 404 })) });
+	const w = world({ request: async url => (new Response(answers[url], { status: answers[url] ? 200 : 404 }), files: { "storage/junk.tmp": "x" } });
 	const model = join(w.storage, "model/model.gguf");
 	rmSync(model);
 	await w.tab();
 	expect(readFileSync(model, "utf8")).toBe("model-bytes");
+	// The cleanup ran before the first command of the window.
+	expect(existsSync(join(w.storage, "junk.tmp"))).toBe(false);
 	expect(w.state.messages).toEqual([]);
 	const failures = [
 		[() => (answers["https://model"] = "wrong-bytes"), "Checksum mismatch: model.gguf"],

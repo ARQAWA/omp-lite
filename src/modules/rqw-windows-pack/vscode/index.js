@@ -460,7 +460,6 @@ function createCli(host) {
 	}
 
 	async function prepare(env, write) {
-		if ((await stat(omp))?.size !== assets.omp.size) throw fail("bundle", { file: assets.omp.file });
 		// An interrupted install is undone first: its journal may hold the pointer.
 		await rollback(env.agentDir);
 		const payload = await selectPayload(host);
@@ -480,6 +479,8 @@ function createCli(host) {
 
 	function openTab(kind) {
 		const env = ready();
+		// A damaged program opens no tab.
+		if (fs.statSync(omp, { throwIfNoEntry: false })?.size !== assets.omp.size) throw fail("bundle", { file: assets.omp.file });
 		const emitter = new vscode.EventEmitter();
 		let proc = null;
 		let closed = false;
