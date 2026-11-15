@@ -139,10 +139,6 @@
 			"to": "extensions/subagent-reuse.js"
 		},
 		{
-			"from": "src/modules/rqw-windows-pack/voice/LICENSE",
-			"to": "extensions/pi-voice-stt/LICENSE"
-		},
-		{
 			"from": "src/modules/rqw-windows-pack/voice/index.ts",
 			"to": "extensions/pi-voice-stt/index.ts"
 		},
@@ -373,34 +369,6 @@
 			{
 				"from": "src/modules/rqw-windows-pack/vscode/messages.json",
 				"to": "messages.json"
-			},
-			{
-				"from": "src/modules/rqw-windows-pack/vscode/licenses/LICENSE-omp.txt",
-				"to": "licenses/LICENSE-omp.txt"
-			},
-			{
-				"from": "src/modules/rqw-windows-pack/vscode/licenses/LICENSE-llama.cpp.txt",
-				"to": "licenses/LICENSE-llama.cpp.txt"
-			},
-			{
-				"from": "src/modules/rqw-windows-pack/vscode/licenses/LICENSE-LLVM-OpenMP.txt",
-				"to": "licenses/LICENSE-LLVM-OpenMP.txt"
-			},
-			{
-				"from": "src/modules/rqw-windows-pack/vscode/licenses/LICENSE-apache-2.0.txt",
-				"to": "licenses/LICENSE-apache-2.0.txt"
-			},
-			{
-				"from": "src/modules/rqw-windows-pack/vscode/licenses/LICENSE-bun.md",
-				"to": "licenses/LICENSE-bun.md"
-			},
-			{
-				"from": "src/modules/rqw-windows-pack/vscode/licenses/LICENSE-msvc-runtime.txt",
-				"to": "licenses/LICENSE-msvc-runtime.txt"
-			},
-			{
-				"from": "src/modules/rqw-windows-pack/vscode/licenses/LICENSE-ffmpeg.txt",
-				"to": "licenses/LICENSE-ffmpeg.txt"
 			}
 		]
 	},

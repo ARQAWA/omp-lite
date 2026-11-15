@@ -8,8 +8,8 @@ const KEY = "ad591530-694c-42f1-9f01-f03bee4cca1c.txt";
 
 test("the storage keeps its own short list and loses everything else", async () => {
 	const dir = temp();
-	const own = ["model/model.gguf", "payload/1.0.0/current.json", "runs/7-a/memory.yml", "shell-7.sh", "stt.json", KEY];
-	const foreign = ["model/model.gguf.x.tmp", "payload/0.9.0/current.json", "runs/8-b/memory.yml", "runs/junk", "shell-8.sh", "runtime/omp.exe", "leases/7.json", "omp-lite-x.tar.gz", "extract.js"];
+	const own = ["model/model.gguf", "payload/1.0.0/current.json", "memory.yml", "shell-7.sh", "stt.json", KEY];
+	const foreign = ["model/model.gguf.x.tmp", "payload/0.9.0/current.json", "runs/8-b/memory.yml", "shell-8.sh", "runtime/omp.exe", "leases/7.json", "omp-lite-x.tar.gz", "extract.js"];
 	for (const name of [...own, ...foreign]) write(join(dir, name), "x");
 	await sweep(dir, "1.0.0", "model.gguf", pid => pid === 7);
 	expect(readdirSync(dir, { recursive: true }).filter(name => statSync(join(dir, name)).isFile()).sort()).toEqual([...own].sort());
@@ -24,26 +24,24 @@ test("a damaged omp.exe stops the tab; the cleanup has already run", async () =>
 	expect(readdirSync(w.storage)).toEqual(["model"]);
 });
 
-test("the model is the only download: checked, kept, and its failure only turns memory off", async () => {
+test("the model is the only download: checked, kept, and its failure never stops the tab", async () => {
 	const answers = { "https://model": "model-bytes" };
-	const w = world({ request: async url => (url === "https://model" ? new Response(answers[url], { status: answers[url] ? 200 : 404 }) : url.endsWith("/health") ? new Response("ok") : Response.json({ data: [{ embedding: Array(768).fill(1) }] })) });
+	const w = world({ request: async url => (new Response(answers[url], { status: answers[url] ? 200 : 404 })) });
 	const model = join(w.storage, "model/model.gguf");
 	rmSync(model);
 	await w.tab();
 	expect(readFileSync(model, "utf8")).toBe("model-bytes");
-	expect(w.state.spawned[0].args[3]).toContain(`'--model'' ''${model}'`);
 	expect(w.state.messages).toEqual([]);
 	const failures = [
 		[() => (answers["https://model"] = "wrong-bytes"), "Checksum mismatch: model.gguf"],
-		[() => delete answers["https://model"], "OMP CLI could not download model.gguf: OMP download failed: HTTP 404"],
-		[() => rmSync(join(w.ext, "runtime/llama/llama-server.exe")), "OMP CLI is damaged: llama-server.exe. Reinstall the extension."],
+		[() => delete answers["https://model"], "OMP download failed: HTTP 404"],
 	];
 	for (const [breakIt, reason] of failures) {
 		write(model, "damaged");
 		breakIt();
 		w.state.messages.length = 0;
 		await w.tab();
-		expect(w.state.messages[0]).toStartWith("OMP CLI: memory is off. " + reason);
+		expect(w.state.messages).toEqual(["OMP CLI could not download model.gguf: " + reason]);
 		// The tab opened all the same, and no half-downloaded file is left.
 		expect(w.state.spawned.at(-1).args[3]).toContain("omp.exe");
 		expect(readdirSync(join(w.storage, "model"))).toEqual(["model.gguf"]);

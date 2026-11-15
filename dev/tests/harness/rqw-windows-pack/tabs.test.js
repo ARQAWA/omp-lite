@@ -9,10 +9,13 @@ test("the OMP tab runs omp.exe through PowerShell and Git Bash with the managed 
 	const w = world({ settings: { proxy: " http://user:secret@proxy:8080 ", proxyStrictSSL: false }, env: { Path: "C:\\Windows", PI_CONFIG_FILES: "C:\\mine.yml", https_proxy: "http://old" } });
 	const terminal = await w.tab();
 	expect(terminal.name).toBe("OMP 1");
-	const [server, proc] = w.state.spawned;
-	expect([server.file, proc.file, proc.args.slice(0, 3)]).toEqual(["powershell.exe", "powershell.exe", ["-NoLogo", "-NoProfile", "-Command"]]);
+	// One program is started: the server that lies in the extension is not.
+	const [proc] = w.state.spawned;
+	expect([w.state.spawned.length, proc.file, proc.args.slice(0, 3)]).toEqual([1, "powershell.exe", ["-NoLogo", "-NoProfile", "-Command"]]);
 	const command = proc.args[3];
-	const overlay = proc.options.env.PI_CONFIG_FILES.split(";").at(-1);
+	// Memory is off: the layer of the extension goes last.
+	const overlay = join(w.storage, "memory.yml");
+	expect(read(overlay)).toBe('memory:\n  backend: "off"\n');
 	expect(command.startsWith(`& '${join(w.root, "bash.exe")}' --login -i -c '`)).toBe(true);
 	expect(command.endsWith(`; ''${join(w.ext, "runtime/omp.exe")}'' ''--config'' ''${overlay}'' ''--allow-home'''`)).toBe(true);
 	expect(command).toContain("unset http_proxy https_proxy all_proxy no_proxy; [[ -n $OMPCLI_HTTP_PROXY ]] && export HTTP_PROXY=$OMPCLI_HTTP_PROXY;");
@@ -24,7 +27,7 @@ test("the OMP tab runs omp.exe through PowerShell and Git Bash with the managed 
 	expect(env.OMPCLI_CONFIG_FILES).toBe(env.PI_CONFIG_FILES);
 	expect(env.PATH).toBe(join(w.ext, "runtime") + ";C:\\Windows");
 	for (const name of ["HTTP_PROXY", "HTTPS_PROXY", "PI_PROXY", "OMPCLI_HTTPS_PROXY", "OMPCLI_PI_PROXY"]) expect(env[name]).toBe("http://user:secret@proxy:8080");
-	expect([env.https_proxy, env.NODE_TLS_REJECT_UNAUTHORIZED, env.MNEMOPI_EMBEDDING_DIM, env.MNEMOPI_EMBEDDING_BATCH_SIZE, env.MNEMOPI_EMBEDDING_MODEL]).toEqual([undefined, "0", "768", "1", "embeddinggemma-2:270m-q8_0"]);
+	expect([env.https_proxy, env.NODE_TLS_REJECT_UNAUTHORIZED, Object.keys(env).filter(name => name.startsWith("MNEMOPI"))]).toEqual([undefined, "0", []]);
 	expect([proc.options.cwd, proc.options.cols, proc.options.rows]).toEqual([w.home, 100, 40]);
 	// The harness is installed, and the dictation config of the window points to the key file.
 	expect(env.OMPCLI_GIT_BASH).toBe(join(w.root, "bash.exe"));
@@ -39,10 +42,9 @@ test("the OMP tab runs omp.exe through PowerShell and Git Bash with the managed 
 	expect(w.state.context["ompcli.terminalActive"]).toBe(true);
 	w.window.onDidChangeActiveTerminal.fire({});
 	expect(w.state.context["ompcli.terminalActive"]).toBe(false);
-	// Closing the last tab kills its program, stops the memory server and drops the overlay.
+	// Closing the tab kills its program.
 	terminal.pty.close();
-	await w.window.onDidCloseTerminal.fire(terminal);
-	expect([proc.killed, server.killed, existsSync(overlay)]).toEqual([true, true, false]);
+	expect(proc.killed).toBe(true);
 });
 
 test("the terminal tab is Git Bash with an rc file; a workspace folder is the working directory", async () => {
@@ -57,8 +59,6 @@ test("the terminal tab is Git Bash with an rc file; a workspace folder is the wo
 	expect([proc.options.cwd, proc.options.env.PI_PROXY, proc.options.env.HTTPS_PROXY]).toEqual(["C:\\work", "http://vdi:1", "http://vdi:1"]);
 	await w.tab();
 	expect(w.state.spawned.at(-1).args[3]).not.toContain("--allow-home");
-	// Two tabs share one memory server.
-	expect(w.state.spawned.length).toBe(3);
 });
 
 test("a command names what is missing and opens nothing", async () => {
@@ -75,12 +75,11 @@ test("a command names what is missing and opens nothing", async () => {
 	}
 });
 
-test("a tab closed while it was loading starts nothing and leaves no memory server", async () => {
+test("a tab closed while it was loading starts nothing", async () => {
 	const w = world();
 	await w.run("ompcli.newTab");
 	const terminal = w.state.terminals[0];
 	terminal.pty.close();
-	w.window.onDidCloseTerminal.fire(terminal);
 	await terminal.opened;
-	expect(w.state.spawned.map(proc => proc.killed)).toEqual([true]);
+	expect(w.state.spawned).toEqual([]);
 });

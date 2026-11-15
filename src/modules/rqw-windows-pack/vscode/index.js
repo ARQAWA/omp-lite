@@ -4,9 +4,8 @@
 // extension host. A bundled program starts one way only: node-pty -> PowerShell -> Git Bash -> program.
 
 const { execFile } = require("node:child_process");
-const { createHash, randomBytes, randomUUID } = require("node:crypto");
+const { createHash, randomUUID } = require("node:crypto");
 const fs = require("node:fs");
-const net = require("node:net");
 const os = require("node:os");
 const path = require("node:path");
 const { promisify } = require("node:util");
@@ -17,8 +16,6 @@ const pins = require("./runtime.json");
 const fsp = fs.promises;
 const GIT_BASH = "C:\\Program Files\\Git\\bin\\bash.exe";
 const REPO = "ARQAWA/omp-lite";
-const MEMORY_MODEL = "embeddinggemma-2:270m-q8_0";
-const MEMORY_DIM = 768;
 const PROXY_VARS = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "PI_PROXY", "NODE_USE_ENV_PROXY", "NODE_TLS_REJECT_UNAUTHORIZED"];
 const SHA = /^[a-f0-9]{40}$/;
 const BACKUPS = ".ompcli-backups";
@@ -106,7 +103,8 @@ function transport({ proxy, insecure, request = fetch, run = curl }) {
 	};
 }
 
-// The model is data: the one thing that is downloaded. It is checked by size and SHA-256 on every start.
+// The model is data: the one thing that is downloaded. It is checked by size and SHA-256 on every tab.
+// Nothing reads it yet: the tab opens without it and only names the reason.
 async function ensureModel(file, asset, web, write) {
 	const good = async target => (await stat(target))?.size === asset.size && (await sha256File(target)) === asset.sha256;
 	if (await good(file)) return;
@@ -114,11 +112,11 @@ async function ensureModel(file, asset, web, write) {
 	const temp = file + "." + randomUUID() + ".tmp";
 	try {
 		await fsp.mkdir(path.dirname(file), { recursive: true });
-		await web.download(asset.url, temp).catch(error => {
-			throw fail("asset", { name: asset.file, reason: error.message });
-		});
+		await web.download(asset.url, temp);
 		if (!(await good(temp))) throw fail("checksum", { file: asset.file });
 		await fsp.rename(temp, file);
+	} catch (error) {
+		throw fail("asset", { name: asset.file, reason: error.message });
 	} finally {
 		await drop(temp);
 	}
@@ -137,14 +135,13 @@ function isAlive(pid) {
 // Windows still holds is left for the next window.
 async function sweep(storageDir, version, modelFile, alive = isAlive) {
 	const live = name => alive(Number(/\d+/.exec(name)[0]));
-	const keep = name => ["model", "payload", "runs", "stt.json", STT_KEY_FILE].includes(name) || (/^shell-\d+\.sh$/.test(name) && live(name));
+	const keep = name => ["model", "payload", "memory.yml", "stt.json", STT_KEY_FILE].includes(name) || (/^shell-\d+\.sh$/.test(name) && live(name));
 	const clean = async (dir, own) => {
 		for (const name of await list(dir)) if (!own(name)) await drop(path.join(dir, name)).catch(() => {});
 	};
 	await clean(storageDir, keep);
 	await clean(path.join(storageDir, "model"), name => name === modelFile);
 	await clean(path.join(storageDir, "payload"), name => name === version);
-	await clean(path.join(storageDir, "runs"), name => /^\d+-/.test(name) && live(name));
 }
 
 // Harness installation: the explicit manifest, a journaled replacement. The user's config.yml is never
@@ -373,116 +370,6 @@ async function updateHarness({ extensionPath, storageDir, version, agentDir, web
 	return result;
 }
 
-// Local memory: one llama.cpp server per window, on loopback, behind a random key.
-
-function freePort() {
-	return new Promise((resolve, reject) => {
-		const server = net.createServer().once("error", reject);
-		server.listen(0, "127.0.0.1", () => {
-			const { port } = server.address();
-			server.close(() => resolve(port));
-		});
-	});
-}
-
-// A hidden bundled program. Its exit hands over the last lines its terminal showed, without colour
-// codes: PowerShell turns every exit code into 1, so these lines say why a program did not start.
-function hidden(pty, bash) {
-	return (file, args, { cwd, env }) => {
-		// MSYS_NO_PATHCONV: Git Bash must hand every argument to the program unchanged.
-		const proc = pty.spawn("powershell.exe", psArgs(bash, words([file, ...args])), { name: "xterm-256color", cols: 120, rows: 30, cwd, env: { ...env, MSYS_NO_PATHCONV: "1" } });
-		let output = "";
-		proc.onData(data => {
-			output = (output + data).slice(-4000);
-		});
-		const tail = () => output.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07/g, "").split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(-3).join(" | ");
-		return { kill: () => kill(proc), tail, onExit: handler => proc.onExit(({ exitCode }) => handler(exitCode, tail())) };
-	};
-}
-
-function createMemory({ serverDir, model, start, onExit, request = fetch, port = freePort, now = Date.now, sleep = ms => new Promise(resolve => setTimeout(resolve, ms)) }) {
-	let pending = null;
-	let child = null;
-	let generation = 0;
-
-	async function attempt(id, deadline) {
-		const number = await port();
-		const key = randomBytes(32).toString("hex");
-		const args = ["--model", model, "--embeddings", "--pooling", "mean", "--ctx-size", "8192", "--batch-size", "8192", "--ubatch-size", "8192",
-			"--parallel", "1", "--threads", "2", "--host", "127.0.0.1", "--port", String(number), "--alias", MEMORY_MODEL, "--no-webui"];
-		const proc = (child = start(path.join(serverDir, "llama-server.exe"), args, { cwd: serverDir, env: { ...process.env, LLAMA_API_KEY: key } }));
-		let dead = null;
-		let started = false;
-		proc.onExit((code, reason) => {
-			dead = Object.assign(fail("memoryExit", { code, reason }), { retry: true });
-			if (started && id === generation) onExit?.();
-		});
-		const alive = () => {
-			if (dead) throw dead;
-		};
-		try {
-			for (;;) {
-				alive();
-				if (now() >= deadline) throw fail("memoryTimeout", { seconds: 60 });
-				const response = await request(`http://127.0.0.1:${number}/health`, { signal: AbortSignal.timeout(1000) }).catch(() => null);
-				alive();
-				if (response?.ok) break;
-				if (response && response.status !== 503) throw fail("memoryHealth", { status: response.status });
-				await sleep(500);
-			}
-			for (const input of ["память", "project memory"]) {
-				const response = await request(`http://127.0.0.1:${number}/v1/embeddings`, {
-					method: "POST",
-					headers: { "content-type": "application/json", authorization: "Bearer " + key },
-					body: JSON.stringify({ model: MEMORY_MODEL, input }),
-					signal: AbortSignal.timeout(5000),
-				});
-				if (!response.ok) throw fail("memoryHealth", { status: response.status });
-				const vector = (await response.json())?.data?.[0]?.embedding;
-				const size = Array.isArray(vector) ? vector.length : 0;
-				if (size !== MEMORY_DIM || !vector.every(value => Number.isFinite(value))) throw fail("memoryDims", { size, expected: MEMORY_DIM });
-			}
-			// The server may have died right after its last answer: a dead server never counts as started.
-			alive();
-			started = true;
-			return { port: number, key };
-		} catch (error) {
-			proc.kill();
-			// The reason carries the last lines of the server terminal; an exit reason already has them.
-			if (error !== dead && proc.tail?.()) error.message += " | " + proc.tail();
-			throw error;
-		}
-	}
-
-	// A server that died gets a fresh port, three attempts in all, inside the one deadline.
-	async function run() {
-		const id = ++generation;
-		const deadline = now() + 60000;
-		for (let number = 1; ; number++) {
-			try {
-				return await attempt(id, deadline);
-			} catch (error) {
-				if (number === 3 || !error.retry || id !== generation) throw error;
-			}
-		}
-	}
-
-	return {
-		ensure: () => (pending ??= run()),
-		stop() {
-			generation++;
-			child?.kill();
-			child = pending = null;
-		},
-	};
-}
-
-// Without a server OMP runs with memory off instead of calling an address nobody listens on.
-function overlayYaml({ port, key }) {
-	if (!key) return 'memory:\n  backend: "off"\n';
-	return ["memory:", "  backend: mnemopi", "mnemopi:", "  noEmbeddings: false", "  embeddingModel: " + MEMORY_MODEL, "  embeddingApiUrl: http://127.0.0.1:" + port + "/v1", "  embeddingApiKey: " + key, ""].join("\n");
-}
-
 // Tab environment and command.
 
 // The `http.proxy` setting wins; an empty one falls back to the proxy VS Code was started with.
@@ -496,9 +383,6 @@ function tabEnv({ base, setting, insecure, runtimeDir, files, stt, gitBash }) {
 	// The profile of Git Bash may wipe these: the tab command puts them back from the OMPCLI_ copies.
 	for (const name of PROXY_VARS) if (envGet(env, name)) envSet(env, "OMPCLI_" + name, envGet(env, name));
 	envSet(env, "PATH", [runtimeDir, envGet(env, "PATH")].filter(Boolean).join(";"));
-	env.MNEMOPI_EMBEDDING_DIM = String(MEMORY_DIM);
-	env.MNEMOPI_EMBEDDING_BATCH_SIZE = "1";
-	env.MNEMOPI_EMBEDDING_MODEL = MEMORY_MODEL;
 	envSet(env, "PI_CONFIG_FILES", files);
 	envSet(env, "OMPCLI_CONFIG_FILES", files);
 	if (stt) {
@@ -547,12 +431,10 @@ function createCli(host) {
 	const terminals = new Set();
 	const processes = new Set();
 	const counts = { chat: 0, shell: 0 };
-	let memory = null;
-	let overlay = null;
 	let swept = null;
 	let queue = Promise.resolve();
 
-	// One window installs, updates and starts memory in turn; the cleanup runs once, before the first of them.
+	// One window installs and updates in turn; the cleanup runs once, before the first of them.
 	function queued(action) {
 		const next = queue.then(() => (swept ??= sweep(storageDir, host.version, assets.model.file))).then(action);
 		queue = next.catch(() => {});
@@ -577,32 +459,6 @@ function createCli(host) {
 		};
 	}
 
-	// Any memory failure leaves the tab open: OMP starts without memory and the tab says why.
-	async function startMemory(env, write) {
-		try {
-			if (!(await stat(path.join(runtimeDir, "llama", "llama-server.exe")))) throw fail("bundle", { file: "llama-server.exe" });
-			await ensureModel(model, assets.model, env.web, write);
-			memory ??= createMemory({
-				serverDir: path.join(runtimeDir, "llama"),
-				model,
-				start: hidden(env.pty, gitBash),
-				request: host.request,
-				onExit() {
-					memory = null;
-					void vscode.window.showErrorMessage(messages.memoryStopped);
-				},
-			});
-			return await memory.ensure();
-		} catch (error) {
-			memory?.stop();
-			memory = null;
-			const line = text("memoryOff", { reason: error.message });
-			write(line);
-			void vscode.window.showWarningMessage(line);
-			return {};
-		}
-	}
-
 	async function prepare(env, write) {
 		if ((await stat(omp))?.size !== assets.omp.size) throw fail("bundle", { file: assets.omp.file });
 		// An interrupted install is undone first: its journal may hold the pointer.
@@ -611,24 +467,15 @@ function createCli(host) {
 		const { layers } = await installHarness({ sourceDir: payload.dir, agentDir: env.agentDir }).catch(error => {
 			throw fail("installFailed", { reason: error.message });
 		});
-		const started = await startMemory(env, write);
-		// A restarted server has a new key, even on the same port.
-		if (!overlay || overlay.key !== started.key) {
-			const dir = path.join(storageDir, "runs", process.pid + "-" + randomUUID());
-			await writeAtomic(path.join(dir, "memory.yml"), overlayYaml(started));
-			overlay = { dir, file: path.join(dir, "memory.yml"), key: started.key };
-		}
-		// OMP reads the list left to right and the last file wins: the user's own layers, the harness fragments, the memory of this window.
-		const files = [envGet(host.env, "PI_CONFIG_FILES"), ...layers, overlay.file].filter(Boolean).join(";");
-		return { files, overlay: overlay.file, stt: await writeSttConfig(env.agentDir, storageDir) };
-	}
-
-	async function release() {
-		if (terminals.size) return;
-		memory?.stop();
-		memory = null;
-		if (overlay) await drop(overlay.dir);
-		overlay = null;
+		await ensureModel(model, assets.model, env.web, write).catch(error => {
+			write(error.message);
+			void vscode.window.showWarningMessage(error.message);
+		});
+		// Memory is off on the VDI: the layer of the extension goes last, and the last file wins.
+		const overlay = path.join(storageDir, "memory.yml");
+		await writeAtomic(overlay, 'memory:\n  backend: "off"\n');
+		const files = [envGet(host.env, "PI_CONFIG_FILES"), ...layers, overlay].filter(Boolean).join(";");
+		return { files, overlay, stt: await writeSttConfig(env.agentDir, storageDir) };
 	}
 
 	function openTab(kind) {
@@ -639,7 +486,7 @@ function createCli(host) {
 		async function start(size) {
 			const prepared = await queued(() => prepare(env, line => emitter.fire(line + "\r\n")));
 			// A tab closed while it was loading leaves nothing behind.
-			if (closed) return release();
+			if (closed) return;
 			const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? host.homedir;
 			let inner = [...restoreEnv(runtimeDir), words([omp, "--config", prepared.overlay, ...(cwd === host.homedir ? ["--allow-home"] : [])])].join("; ");
 			if (kind === "shell") {
@@ -705,7 +552,7 @@ function createCli(host) {
 		// Activation only registers the commands: nothing is downloaded, started or cleaned here.
 		activate: () => [
 			vscode.window.onDidChangeActiveTerminal(active => vscode.commands.executeCommand("setContext", "ompcli.terminalActive", terminals.has(active))),
-			vscode.window.onDidCloseTerminal(terminal => terminals.delete(terminal) && release()),
+			vscode.window.onDidCloseTerminal(terminal => terminals.delete(terminal)),
 			vscode.commands.registerCommand("ompcli.newTab", guarded(() => openTab("chat"))),
 			vscode.commands.registerCommand("ompcli.shellTab", guarded(() => openTab("shell"))),
 			vscode.commands.registerCommand(
@@ -715,8 +562,6 @@ function createCli(host) {
 		],
 		dispose() {
 			for (const child of processes) kill(child);
-			memory?.stop();
-			if (overlay) void drop(overlay.dir);
 		},
 	};
 }
@@ -742,4 +587,4 @@ function deactivate() {
 	active = null;
 }
 
-module.exports = { activate, deactivate, createCli, installHarness, createMemory, sweep, transport };
+module.exports = { activate, deactivate, createCli, installHarness, sweep, transport };

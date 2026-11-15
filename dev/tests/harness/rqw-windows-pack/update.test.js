@@ -43,8 +43,7 @@ function github(options) {
 	state.request = async (url, init) => {
 		calls.push([url, init?.headers]);
 		if (url === "https://api.github.com/repos/ARQAWA/omp-lite/commits/main") return Response.json({ sha });
-		if (url === "https://codeload.github.com/ARQAWA/omp-lite/tar.gz/" + sha) return new Response(state.body());
-		return url.endsWith("/health") ? new Response("ok") : Response.json({ data: [{ embedding: Array(768).fill(1) }] });
+		return new Response(url === "https://codeload.github.com/ARQAWA/omp-lite/tar.gz/" + sha ? state.body() : "model-bytes");
 	};
 	return state;
 }

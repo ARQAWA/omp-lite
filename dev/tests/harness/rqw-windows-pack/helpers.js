@@ -26,7 +26,6 @@ export function world({ settings = {}, env = {}, platform = "win32", request, fo
 	const [ext, storage, home] = ["ext", "storage", "home"].map(name => join(root, name));
 	const model = "model-bytes";
 	write(join(ext, "runtime/omp.exe"), "omp");
-	write(join(ext, "runtime/llama/llama-server.exe"), "llama");
 	write(join(storage, "model/model.gguf"), model);
 	write(join(ext, "payload/.revision"), "a".repeat(40) + "\n");
 	payload(join(ext, "payload"), { files: [{ from: "src/stt.windows.json", to: "extensions/pi-voice-stt/stt.windows.json" }], config: [{ from: "src/config.yml" }] }, {
@@ -77,8 +76,6 @@ export function world({ settings = {}, env = {}, platform = "win32", request, fo
 			return proc;
 		},
 	};
-	// The memory server of this world is healthy and answers with 768 numbers.
-	request ??= async url => (url.endsWith("/health") ? new Response("ok") : Response.json({ data: [{ embedding: Array(768).fill(0.5) }] }));
 	const host = {
 		vscode, platform, request, env, arch: "x64", version: "1.0.0", extensionPath: ext, storageDir: storage, homedir: home,
 		gitBash: write(join(root, "bash.exe"), ""),
