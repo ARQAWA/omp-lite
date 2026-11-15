@@ -244,11 +244,12 @@ async function installHarness({ sourceDir, agentDir, pointer }) {
 				await fsp.rmdir(path.dirname(change.target)).catch(() => {});
 			}
 		}
+		// Dropping the journal ends the transaction: a failure here undoes the install as well.
+		await drop(base);
 	} catch (error) {
 		await rollback(agentDir);
 		throw error;
 	}
-	await drop(base);
 	return { changed: true, layers };
 }
 
