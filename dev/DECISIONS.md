@@ -1960,3 +1960,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-15. `bun test dev/tests/harness/rqw-codex-adapter`: 8 pass, 0 fail. `bun test dev/tests` после слияния с main: 326 pass, 0 fail. Старый и новый код дали одинаковые описания `task` и `eval` на шаблонах OMP `prompts/tools/task.md` и `eval.md`. Живьём через `omp --no-extensions -e`: `web_search` вернул `[fetch 1]`; сабагент назвал слово из `AGENTS.md`; без просьбы `task` не вызван; по просьбе вызов `task` без поля `agent`; в запросе Codex `parallel_tool_calls: true`. `/blindreview`: принято за 10 кругов, 248 требований из 248; одна находка закрыта возражением: сходство трёх мест с прежним кодом задано самим проектом.
 
 **Носители правила:** `src/modules/rqw-codex-adapter/`, `dev/tests/harness/rqw-codex-adapter/rqw-codex-adapter.test.js`, `install.manifest.json`.
+
+## D-113 — RQW Reviewer: модуль `review` стал `rqw-reviewer`, README и тест сведены к минимуму
+
+**Решение:** модуль `src/modules/review/` переименован в `src/modules/rqw-reviewer/`, тест переехал в `dev/tests/harness/rqw-reviewer/`. Пять принятых текстов перенесены байт в байт: `agents/collector.md`, `agents/acceptor.md`, `skills/reviewer/SKILL.md`, `skills/blindreview/SKILL.md`, `skills/highreview/SKILL.md`. README модуля написан заново: 141 строка стала 22. Тест написан заново: 25 строк стали 23, три проверки: профили на Terra `xhigh` и `acceptor` без `write` и `edit`; шапки трёх скиллов; в модуле только тексты. В манифесте поменялись пять путей `from`.
+
+**Основание:** слова владельца, сессия `01a1d13b-8491`, id `959607dc`: «Так давай переделаем плагин в RQW Reviewer Extension»; «весь код проекта был полностью переписан ... Должно быть минимальное количество кода, минимальное количество строк кода, минимальное количество тестов, минимальное количество строк тестов. Только минимально достаточное покрытие ... При этом должны быть соблюдены все, э-э-э, детали проекта»; «При этом принятые промпты не трогаем».
+
+**Границы:** кода в модуле нет: переписаны README и тест. Имена профилей, скиллов и установленных файлов прежние: их называют принятые промпты. Цели `to` в манифесте те же, установка не менялась. Записи до D-112 называют прежний путь `src/modules/review/`. История модуля осталась в `dev/history/review.md`.
+
+**Проверка:** 2026-11-15. `bun test dev/tests/harness/rqw-reviewer`: 3 pass, 0 fail. `bun test dev/tests`: 327 pass, 0 fail. Коммит `27b0c8a`, слияние `a7e5736`. Пять текстов равны прежним (`git diff -M`: `R100`) и установленным в `~/.omp/agent` (`cmp`).
+
+**Носители правила:** `src/modules/rqw-reviewer/`, `dev/tests/harness/rqw-reviewer/rqw-reviewer.test.js`, `install.manifest.json`.
