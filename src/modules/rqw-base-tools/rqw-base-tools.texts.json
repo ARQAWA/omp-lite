@@ -31,7 +31,7 @@
 			],
 			"\n`cwd` sets the directory; never `cd`. Independent commands are separate calls in one response: they run in parallel. Dependent commands are joined with `&&`.\nOutput over 50 KB keeps its head and tail, the middle is cut: `[Showing lines 1-N and M-K of K; ... middle lines elided. Read artifact://0 for full output]`. `read` the artifact.\nNext step: after `edit`, run the narrow check (a test, a build, `git diff`).\n",
 			{
-				"native": "Persistent shell:"
+				"native": "Persistent bash"
 			}
 		],
 		"edit": [

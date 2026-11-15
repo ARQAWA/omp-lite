@@ -194,10 +194,9 @@ const canon = name => name.replace(/^_/, "").replace(/^apply_patch$/, "edit");
 // OMP sends no descriptions and keeps the native texts in the system prompt: nothing to check or replace.
 const toolsOf = payload => [payload, payload?.tools, payload?.functions, payload?.config?.tools, payload?.request?.tools, payload?.toolConfig?.tools].filter(Array.isArray).flat()
 	.flatMap(tool => tool?.functionDeclarations ?? [tool?.function ?? tool?.toolSpec ?? tool]).filter(tool => typeof tool?.name === "string" && tool.description);
-// On Windows OMP adds one line to bash (prompts/tools/bash.md, isWindows): not a change.
-const WINDOWS_LINE = /^Windows host, emulated bash environment: .*$/m;
-// Without the `eval` tool OMP words one bash line differently: both forms are native.
-const native = text => String(text).replace(WINDOWS_LINE, "").replace("complex pipelines → `eval`.", "complex flow → dedicated tool or checked-in script.");
+// OMP lists its shell builtins in bash (prompts/tools/bash.md): the list follows the platform, not a change.
+const BUILTINS = /^In-process builtins, ahead of PATH: .*$/m;
+const native = text => String(text).replace(BUILTINS, "");
 
 /** The first native tool or setting that moved away from the reference. */
 function checkReference(tools, current, isChild) {

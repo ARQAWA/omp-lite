@@ -1,4 +1,4 @@
-// RQW Codex Adapter, OMP 18.18.8: opt-in delegation, AGENTS.md for subagents, live Codex web search, Codex transport.
+// RQW Codex Adapter, OMP 18.20.2: opt-in delegation, AGENTS.md for subagents, live Codex web search, Codex transport.
 import { existsSync } from "node:fs";
 import { withOAuthAccess } from "@oh-my-pi/pi-ai";
 import { lookup } from "@oh-my-pi/pi-coding-agent/config/registry";
@@ -17,21 +17,21 @@ const EDITS = {
 	__proto__: null,
 	task: {
 		cut: [
-			"Read-only research MUST use `scout` only when files unknown. ",
+			"most specific, ",
 			"MUST be used for exploratory codebase research, rapid code analysis, and broad pattern searches. ",
 		],
 		add: "Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.",
 		swap: [
-			"Use most specific agent.",
+			"Read-only research MUST use `scout` only when files unknown.",
 			"Omit `agent` by default: a general worker equal to you. `scout` only for read-only search over unknown files; `sonic` only for mechanical edits with exact instructions. The user names an agent type: pass it in `agent`. The user names a model or effort: set `model` to `provider/id:level` (your own model if none named), no `agent`. Levels: `low`, `medium`, `high`, `xhigh` (extra high), `max`; pass exactly the level the user says. In every task say how thorough to be and exactly what to return.",
 		],
 	},
 	eval: {
 		cut: [
 			" Subagents have separate kernels.",
-			"For 2+ independent items, use a named `workpool()`; results auto-deliver. If blocked, leave `eval` and call `wait`.\n",
+			"If blocked, leave `eval` and call `wait`.\n",
 			"For 2+ independent items, use a named `workpool()`; results auto-deliver.\n",
-			"- `agent`, `workpool`: background subagents, DAG waves \u2192 `xd://eval/agents`\n",
+			"- `agent`, `workpool`: background subagents, DAG waves \u2192 xd://eval/agents\n",
 		],
 		add: "Use JavaScript (Bun) by default. Use Python only for rare tasks requiring Python-specific libraries, such as pandas, NumPy or Matplotlib.\nFor project file reading and searching, use the read, grep and glob tools. Use eval for computation, not as a substitute for those tools.",
 		swap: ['eval(language="py", code="%load \\"scripts/my setup.py\\"")', 'eval(language="js", code="%load \\"scripts/my setup.js\\"")'],

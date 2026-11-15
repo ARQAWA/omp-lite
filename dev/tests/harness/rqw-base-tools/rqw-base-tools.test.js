@@ -152,7 +152,6 @@ test("the approval target is the real search root as a tree; a link into .git is
 
 // ---- texts and guard ----
 
-const WINDOWS = "Windows host, emulated bash environment: write bash; paths `C:/x` or `/c/x`.";
 // A request with the native tools of the reference, in the flat (Claude) form.
 const payload = () => ({
 	messages: [{ role: "assistant", content: [{ type: "tool_use", name: "files", input: {} }] }],
@@ -173,14 +172,14 @@ test("six native descriptions become ours; schemas and messages stay", async () 
 	expect(seen).toEqual([]);
 });
 
-test("with files, the GPT names and the Windows line: the nested form is rewritten once", async () => {
+test("with files, the GPT names and another builtins list: the nested form is rewritten once", async () => {
 	const { handlers, ctx, seen } = setup(), flat = payload();
 	tool(flat, "edit").name = "apply_patch";
-	tool(flat, "bash").description = tool(flat, "bash").description.replace("\n\n", `\n${WINDOWS}\n`);
+	tool(flat, "bash").description = tool(flat, "bash").description.replace(/(ahead of PATH: ).*/, "$1awk");
 	const body = { tools: [...flat.tools, { name: "files", description: texts.files }].map(entry => ({ type: "function", function: entry })) };
 	await handlers.before_provider_request({ payload: body }, ctx);
 	const once = JSON.stringify(body);
-	expect(flat.tools.map(entry => entry.description)).toEqual(ours(0).map(text => text.replace("`&&`.\n\nScripts", `\`&&\`.\n${WINDOWS}\nScripts`)));
+	expect(flat.tools.map(entry => entry.description)).toEqual(ours(0).map(text => text.replace(/(ahead of PATH: ).*/, "$1awk")));
 	await handlers.before_provider_request({ payload: body }, ctx);
 	expect(JSON.stringify(body)).toBe(once);
 	expect(seen).toEqual([]);
@@ -191,7 +190,7 @@ test("a native text without its marker is kept whole, and a second pass adds not
 	tool(body, "bash").description = "new native text";
 	await handlers.before_provider_request({ payload: body }, ctx);
 	await handlers.before_provider_request({ payload: body }, ctx);
-	expect(tool(body, "bash").description).toBe(ours(1)[Object.keys(reference.tools).indexOf("bash")].split("Persistent shell:")[0] + "new native text");
+	expect(tool(body, "bash").description).toBe(ours(1)[Object.keys(reference.tools).indexOf("bash")].split("Persistent bash")[0] + "new native text");
 });
 
 test("the Google, Bedrock and string-schema forms are rewritten; empty descriptions of the inline catalog are left alone", async () => {

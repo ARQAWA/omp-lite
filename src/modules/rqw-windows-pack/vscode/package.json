@@ -2,7 +2,7 @@
 	"name": "ompcli",
 	"displayName": "RQW Windows Pack",
 	"publisher": "arqawa",
-	"version": "0.0.14",
+	"version": "0.0.15",
 	"engines": {
 		"vscode": "^1.86.0"
 	},

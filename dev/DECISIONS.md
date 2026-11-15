@@ -2097,3 +2097,25 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** Windows VDI не проверено: запись `ffmpeg` и вид надписи за владельцем. Решения D-117 и D-118 описывают прежнюю копию плагина.
 
 **Носители правила:** `src/modules/rqw-windows-pack/voice/`, `dev/tests/harness/rqw-windows-pack/voice.test.js`, `install.manifest.json`, `INSTALL.md`.
+
+## D-122 — харнес на OMP 18.20.2: минимальный апдейт
+
+**Решение:** харнес переведён с OMP 18.18.8 на 18.20.2 минимальной правкой:
+
+1. `rqw-codex-adapter`: якоря под тексты 18.20.2. `task`: режется `most specific, `; наша строка «Omit `agent` by default ...» теперь заменяет строку «Read-only research MUST use `scout` only when files unknown.». `eval`: режется `If blocked, leave `eval` and call `wait`.` отдельной строкой; строка пространства имён `agent`/`workpool` режется в виде 18.20.2 `xd://eval/agents` без обратных кавычек.
+2. `rqw-base-tools`: эталон сторожа: описания `read`, `bash`, `glob`, `write` взяты из OMP 18.20.2; зависящая от платформы строка bash `In-process builtins, ahead of PATH: ...` не считается изменением (заменяет старую строку про Windows и старую формулировку про `eval`); маркер родного хвоста bash: `Persistent bash`.
+3. `rqw-system-core`: обход пометки каждого вызова убран. OMP 18.20.2 не помечает сообщение, которое хук `context` переписывает одинаково на каждом запросе (`extensibility/extensions/runner.ts`, `#isRepeatedProjection`). Живой снимок: на 18.20.2 запрос с обходом и без него одинаков (на 18.18.8 различался).
+4. `rqw-runtime-config`: четыре новых провайдера 18.20.2 закрыты в `disabledProviders`: `antigravity-cli`, `chutes`, `liquid`, `nace` (`packages/catalog/src/compat/provider-ids.ts`). Теперь закрыто 94.
+5. `rqw-windows-pack`: закреплён `omp.exe` 18.20.2 (sha256 `6dbb8ac30106f163fcb61d818e6756799a816cb58d63fc3e11a0d7af56abfb90`, размер 252504064, дайджест релиза GitHub), версия расширения 0.0.15. `Update` отказывается принимать новый `runtime.json` и отправляет в Marketplace, поэтому VDI не получит новый харнес на старом `omp.exe`.
+6. `INSTALL.md`: проверка версии `omp/18.20.2`.
+7. `commit` в `eval` остаётся включённым (по умолчанию `commit.enabled: true`) по слову владельца.
+
+**Основание:** слова владельца от 2026-11-15: «спланируй апдейт нашего harness'а на самую свежую версию», «нельзяникак захертить все механики нашего Харнеса», «Апдейт должен быть самый микро- микро-нано-минимальный», «Да, собирай», «через eval включи его, пусть он работает через eval тоже».
+
+**Проверка:** живые снимки запросов бинарников 18.18.8 и 18.20.2 на копии `~/.omp/agent`, ключ поддельный, снимок снят до отправки; 63 настройки дают равные действующие значения; все внутренние импорты харнеса грузятся в 18.20.2; `bun test dev/tests`: 96 прошли, 0 упали, 18 файлов.
+
+**Причина:** OMP 18.20.2, `packages/coding-agent/src`: `prompts/tools/task.md`, `prompts/tools/eval.md`, `prompts/tools/bash.md`, `prompts/tools/read.md`, `prompts/tools/glob.md`, `prompts/tools/write.md`, `extensibility/extensions/runner.ts`; `packages/catalog/src/compat/provider-ids.ts`.
+
+**Границы:** VDI не проверено; VSIX 0.0.15 публикуется только по слову владельца; строка `task` «Omit `agent` by default» появляется только там, где OMP показывает строку про `scout` (scout можно запустить), как и прежний вырез.
+
+**Носители правила:** изменённые файлы: `src/modules/rqw-codex-adapter/index.js`, `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.reference.json`, `rqw-base-tools.texts.json`, `src/modules/rqw-system-core/index.js`, `src/modules/rqw-runtime-config/config.yml`, `src/modules/rqw-windows-pack/vscode/runtime.json`, `vscode/package.json`, `INSTALL.md` и четыре изменённых тестовых файла.

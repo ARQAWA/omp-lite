@@ -1,7 +1,5 @@
 import { expect, mock, test } from "bun:test";
 
-const MARK = Symbol("mark");
-mock.module("@oh-my-pi/pi-ai/utils/block-symbols", () => ({ kPerCallContextMessage: MARK }));
 const { default: core, REMINDER } = await import("../../../../src/modules/rqw-system-core/index.js");
 
 const read = path => Bun.file(new URL(`../../../../src/modules/rqw-system-core/${path}`, import.meta.url)).text();
@@ -33,19 +31,13 @@ Mixed or unclear message (a change plus a question, research, or report): do onl
 Do all that was ordered and nothing beyond it. Follow exact instructions exactly. Take the shortest, simplest path: no extras, no overengineering, no guesses. An unordered part seems critical: ask the owner first.`);
 });
 
-test("main: the reminder ends every user message, other messages stay, no mark sticks", () => {
+test("main: the reminder ends every user message, other messages stay", () => {
 	const assistant = { role: "assistant", content: "a" };
 	const image = { type: "image", data: "x" };
 	const { messages } = run([{ role: "user", content: "hi" }, assistant, { role: "user", content: [image] }], "main");
 	expect(messages[0].content).toBe(`hi\n\n${REMINDER}`);
 	expect(messages[1]).toBe(assistant);
 	expect(messages[2].content).toEqual([image, { type: "text", text: REMINDER }]);
-	for (const message of [messages[0], messages[2]]) {
-		// OMP 18.18.8 block-symbols.ts markPerCallContextMessage.
-		message[MARK] = true;
-		expect(message[MARK]).toBeUndefined();
-		expect({ ...message }[MARK]).toBeUndefined();
-	}
 });
 
 test("subagents get nothing", () => {

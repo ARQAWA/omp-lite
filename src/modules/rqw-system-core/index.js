@@ -1,5 +1,3 @@
-import { kPerCallContextMessage as MARK } from "@oh-my-pi/pi-ai/utils/block-symbols";
-
 export const REMINDER = `## Communication
 
 The user has dyslexia. Short sentences: at most 8 words. Paragraphs: at most 4 sentences. Bold main ideas. Short steps, clear words. Simple Russian, address the user as «ты». Numbered lists for many items, one line each. Prefer lowercase. Avoid special typographic characters. This overrides all other communication rules.
@@ -19,8 +17,7 @@ const withReminder = content =>
 export default function rqwSystemCore(pi) {
 	pi.on("context", (event, ctx) => {
 		if (ctx.agent.kind !== "main") return;
-		// Workaround for OMP 18.18.8: the empty setter swallows the per-call mark OMP puts on changed messages.
-		const patch = message => Object.defineProperty({ ...message, content: withReminder(message.content) }, MARK, { set() {} });
+		const patch = message => ({ ...message, content: withReminder(message.content) });
 		return { messages: event.messages.map(message => (message.role === "user" ? patch(message) : message)) };
 	});
 }

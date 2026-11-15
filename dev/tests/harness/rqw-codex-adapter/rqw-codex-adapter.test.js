@@ -41,17 +41,17 @@ const request = (tools, model = {}) => load().hooks.before_provider_request({ pa
 const RULE = "Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.";
 
 test("task: the rule goes under the first line once, scout pushes go, both names and shapes work", () => {
-	const description = "Spawn `tasks[]` concurrently.\n\n# Delegation\nUse most specific agent. Read-only research MUST use `scout` only when files unknown. Prefer one agent.\n- `scout`: MUST be used for exploratory codebase research, rapid code analysis, and broad pattern searches. Read-only scout.";
+	const description = "Spawn `tasks[]` concurrently.\n\n# Inputs\n- `agent`: most specific, inside each `tasks[]` item.\n  - Read-only research MUST use `scout` only when files unknown.\n  - Prefer one agent.\n- `scout`: MUST be used for exploratory codebase research, rapid code analysis, and broad pattern searches. Read-only scout.";
 	const flat = { name: "_task", description };
 	const nested = { type: "function", function: { name: "_task", description } };
-	const other = { name: "read", description: "Use most specific agent." };
+	const other = { name: "read", description: "Read-only research MUST use `scout` only when files unknown." };
 	request([flat, nested, other]);
 	request([flat, nested]);
 	request([flat, nested]);
 	for (const text of [flat.description, nested.function.description]) {
-		expect(text).toBe(`Spawn \`tasks[]\` concurrently.\n${RULE}\n\n# Delegation\nOmit \`agent\` by default: a general worker equal to you. \`scout\` only for read-only search over unknown files; \`sonic\` only for mechanical edits with exact instructions. The user names an agent type: pass it in \`agent\`. The user names a model or effort: set \`model\` to \`provider/id:level\` (your own model if none named), no \`agent\`. Levels: \`low\`, \`medium\`, \`high\`, \`xhigh\` (extra high), \`max\`; pass exactly the level the user says. In every task say how thorough to be and exactly what to return. Prefer one agent.\n- \`scout\`: Read-only scout.`);
+		expect(text).toBe(`Spawn \`tasks[]\` concurrently.\n${RULE}\n\n# Inputs\n- \`agent\`: inside each \`tasks[]\` item.\n  - Omit \`agent\` by default: a general worker equal to you. \`scout\` only for read-only search over unknown files; \`sonic\` only for mechanical edits with exact instructions. The user names an agent type: pass it in \`agent\`. The user names a model or effort: set \`model\` to \`provider/id:level\` (your own model if none named), no \`agent\`. Levels: \`low\`, \`medium\`, \`high\`, \`xhigh\` (extra high), \`max\`; pass exactly the level the user says. In every task say how thorough to be and exactly what to return.\n  - Prefer one agent.\n- \`scout\`: Read-only scout.`);
 	}
-	expect(other.description).toBe("Use most specific agent.");
+	expect(other.description).toBe("Read-only research MUST use `scout` only when files unknown.");
 });
 
 test("eval: Bun by default, no agent and workpool hints, direct calls blocked", () => {
@@ -59,8 +59,8 @@ test("eval: Bun by default, no agent and workpool hints, direct calls blocked", 
 		name: "eval",
 		description: [
 			"One cell per call. Subagents have separate kernels.",
-			"For 2+ independent items, use a named `workpool()`; results auto-deliver. If blocked, leave `eval` and call `wait`.",
-			"- `agent`, `workpool`: background subagents, DAG waves \u2192 `xd://eval/agents`",
+			"For 2+ independent items, use a named `workpool()`; results auto-deliver.\nIf blocked, leave `eval` and call `wait`.",
+			"- `agent`, `workpool`: background subagents, DAG waves \u2192 xd://eval/agents",
 			'eval(language="py", code="%load \\"scripts/my setup.py\\"")',
 		].join("\n"),
 	};
