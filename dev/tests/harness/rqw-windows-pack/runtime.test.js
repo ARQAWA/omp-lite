@@ -25,7 +25,7 @@ test("a damaged omp.exe opens no tab", async () => {
 
 test("the model is the only download: checked, kept, and its failure never stops the tab", async () => {
 	const answers = { "https://model": "model-bytes" };
-	const w = world({ request: async url => (new Response(answers[url], { status: answers[url] ? 200 : 404 }), files: { "storage/junk.tmp": "x" } });
+	const w = world({ request: async url => new Response(answers[url], { status: answers[url] ? 200 : 404 }), files: { "storage/junk.tmp": "x" } });
 	const model = join(w.storage, "model/model.gguf");
 	rmSync(model);
 	await w.tab();
