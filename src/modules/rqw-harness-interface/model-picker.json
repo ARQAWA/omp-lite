@@ -15,11 +15,19 @@
   "hintShort": "Enter/Esc",
   "minName": 4,
   "effortOrder": ["low", "medium", "high", "xhigh", "max"],
-  "efforts": {
-    "low": { "color": "thinkingLow" },
-    "medium": { "color": "thinkingMedium" },
-    "high": { "color": "thinkingHigh" },
-    "xhigh": { "color": "thinkingXhigh" },
-    "max": { "color": "thinkingMax" }
+  "colors": {
+    "accent": "#c9a227",
+    "muted": "#b8b3aa",
+    "dim": "#96918a",
+    "error": "#ff4757",
+    "low": "#80ffc4",
+    "medium": "#00df77",
+    "high": "#c9a227",
+    "xhigh": "#b97cff",
+    "max": "#ff4757"
+  },
+  "aliases": {
+    "opencode-go/deepseek-v4.1-flash": "DeepSeek Flash OpenCodeGo",
+    "openrouter/deepseek/deepseek-v4.1-flash-1017": "DeepSeek Flash OpenRouter"
   }
 }

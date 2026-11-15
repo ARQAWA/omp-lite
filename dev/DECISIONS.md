@@ -1972,3 +1972,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 2026-11-15. `bun test dev/tests/harness/rqw-reviewer`: 3 pass, 0 fail. `bun test dev/tests`: 327 pass, 0 fail. Коммит `27b0c8a`, слияние `a7e5736`. Пять текстов равны прежним (`git diff -M`: `R100`) и установленным в `~/.omp/agent` (`cmp`).
 
 **Носители правила:** `src/modules/rqw-reviewer/`, `dev/tests/harness/rqw-reviewer/rqw-reviewer.test.js`, `install.manifest.json`.
+
+## D-114 — единый интерфейс харнеса
+
+**Решение:** шесть модулей `model-picker`, `status-line`, `subscriptions`, `compactions`, `tool-summary`, `turn-duration` объединены в `rqw-harness-interface`. Метка провайдера убрана из пикера; для двух DeepSeek показаны алиасы `DeepSeek Flash OpenCodeGo` и `DeepSeek Flash OpenRouter`. Цвета пикера фиксированы по MyP. В счётчике тулов `files` относится к search, `ast_edit` к edit.
+
+**Основание:** заказ владельца от 2026-11-15.
+
+**Причина:** единый интерфейс с минимальным кодом и тестами. OMP 18.18.8: `packages/coding-agent/src/discovery/helpers.ts`, `extensibility/extensions/types.ts`, `slash-commands/helpers/active-oauth-account.ts`.
+
+**Границы:** принятые ограничения интерфейса описаны в README модуля. Старые пути удаляются при установке через манифест.
+
+**Носители правила:** `src/modules/rqw-harness-interface/`, `dev/tests/harness/rqw-harness-interface/`, `install.manifest.json`, `INSTALL.md`.

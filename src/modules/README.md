@@ -22,21 +22,13 @@ README модуля описывает:
 - `rqw-system-core` — основа: системный промпт, правила общения, памятка внутри каждого сообщения владельца. Тест: `dev/tests/harness/rqw-system-core/`.
 - `skill-alias` — короткий `/имя` вместо `/skill:имя`. Тест: `dev/tests/harness/skill-alias/`.
 - `memory-guide` — короткий блок про память в системном промпте, пока включён Mnemopi. Тест: `dev/tests/harness/memory-guide/`.
-- `model-picker` — компактный пикер модели и усилия, Shift+стрелки, фильтр. Тест: `dev/tests/harness/model-picker/`.
-- `tool-summary` — одна строка со счётчиками тулов рядом с карточками. Тест: `dev/tests/harness/tool-summary/`.
+- `rqw-harness-interface` — пикер модели и усилия, статуслайн, лимиты, счётчики компакшенов и тулов, время хода. Тест: `dev/tests/harness/rqw-harness-interface/`.
 - `rqw-reviewer` — приёмка: профили сабагентов `collector` и `acceptor`, три скилла. Кода нет. Тест: `dev/tests/harness/rqw-reviewer/`.
 - `subagent-reuse` — инструмент `reuse`: та же сессия сабагента, история с нуля через `newSession()`. Тест: `dev/tests/harness/subagent-reuse/`.
-- `subscriptions` — метки `CC`, `CX`, `Go` с лимитами подписок. Тест: `dev/tests/harness/subscriptions/`.
-- `compactions` — счётчик компакшенов сессии в статуслайне. Тест: `dev/tests/harness/compactions/`.
-- `turn-duration` — строка `⏱ 2m 4s` после каждого хода. Тест: `dev/tests/harness/turn-duration/`.
 - `base-tools` — тул `files`: карта проекта одним вызовом на движке OMP, без потолка 200 и без git; правка по файлам: несошедшийся файл патча пропускается, ответ идёт ошибкой и хранит убранную секцию, остальные пишет родной `edit`; настройки `apply_patch`, контекста `grep` и порога спилла в `base-tools.yml`. Тест: `dev/tests/harness/base-tools/`.
 - `rqw-codex-adapter` — одно расширение: делегирование как в Codex и три профиля сабагентов, `AGENTS.md` для сабагентов, Codex-поиск `web_search`, тюнинг транспорта Codex. Тест: `dev/tests/harness/rqw-codex-adapter/`.
 - `ompcli` — расширение VS Code `arqawa.ompcli` для Windows VDI: вкладки OMP, комплектный runtime, локальная память, Update и установка харнеса по манифесту. Тест: `dev/tests/harness/ompcli/`.
 - `voice-stt` — диктовка Soniox: плагин `pi-voice-stt` v0.11.0 с нашей правкой запуска `ffmpeg` на VDI. Тест: `dev/tests/harness/voice-stt/`.
-
-Настройки без кода:
-
-- `status-line` — раскладка родного статуслайна, `status-line.yml`.
 
 Промпт без кода:
 
