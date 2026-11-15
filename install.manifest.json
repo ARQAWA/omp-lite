@@ -59,14 +59,6 @@
 			"to": "extensions/rqw-base-tools/rqw-base-tools.reference.json"
 		},
 		{
-			"from": "src/modules/memory-guide/index.js",
-			"to": "extensions/memory-guide.js"
-		},
-		{
-			"from": "src/modules/memory-guide/memory-guide.json",
-			"to": "extensions/memory-guide.json"
-		},
-		{
 			"from": "src/modules/rqw-harness-interface/index.js",
 			"to": "extensions/rqw-harness-interface/index.js"
 		},
@@ -117,18 +109,6 @@
 		{
 			"from": "src/modules/rqw-reviewer/skills/reviewer/SKILL.md",
 			"to": "skills/reviewer/SKILL.md"
-		},
-		{
-			"from": "src/modules/short-task/SKILL.md",
-			"to": "skills/short-task/SKILL.md"
-		},
-		{
-			"from": "src/modules/skill-alias/index.js",
-			"to": "extensions/skill-alias.js"
-		},
-		{
-			"from": "src/modules/subagent-reuse/index.js",
-			"to": "extensions/subagent-reuse.js"
 		},
 		{
 			"from": "src/modules/rqw-windows-pack/voice/index.ts",
@@ -404,7 +384,12 @@
 		"extensions/base-tools.descriptions.json",
 		"extensions/base-tools.texts.json",
 		"extensions/base-tools.reference.json",
-		"extensions/rqw-harness-interface/LICENSE"
+		"extensions/rqw-harness-interface/LICENSE",
+		"extensions/memory-guide.js",
+		"extensions/memory-guide.json",
+		"extensions/skill-alias.js",
+		"extensions/subagent-reuse.js",
+		"skills/short-task/SKILL.md"
 	],
 	"config": [
 		{

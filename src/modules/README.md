@@ -20,18 +20,11 @@ README модуля описывает:
 Написанный код:
 
 - `rqw-system-core` — основа: системный промпт, правила общения, памятка внутри каждого сообщения владельца. Тест: `dev/tests/harness/rqw-system-core/`.
-- `skill-alias` — короткий `/имя` вместо `/skill:имя`. Тест: `dev/tests/harness/skill-alias/`.
-- `memory-guide` — короткий блок про память в системном промпте, пока включён Mnemopi. Тест: `dev/tests/harness/memory-guide/`.
 - `rqw-harness-interface` — пикер модели и усилия, статуслайн, лимиты, счётчики компакшенов и тулов, время хода. Тест: `dev/tests/harness/rqw-harness-interface/`.
 - `rqw-reviewer` — приёмка: профили сабагентов `collector` и `acceptor`, три скилла. Кода нет. Тест: `dev/tests/harness/rqw-reviewer/`.
-- `subagent-reuse` — инструмент `reuse`: та же сессия сабагента, история с нуля через `newSession()`. Тест: `dev/tests/harness/subagent-reuse/`.
 - `rqw-base-tools` — тулинг файлов одним расширением: тул `files` (карта проекта и широкий поиск), свои описания шести родных тулов, сторож, правка по файлам, метка целого файла; восемь настроек в `rqw-base-tools.yml`. Тест: `dev/tests/harness/rqw-base-tools/`.
 - `rqw-codex-adapter` — одно расширение: делегирование как в Codex и три профиля сабагентов, `AGENTS.md` для сабагентов, Codex-поиск `web_search`, тюнинг транспорта Codex. Тест: `dev/tests/harness/rqw-codex-adapter/`.
 - `rqw-windows-pack` — харнес на Windows VDI: расширение VS Code `arqawa.ompcli` (вкладки OMP, комплектные программы, Update, установка харнеса по манифесту) и диктовка Soniox, плагин `pi-voice-stt` v0.11.0. Тест: `dev/tests/harness/rqw-windows-pack/`.
-
-Промпт без кода:
-
-- `short-task` — навык: размытая задача превращается в карточку из пяти строк, `SKILL.md`.
 
 Каждый README описывает свой модуль.
 

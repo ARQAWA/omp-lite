@@ -13,4 +13,4 @@
 Остаток:
 - проверка на Windows VDI: за владельцем (план T7, пункт 13).
 
-Уже сделано и лежит в [src/modules/](../src/modules/README.md): 24 модуля, список в README каталога.
+Уже сделано и лежит в [src/modules/](../src/modules/README.md): 8 модулей, список в README каталога.
