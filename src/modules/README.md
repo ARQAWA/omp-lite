@@ -27,8 +27,7 @@ README модуля описывает:
 - `subagent-reuse` — инструмент `reuse`: та же сессия сабагента, история с нуля через `newSession()`. Тест: `dev/tests/harness/subagent-reuse/`.
 - `base-tools` — тул `files`: карта проекта одним вызовом на движке OMP, без потолка 200 и без git; правка по файлам: несошедшийся файл патча пропускается, ответ идёт ошибкой и хранит убранную секцию, остальные пишет родной `edit`; настройки `apply_patch`, контекста `grep` и порога спилла в `base-tools.yml`. Тест: `dev/tests/harness/base-tools/`.
 - `rqw-codex-adapter` — одно расширение: делегирование как в Codex и три профиля сабагентов, `AGENTS.md` для сабагентов, Codex-поиск `web_search`, тюнинг транспорта Codex. Тест: `dev/tests/harness/rqw-codex-adapter/`.
-- `ompcli` — расширение VS Code `arqawa.ompcli` для Windows VDI: вкладки OMP, комплектный runtime, локальная память, Update и установка харнеса по манифесту. Тест: `dev/tests/harness/ompcli/`.
-- `voice-stt` — диктовка Soniox: плагин `pi-voice-stt` v0.11.0 с нашей правкой запуска `ffmpeg` на VDI. Тест: `dev/tests/harness/voice-stt/`.
+- `rqw-windows-pack` — харнес на Windows VDI: расширение VS Code `arqawa.ompcli` (вкладки OMP, комплектные программы, локальная память, Update, установка харнеса по манифесту) и диктовка Soniox, плагин `pi-voice-stt` v0.11.0. Тест: `dev/tests/harness/rqw-windows-pack/`.
 
 Промпт без кода:
 

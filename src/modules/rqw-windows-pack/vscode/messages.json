@@ -3,7 +3,6 @@
 	"profile": "OMP CLI requires the default OMP profile.",
 	"gitBash": "Not found: {path}. Install Git for Windows.",
 	"nodePty": "Not found: {path}. OMP CLI cannot open a terminal.",
-	"busy": "OMP CLI installation is busy.",
 	"closeTabs": "Close OMP CLI tabs before updating.",
 	"memoryOff": "OMP CLI: memory is off. {reason}",
 	"memoryStopped": "Local memory stopped. Reopen OMP CLI tab.",
