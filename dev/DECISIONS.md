@@ -1994,3 +1994,24 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** манифест и состав поставки не менялись. Прежние версии файлов восстанавливаются из git, не из копии.
 
 **Носители правила:** `INSTALL.md`.
+
+## D-116 — RQW Base Tools: модуль `base-tools` переписан с нуля одним расширением
+
+**Решение:** модуль `base-tools` заменён модулем [rqw-base-tools](../src/modules/rqw-base-tools/README.md). Одна папка, одно расширение, один тест. Код: 721 строка стала 403. Тесты: семь файлов и четыре снимка стали одним файлом на 25 тестов. Пять частей прежние: тул `files`, свои описания шести родных тулов, сторож, правка по файлам, метка целого файла. Правки по словам владельца:
+
+1. три настройки переехали в плагин из общего конфига: `read.defaultLimit: 4000`, `read.summarize.enabled: true`, `tools.outputMaxColumns: 0`.
+2. добавлена восьмая настройка `inlineToolDescriptors: "off"`: описания тулов идут в запросе и заменяются, так и у Gemini.
+3. все восемь настроек живут только в `rqw-base-tools.yml`. Из `runtime-config/config.yml` семь ключей убраны.
+4. описание `edit` дополнено строкой: «If the answer says no files were modified, nothing was written: fix and resend the whole patch.»
+5. описания `files` и `grep` уточнены: негодную регулярку движок чинит сам; явно названный файл ищется целиком, кроме многострочного поиска.
+6. родной конец описаний `bash` и `edit` берётся из самого запроса, в плагине не хранится.
+7. метка целого файла ставится и на чтении несколькими диапазонами, покрывшими файл, и на текстовом виде notebook, документа, члена архива.
+8. патч с путём, который движок правит сам, или с правкой файла, которого нет по пути, идёт родному `edit` целиком.
+
+**Основание:** заказ владельца от 2026-11-15: проект плагина, ревью кода до чистого ответа, blind review, полный релиз. История модуля `dev/history/base-tools.md` удалена по его слову «зачистить всё старое».
+
+**Причина:** один плагин с минимальным кодом и тестами. Ревью кода: 12 кругов, два последних чистые. OMP 18.18.8: `packages/coding-agent/src/extensibility/extensions/types.ts`, `extensibility/extensions/wrapper.ts`, `tools/read.ts`, `tools/output-meta.ts`, `config/inline-tool-descriptors-mode.ts`, `session/settings.ts`, `packages/agent/src/agent-loop.ts`, `crates/pi-edit/src/path_policy.rs`, `crates/pi-walker/src/glob.rs`.
+
+**Границы:** описаны в README модуля. Костыль один: импорт движка `@oh-my-pi/pi-natives` из расширения, сторож сверяет его экспорты. Не проверено: Windows VDI, красная карточка пропуска глазами. Старые файлы `extensions/base-tools.*` удаляются при установке через манифест.
+
+**Носители правила:** `src/modules/rqw-base-tools/`, `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`, `src/modules/runtime-config/config.yml`, `install.manifest.json`.

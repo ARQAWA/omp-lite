@@ -198,28 +198,18 @@ mnemopi:
   embeddingApiUrl: http://127.0.0.1:11434/v1
   embeddingApiKey: ollama
 tools:
-  artifactSpillThreshold: 100
   artifactHeadBytes: 50
   artifactTailBytes: 0
   artifactMaxBytes: 32
   artifactTailLines: 0
-  outputMaxColumns: 0
   approvalMode: yolo
-read:
-  defaultLimit: 4000
-  summarize:
-    enabled: true
 startup:
   quiet: true
   showSplash: false
   checkUpdate: false
 edit:
-  mode: apply_patch
   autoRepair:
     enabled: true
-grep:
-  contextBefore: 3
-  contextAfter: 3
 lsp:
   diagnosticsOnEdit: true
 bashInterceptor:

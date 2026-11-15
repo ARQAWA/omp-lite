@@ -38,6 +38,13 @@ test("interface files replace the old installed extensions", () => {
 	expect(manifest.config).toContainEqual({ from: "src/modules/rqw-harness-interface/status-line.yml", to: "config.yml", mode: "merge" });
 });
 
+test("rqw-base-tools replaces the old installed base-tools", () => {
+	for (const name of ["index.js", "rqw-base-tools.texts.json", "rqw-base-tools.reference.json"])
+		expect(manifest.files).toContainEqual({ from: `src/modules/rqw-base-tools/${name}`, to: `extensions/rqw-base-tools/${name}` });
+	for (const name of ["js", "descriptions.json", "texts.json", "reference.json"]) expect(manifest.remove).toContain(`extensions/base-tools.${name}`);
+	expect(manifest.config).toContainEqual({ from: "src/modules/rqw-base-tools/rqw-base-tools.yml", to: "config.yml", mode: "merge" });
+});
+
 test("targets stay inside the agent root and are unique", () => {
 	const targets = new Set();
 	for (const entry of manifest.files) {
