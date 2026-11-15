@@ -12,7 +12,7 @@ RQW Windows Pack переносит харнес на Windows VDI без пра�
 - `vscode/index.js`: весь код расширения VS Code. `vscode/package.json`: три команды и две клавиши.
 - `vscode/runtime.json`: закреплённые программы и модель, с размером и SHA-256. Единственное место пинов.
 - `vscode/messages.json`: все видимые тексты, английский.
-- `voice/index.js`: весь код диктовки, свой, 191 строка.
+- `voice/index.js`: весь код диктовки, свой.
 - `voice/stt.windows.json`: клавиша, микрофон, настройки Soniox, тексты.
 
 В рантайме мест два. `vscode/` это расширение VS Code. `voice/` это расширение OMP в `~/.omp/agent/extensions/pi-voice-stt/`. На VDI второе место заполняет первое: ставится только расширение VS Code.

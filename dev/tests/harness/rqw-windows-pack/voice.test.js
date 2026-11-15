@@ -47,7 +47,7 @@ function world(platform = "win32", env = { OMPCLI_GIT_BASH: bash }) {
 	};
 	const run = (file, args) => {
 		const listeners = {}, target = /''([^']+rec\.wav)''/.exec(args[3])[1];
-		w.spawned.push([file, args[3]]);
+		w.spawned.push([file, args[3], listeners]);
 		return { pid: 7, stderr: { on() {} }, once(name, fn) { listeners[name] = fn; return this; }, stdin: { end: () => { writeFileSync(target, w.sound); listeners.close(); } } };
 	};
 	const request = async (url, init = {}) => {
@@ -123,6 +123,21 @@ test("alt+w records and inserts, Enter sends, Esc cancels; the label stands on t
 	w.input("alt+w");
 	await until(() => w.notes.length);
 	expect([w.notes, w.calls.length]).toEqual([[["voice: " + data.texts.silent, "error"]], before]);
+
+	// ffmpeg dies by itself: the error is shown, the label is idle again.
+	w.input("alt+w");
+	await until(() => w.spawned.length === 5);
+	w.spawned[4][2].close();
+	await until(() => w.notes.length === 2);
+	expect([w.notes[1][0], top().slice(0, 5)]).toEqual(["voice: " + data.texts.noAudio + " ", "voice"]);
+
+	// A cancelled start launches nothing; a session switch cancels the recording.
+	w.input("alt+w"); w.input("escape"); w.input("alt+w");
+	await until(() => w.spawned.length === 6);
+	await new Promise(next => setTimeout(next, 20));
+	expect(w.spawned).toHaveLength(6);
+	w.handlers.session_switch({}, w.ctx);
+	expect(top().slice(0, 5)).toBe("voice");
 });
 
 test("/stt doctor names the missing key, then checks ffmpeg through the chain", async () => {

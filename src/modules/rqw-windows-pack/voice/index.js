@@ -39,6 +39,8 @@ export const inject = (line, width, label) => {
 // Soniox async: upload, order, poll, read, delete. The recognition settings come from the JSON as they are.
 export async function transcribe(audio, key, signal, request = fetch) {
 	const { baseUrl, pollMs, timeoutMs, ...settings } = data.soniox, headers = { Authorization: `Bearer ${key}` };
+	// One deadline covers every request and every body.
+	signal = AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]);
 	const call = async (path, init = {}) => {
 		const response = await request(baseUrl + path, { ...init, headers: { ...headers, ...init.headers }, signal });
 		if (!response.ok) throw new Error(`Soniox ${response.status}: ${(await response.text()).slice(0, 200)}`);
@@ -51,10 +53,10 @@ export async function transcribe(audio, key, signal, request = fetch) {
 	let job;
 	try {
 		job = await call("/v1/transcriptions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...settings, file_id: file.id }) });
-		for (const end = Date.now() + timeoutMs; ; await new Promise(done => setTimeout(done, pollMs))) {
+		for (; ; await new Promise(done => setTimeout(done, pollMs))) {
 			const { status, error_message } = await call(`/v1/transcriptions/${job.id}`);
 			if (status === "completed") break;
-			if (status === "error" || Date.now() > end) throw new Error(`Soniox: ${error_message || "timed out"}`);
+			if (status === "error") throw new Error(`Soniox: ${error_message}`);
 		}
 		return (await call(`/v1/transcriptions/${job.id}/transcript`)).text.trim();
 	} finally {
@@ -88,15 +90,32 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 	};
 	const ffmpeg = args => launch(bash, "ffmpeg", args);
 
-	const start = async () => {
+	// One attempt is one object: every step checks that it is still the current one.
+	const release = rec => {
+		if (job === rec) { job = undefined; setMode("idle"); }
+		return rec.dir && rm(rec.dir, { recursive: true, force: true }).catch(() => {});
+	};
+	const guard = (ctx, rec, work) => void work.catch(error => {
+		release(rec);
+		if (!rec.abort.signal.aborted) ctx.ui.notify(`${text.title}: ${error.message}`, "error");
+	});
+	const start = ctx => {
+		const rec = (job = { abort: new AbortController(), log: "" });
 		setMode("recording");
-		const key = await readKey(), dir = await mkdtemp(join(tmpdir(), "rqw-voice-")), file = join(dir, "rec.wav");
-		// Esc came while the key was read: nothing is started.
-		if (mode !== "recording") return rm(dir, { recursive: true, force: true });
-		const child = run(...ffmpeg(["-hide_banner", "-loglevel", "warning", "-f", "dshow", "-audio_buffer_size", "20", "-i", data.input, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", "-y", file]), { stdio: ["pipe", "ignore", "pipe"] });
-		const rec = { key, dir, file, child, log: "", closed: new Promise(done => child.once("close", done).once("error", done)) };
-		child.stderr.on("data", chunk => (rec.log = (rec.log + chunk).slice(-2000)));
-		job = rec;
+		guard(ctx, rec, (async () => {
+			rec.key = await readKey();
+			const dir = await mkdtemp(join(tmpdir(), "rqw-voice-"));
+			rec.file = join(rec.dir = dir, "rec.wav");
+			// Esc or a session switch came while the key was read: nothing is started.
+			if (job !== rec) return release(rec);
+			const child = (rec.child = run(...ffmpeg(["-hide_banner", "-loglevel", "warning", "-f", "dshow", "-audio_buffer_size", "20", "-i", data.input, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", "-y", rec.file]), { stdio: ["pipe", "ignore", "pipe"] }));
+			child.stderr.on("data", chunk => (rec.log = (rec.log + chunk).slice(-2000)));
+			rec.closed = new Promise(done => child.once("close", done).once("error", done));
+			// ffmpeg died by itself: no microphone, no access.
+			rec.closed.then(() => job === rec && mode === "recording" && guard(ctx, rec, Promise.reject(new Error(`${text.noAudio} ${rec.log}`))));
+			// alt+w or Enter came before ffmpeg started.
+			if ("send" in rec) return finish(ctx, rec, rec.send);
+		})());
 	};
 	const halt = async rec => {
 		try { rec.child.stdin.end("q\n"); } catch {}
@@ -105,52 +124,47 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 		await rec.closed;
 		clearTimeout(kill);
 	};
-	const finish = async (ctx, send) => {
-		const rec = job, abort = new AbortController(), mine = (job = { abort });
+	const finish = async (ctx, rec, send) => {
 		setMode("transcribing");
-		try {
-			await halt(rec);
-			const audio = await readFile(rec.file).catch(() => { throw new Error(`${text.noAudio} ${rec.log}`); });
-			if (audio.length < MIN_BYTES || peak(audio) <= SILENCE) throw new Error(text.silent);
-			const words = await transcribe(audio, rec.key, abort.signal, request);
-			if (abort.signal.aborted) return;
-			ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${words} `);
-			const prompt = send && ctx.ui.getEditorText().trimEnd();
-			if (!prompt) return;
-			ctx.ui.setEditorText("");
-			await pi.sendUserMessage(prompt, ctx.isIdle() ? undefined : { deliverAs: "followUp" });
-		} catch (error) {
-			if (!abort.signal.aborted) throw error;
-		} finally {
-			await rm(rec.dir, { recursive: true, force: true });
-			if (job === mine) { job = undefined; setMode("idle"); }
-		}
+		await halt(rec);
+		const audio = await readFile(rec.file).catch(() => { throw new Error(`${text.noAudio} ${rec.log}`); });
+		if (audio.length < MIN_BYTES || peak(audio) <= SILENCE) throw new Error(text.silent);
+		const words = await transcribe(audio, rec.key, rec.abort.signal, request);
+		if (job !== rec) return;
+		// The dictation is over before the prompt runs: sendUserMessage resolves when the whole turn ends.
+		release(rec);
+		ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${words} `);
+		const prompt = send && ctx.ui.getEditorText().trimEnd();
+		if (!prompt) return;
+		ctx.ui.setEditorText("");
+		await pi.sendUserMessage(prompt, ctx.isIdle() ? undefined : { deliverAs: "followUp" }).catch(error => {
+			ctx.ui.setEditorText(`${prompt} ${ctx.ui.getEditorText()}`);
+			throw error;
+		});
 	};
 	const cancel = async () => {
 		const rec = job;
+		if (!rec) return;
+		rec.abort.abort();
 		job = undefined;
 		setMode("idle");
-		rec?.abort?.abort();
-		if (!rec?.child) return;
-		await halt(rec);
-		await rm(rec.dir, { recursive: true, force: true });
+		if (rec.child) await halt(rec);
+		await release(rec);
 	};
-	const guard = (ctx, work) => void work.catch(error => {
-		job = undefined;
-		setMode("idle");
-		ctx.ui.notify(`${text.title}: ${error.message}`, "error");
-	});
 	const press = (ctx, input) => {
-		if (matchesKey(input, data.keybind)) {
-			if (mode === "idle") guard(ctx, start());
-			else if (job?.child) guard(ctx, finish(ctx));
-		} else if (job?.child && matchesKey(input, "enter")) guard(ctx, finish(ctx, true));
-		else if (mode !== "idle" && matchesKey(input, "escape")) guard(ctx, cancel());
-		else return;
+		const rec = job, stop = matchesKey(input, data.keybind);
+		if (stop && !rec) start(ctx);
+		else if (rec && mode === "recording" && (stop || matchesKey(input, "enter"))) {
+			if (rec.child) guard(ctx, rec, finish(ctx, rec, !stop));
+			else rec.send = !stop;
+		} else if (rec && matchesKey(input, "escape")) void cancel();
+		else if (!(rec && stop)) return;
 		return { consume: true };
 	};
 
 	const attach = (_event, ctx) => {
+		// A recording never moves into another session.
+		void cancel();
 		unsubscribe?.();
 		unsubscribe = undefined;
 		if (ctx.mode !== "tui" || !ctx.hasUI) return;
