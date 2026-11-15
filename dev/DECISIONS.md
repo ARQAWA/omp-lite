@@ -1925,7 +1925,23 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители правила:** `src/modules/review/agents/collector.md`, `src/modules/review/agents/acceptor.md`, `src/modules/review/skills/reviewer/SKILL.md`, `src/modules/review/README.md`, `dev/tests/harness/review/review.test.js`.
 
-## D-111 — RQW Codex Adapter: четыре модуля слиты в одно расширение и переписаны с нуля
+## D-111 — RQW System Core: один плагин, памятка внутри сообщения владельца
+
+**Решение:** модули `system-prompt`, `communication`, `dyslexia`, `workflow` объединены в `src/modules/rqw-system-core/`. `SYSTEM.md` и два правила перенесены без правок текста. Тексты дислексии и workflow стали одной памяткой `REMINDER`. Расширение на событии `context` дописывает её последним блоком в каждое сообщение `user` главного агента. История и экран не меняются. Заменяет доставку скрытым сообщением из D-057 и решений по `workflow`. Память (`memory-guide`) в плагин не входит.
+
+**Костыли, согласованы владельцем:** 1. Пустой setter на `kPerCallContextMessage`: OMP не ставит пометку разового сообщения, Claude ставит точку кеша на сообщение как у обычного. 2. `PI_ANTHROPIC_MESSAGE_THREADS=0`: threads выключены у всего процесса.
+
+**Основание:** слова владельца, сессия `01a1dc37-5f28`: «заметка вот эта вот для workflow, для дислексия, она должна быть частью сообщения моего, не отдельным, блядь, сообщением»; «Никаких не должно быть пометок»; «не должно быть никаких тредс»; «найти самый простой, самый короткий путь»; «Ну всё, давай делать плагин тогда».
+
+**Причина:** OMP 18.18.8. `coding-agent/src/extensibility/extensions/runner.ts`, `emitContext`: изменённое сообщение получает `markPerCallContextMessage`. `ai/src/utils/block-symbols.ts`: пометка это присваивание символьному полю. `ai/src/providers/anthropic.ts`: с пометкой нет точки кеша на сообщении и нет threads. `ai/src/providers/anthropic-threads.ts`, `wantsAnthropicThreads`: флаг главнее настроек модели. Событие `input` не подошло: текст виден на экране (`modes/utils/ui-helpers.ts`).
+
+**Границы:** обход пометки держится на внутреннем поле OMP: после обновления OMP перепроверить. Памятки нет в истории, сжатие её не видит. Без threads вся история уходит в каждом запросе. На моделях 5.5 и Fable 5.2 живьём не проверено, на Windows VDI не проверено. В рантайм не установлено.
+
+**Проверка:** 2026-11-15. `bun test dev/tests`: 340 pass, 0 fail. Коммит `098a0b1`, слияние `2529696`. Пробник на бинарнике 18.18.8 до сборки, запрос к модели не уходил: памятка внутри одного сообщения, с setter точка кеша стоит, с флагом `0` threads выключены. `/blindreview`: принято за 2 круга (чисто, чисто), 34 требования из 34.
+
+**Носители правила:** `src/modules/rqw-system-core/`, `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`, `install.manifest.json`.
+
+## D-112 — RQW Codex Adapter: четыре модуля слиты в одно расширение и переписаны с нуля
 
 **Решение:** модули `task-delegation`, `child-agents-md`, `web-search`, `codex-transport` заменены одним модулем [rqw-codex-adapter](../src/modules/rqw-codex-adapter/README.md). Одна папка, одно расширение, один тест. Тексты для модели лежат в коде, отдельного JSON нет. Поведение четырёх частей прежнее, кроме пяти правок по ответам владельца:
 
@@ -1941,6 +1957,6 @@ Blind и high больше не различаются ни моделью, ни
 
 **Границы:** известные проблемы перечислены в README модуля. На Windows VDI не проверено. В `~/.omp/agent` не установлено.
 
-**Проверка:** 2026-11-15. `bun test dev/tests/harness/rqw-codex-adapter`: 8 pass, 0 fail. `bun test dev/tests`: 328 pass, 0 fail. Старый и новый код дали одинаковые описания `task` и `eval` на шаблонах OMP `prompts/tools/task.md` и `eval.md`. Живьём через `omp --no-extensions -e`: `web_search` вернул `[fetch 1]`; сабагент назвал слово из `AGENTS.md`.
+**Проверка:** 2026-11-15. `bun test dev/tests/harness/rqw-codex-adapter`: 8 pass, 0 fail. `bun test dev/tests` после слияния с main: 326 pass, 0 fail. Старый и новый код дали одинаковые описания `task` и `eval` на шаблонах OMP `prompts/tools/task.md` и `eval.md`. Живьём через `omp --no-extensions -e`: `web_search` вернул `[fetch 1]`; сабагент назвал слово из `AGENTS.md`; без просьбы `task` не вызван; по просьбе вызов `task` без поля `agent`; в запросе Codex `parallel_tool_calls: true`. `/blindreview`: принято за 10 кругов, 248 требований из 248; одна находка закрыта возражением: сходство трёх мест с прежним кодом задано самим проектом.
 
 **Носители правила:** `src/modules/rqw-codex-adapter/`, `dev/tests/harness/rqw-codex-adapter/rqw-codex-adapter.test.js`, `install.manifest.json`.

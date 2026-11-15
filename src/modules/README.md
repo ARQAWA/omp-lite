@@ -19,8 +19,7 @@ README модуля описывает:
 
 Написанный код:
 
-- `dyslexia` — правило дислексии скрытым сообщением на каждом ходе. Тест: `dev/tests/harness/dyslexia/`.
-- `workflow` — подсказка о порядке работы скрытым сообщением, только основному агенту. Тест: `dev/tests/harness/workflow/`.
+- `rqw-system-core` — основа: системный промпт, правила общения, памятка внутри каждого сообщения владельца. Тест: `dev/tests/harness/rqw-system-core/`.
 - `skill-alias` — короткий `/имя` вместо `/skill:имя`. Тест: `dev/tests/harness/skill-alias/`.
 - `memory-guide` — короткий блок про память в системном промпте, пока включён Mnemopi. Тест: `dev/tests/harness/memory-guide/`.
 - `model-picker` — компактный пикер модели и усилия, Shift+стрелки, фильтр. Тест: `dev/tests/harness/model-picker/`.
@@ -41,8 +40,6 @@ README модуля описывает:
 
 Промпт без кода:
 
-- `system-prompt` — системный промпт на базе Cursor 5.5, `SYSTEM.md`.
-- `communication` — правила общения: блоки для главного агента, заметка об отчёте для сабагентов. Тест: `dev/tests/harness/communication/`.
 - `short-task` — навык: размытая задача превращается в карточку из пяти строк, `SKILL.md`.
 
 Каждый README описывает свой модуль.
