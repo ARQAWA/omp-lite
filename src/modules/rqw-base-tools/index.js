@@ -256,8 +256,9 @@ async function partialPatch(input, cwd, dry) {
 	const paths = [...new Set(sections.map(key))];
 	// Only the native edit resolves a URL target and finds a missing file elsewhere by its name.
 	// A cut or a paste uses the clipboard of the whole patch and of the session; a move writes one more file;
-	// the dry run of a removal drops the snapshots of the file: such a patch is not split.
-	if (paths.length < 2 || /^\s*(?:(?:CUT|MV|REM)\b|PUT\b.*[^:\s]\s*$)/m.test(input) || sections.some(section => !existsSync(section.full))) return;
+	// the dry run of a removal drops the snapshots of the file; a notebook is edited as cells, not as its file text:
+	// such a patch is not split.
+	if (paths.length < 2 || /^\s*(?:(?:CUT|MV|REM)\b|PUT\b.*[^:\s]\s*$)/m.test(input) || sections.some(section => section.full.endsWith(".ipynb") || !existsSync(section.full))) return;
 	if (!(await dry(input)).isError) return;
 	const skipped = [];
 	for (const full of paths) {

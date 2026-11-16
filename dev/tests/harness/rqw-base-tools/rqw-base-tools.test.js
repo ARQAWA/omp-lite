@@ -272,7 +272,7 @@ const result = more => ({ toolName: "edit", toolCallId: "one", isError: false, c
 const note = [texts.skipped.head, "[bad.txt]: no match in bad.txt", texts.skipped.section, `${bad}\n${alias}`, texts.skipped.tail].join("\n");
 // A folder with the files the patches change.
 const repo = (run, natives) => tmp(async dir => {
-	for (const name of ["a.txt", "bad.txt", "bad2.txt", "m.txt"]) await writeFile(join(dir, name), "old");
+	for (const name of ["a.txt", "bad.txt", "bad2.txt", "m.txt", "n.ipynb"]) await writeFile(join(dir, name), "old");
 	await run(setup(natives, undefined, dir), dir);
 });
 
@@ -307,8 +307,8 @@ test("the native edit gets the patch as it is in every other case", async () => 
 		[patch(a, c)], [patch(bad, alias)], [patch(bad, bad2)], [`x\n${patch(a, bad)}`], [undefined], [patch(a, bad), "write"], [patch(a, bad), "edit", broken],
 		// The engine may find a missing file elsewhere by its name.
 		[patch(a, bad, "[gone.txt#EEEE]\nPUT 1.=1:\n+x")],
-		// A move between files: the source must not be cut without the paste. A renamed file may land on a skipped one. A removal drops snapshots.
-		[patch("[a.txt#AAAA]\nCUT 1.=1", "[m.txt]\nPUT <1", bad)], [patch(a, bad, "[m.txt]\nPUT <1 @name")], [patch("[a.txt#AAAA]\nMV bad.txt", bad)], [patch(a, bad, "[m.txt]\nREM")],
+		// A move between files: the source must not be cut without the paste. A renamed file may land on a skipped one. A removal drops snapshots. A notebook is cells.
+		[patch("[a.txt#AAAA]\nCUT 1.=1", "[m.txt]\nPUT <1", bad)], [patch(a, bad, "[m.txt]\nPUT <1 @name")], [patch("[a.txt#AAAA]\nMV bad.txt", bad)], [patch(a, bad, "[m.txt]\nREM")], [patch(a, bad, "[n.ipynb]\nPUT 1.=1:\n+x")],
 		// The native edit ignores the rows after the end of a patch.
 		[`${patch(bad)}\n*** End Patch\n${c}`],
 	];
