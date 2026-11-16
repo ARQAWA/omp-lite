@@ -2165,3 +2165,24 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests`: 96 pass, 0 fail.
 
 **Носители правила:** `src/modules/rqw-runtime-config/config.yml`, `src/modules/rqw-harness-interface/model-picker.json`.
+
+## D-127 — сбор контекста волнами по образцу Cursor
+
+**Решение:** четыре малые правки, чтобы агент собирал контекст как в Cursor, но пачками:
+
+1. `read.summarize.enabled: false`: `read` по голому пути отдаёт файл целиком. Сторож ждёт `false`. Описание `read`: «A bare path returns the whole file: prefer it to ranges.» вместо абзаца про сводку.
+2. `files` с `pattern`: имя файла и число совпадений, без первой строки совпадения. Второй проход движка (`mode: "content"`) и функция `clip` убраны.
+3. описание `grep`: «An exact name or value given in the request: search it here first.»
+4. блок `<file_work>` в `SYSTEM.md`, семь шагов: в первом ответе карта, один широкий поиск, `grep` точных имён из запроса и `grep` темы в файлах сборки и запуска; точки входа целиком; дальше по импортам и вызовам пачкой вместе с `grep` точных имён; повтор, пока у каждой части запроса нет кода; одной пачкой непрочитанные миграции, конфиг, читатели хранилища и тесты; добор промахов ещё одним ответом; правка. В конце: «The shortest path limits what you change, never what you read.»
+
+Памятка `REMINDER` и описание `edit` не менялись.
+
+**Основание:** слова владельца от 2026-11-16: «чтобы агент вёл себя exactly так же, как в Курсоре, но учитывая наши тууулы»; «уменьшенное количество шагов»; «спроектируй ... проект самых кратчайших минимальных изменений, чтобы всё это применить и потом сразу же сделать замер ... Haiku High, Luna Extra High ... только эти две модели».
+
+**Причина:** реверс Cursor (`~/ai-project/cursor-pi/research/cursor/reverse/`): в системном промпте про поиск две строки, алгоритма нет; `ReadFile` «recommended to read the whole file»; поиск отдаёт имена файлов; описание `Subagent`: точное имя ищется напрямую. Замер от 2026-11-16 (`~/Downloads/bench-reports/`): сводка чтения прятала импорты, главный агент на terra открывал 3 файла из 5 обязательных. OMP 18.20.2: `packages/coding-agent/src/tools/read.ts`, `read-summary.ts`; каталог агента через `PI_CODING_AGENT_DIR` (`packages/utils/src/dirs.ts`).
+
+**Проверка:** `bun test dev/tests`: 96 pass, 0 fail. Замер: 12 прогонов задачи сбора, `openai-codex/gpt-6-luna` xhigh и `anthropic/claude-haiku-5-5` high, по 3 круга, прежняя и новая сборка в отдельных каталогах агента. Данные: `~/Downloads/bench-reports/waves/`. Среднее, прежняя → новая. luna: запросов 8,7 → 6,3; тулколов 53,7 → 28,7; строк обязательных файлов 62 → 100%; файлов из 5 обязательных 4,3 → 4,7; $0,058 → 0,049; 183 → 164 с. haiku: запросов 9,3 → 7,0; тулколов 51,3 → 38,0; строк обязательных файлов 26 → 100%; файлов из 5 обязательных 3,7 → 5,0; $0,110 → 0,127; 92 → 80 с.
+
+**Границы:** по 3 круга, одна задача, один проект; задача правки не мерялась; охват считан только по ответам `read`. Миграцию `000015_inventory_seller_asset_guards.sql` новая сборка не открыла в 1 прогонах из 6, прежняя в 5 из 6. Заменяет D-104 и D-107 в части сводки чтения у главного агента.
+
+**Носители правила:** `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.texts.json`, `rqw-base-tools.yml`, `rqw-base-tools.reference.json`, `src/modules/rqw-system-core/SYSTEM.md`, `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`, `dev/tests/install/manifest.test.js`.

@@ -10,7 +10,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import reference from "./rqw-base-tools.reference.json";
 import texts from "./rqw-base-tools.texts.json";
 
-const TIMEOUT_MS = 30000, DRY_RUN_MS = 10000, MAX_FILE_BYTES = 4 * 1024 * 1024, MAX_LINE_BYTES = 512, RESERVE_KB = 5;
+const TIMEOUT_MS = 30000, DRY_RUN_MS = 10000, MAX_FILE_BYTES = 4 * 1024 * 1024, RESERVE_KB = 5;
 const NATIVES = "@oh-my-pi/pi-natives", OMP = "@oh-my-pi/pi-coding-agent/", SPILL = "tools.artifactSpillThreshold";
 // OMP resolves its own packages for an extension only when the specifier is written out.
 const MODULES = {
@@ -87,19 +87,11 @@ function renderMap(files, budget) {
 	return [header, ...blocks.flatMap(block => block.lines), footer()].join("\n");
 }
 
-function clip(line) {
-	let text = String(line ?? "").replace(/\r?\n/g, "\\n").replace(/\r$/, "");
-	if (size(text) <= MAX_LINE_BYTES) return text;
-	text = text.slice(0, MAX_LINE_BYTES);
-	while (size(text) > MAX_LINE_BYTES - 3) text = text.slice(0, -1);
-	return `${text}...`;
-}
-
 /** Search results by match count. The tail folds by directory, then by top-level directory. */
-function renderSearch(entries, first, head, budget) {
+function renderSearch(entries, head, budget) {
 	const sorted = [...entries].sort((a, b) => b.count - a.count || a.path.localeCompare(b.path)), total = sorted.length;
 	if (!total) return [...head, "No files matched.", "[all 0 files listed]"].join("\n");
-	const lines = sorted.map(entry => `${entry.path} (${entry.count} ${entry.count === 1 ? "match" : "matches"}): ${clip(first.get(entry.path))}`);
+	const lines = sorted.map(entry => `${entry.path} (${entry.count} ${entry.count === 1 ? "match" : "matches"})`);
 	const dirOf = (path, top) => top ? path.split("/")[0] : path.slice(0, path.lastIndexOf("/"));
 	const label = (dir, [files, matches]) => `${dir}/ (${files} files, ${matches} matches)`;
 	const footer = (listed, dirs) => dirs ? `[${total} files: ${listed} listed, the rest folded into ${dirs} directories]` : `[all ${total} files listed]`;
@@ -170,18 +162,10 @@ async function runFiles(params, cwd, load, pi, signal) {
 		const entries = (counts?.matches ?? [])
 			.map(match => ({ path: rel(root, match.path), count: Number(match.matchCount ?? 0) }))
 			.filter(entry => entry.count > 0 && !hidden(entry.path));
-		const first = new Map();
-		if (entries.length) {
-			const content = await natives.grep({ ...grep, mode: "content", maxCountPerFile: 1, maxColumns: MAX_LINE_BYTES, timeoutMs: left() });
-			for (const match of content?.matches ?? []) {
-				const path = rel(root, match.path);
-				if (!first.has(path)) first.set(path, match.line);
-			}
-		}
 		const total = Math.max(scope, entries.length), searched = Math.min(total, Math.max(Number(counts?.filesSearched ?? total) - lost, entries.length));
 		const head = [`${entries.length} files, ${entries.reduce((sum, entry) => sum + entry.count, 0)} matches, searched ${searched} of ${total} files`];
 		if (big.length) head.push(`searched in part (first 4 MiB): ${big.sort().join(", ")}`);
-		return done(renderSearch(entries, first, head, budget));
+		return done(renderSearch(entries, head, budget));
 	} catch (error) {
 		return answer(`files: ${error instanceof Error ? error.message : error}. Narrow path and try again.`, true);
 	}

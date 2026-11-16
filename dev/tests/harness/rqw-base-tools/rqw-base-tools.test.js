@@ -19,11 +19,11 @@ class EditSession {
 		return bad ? { isError: true, text: `no match in ${bad[1]}` } : { isError: false, text: "ok" };
 	}
 }
-// counts: path -> [match count, first matching line]
+// counts: path -> match count
 const engine = (paths, counts = {}, searched = paths.length, calls = []) => ({
 	calls,
 	glob: async options => (calls.push(options), { matches: paths.map(path => ({ path, fileType: 1 })) }),
-	grep: async options => (calls.push(options), { filesSearched: searched, matches: Object.entries(counts).map(([path, [matchCount, line]]) => ({ path, matchCount, line })) }),
+	grep: async options => (calls.push(options), { filesSearched: searched, matches: Object.entries(counts).map(([path, matchCount]) => ({ path, matchCount })) }),
 });
 // One fake of OMP: the engine, the settings registry, the approval keys.
 function setup(natives = engine([]), current = reference.settings, cwd = "/repo") {
@@ -73,19 +73,18 @@ test("a map over the budget folds deep directories; one that cannot fit goes out
 	expect(whole.split("\n").at(-1)).toBe("[all 300 files listed]");
 });
 
-test("a search lists files by match count with the first line", async () => {
-	const natives = engine(["a.ts", "src/b.ts", "src/c.bin", "node_modules/n.js"], { "a.ts": [1, "one\ntwo"], "src/b.ts": [3, "x".repeat(600)], "node_modules/n.js": [9, "x"] }, 2);
+test("a search lists files by match count", async () => {
+	const natives = engine(["a.ts", "src/b.ts", "src/c.bin", "node_modules/n.js"], { "a.ts": 1, "src/b.ts": 3, "node_modules/n.js": 9 }, 2);
 	const lines = (await setup(natives).files({ pattern: "one\\ntwo|x", case: false, glob: "**/*" })).split("\n");
 	expect(lines[0]).toBe("2 files, 4 matches, searched 2 of 3 files");
-	expect(lines[1]).toBe(`src/b.ts (3 matches): ${"x".repeat(509)}...`);
-	expect(lines.slice(2)).toEqual(["a.ts (1 match): one\\ntwo", "[all 2 files listed]"]);
+	expect(lines.slice(1)).toEqual(["src/b.ts (3 matches)", "a.ts (1 match)", "[all 2 files listed]"]);
 	expect(natives.calls[1]).toMatchObject({ mode: "count", pattern: "one\\ntwo|x", ignoreCase: true, multiline: true, glob: "**/*" });
-	expect(natives.calls[2]).toMatchObject({ mode: "content", maxCountPerFile: 1 });
+	expect(natives.calls).toHaveLength(2);
 	expect(await setup(engine(["a.ts"])).files({ pattern: "zzz" })).toBe("0 files, 0 matches, searched 1 of 1 files\nNo files matched.\n[all 0 files listed]");
 });
 
 test("a long search tail folds by directory and the counts add up", async () => {
-	const counts = Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`src/d${i % 10}/f${i}.ts`, [1, "x"]]));
+	const counts = Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`src/d${i % 10}/f${i}.ts`, 1]));
 	const text = await setup(engine(Object.keys(counts), counts), small).files({ pattern: "x" });
 	const [, listed] = /^\[100 files: (\d+) listed, the rest folded into \d+ directories\]$/.exec(text.split("\n").at(-1));
 	const folded = [...text.matchAll(/^src\/d\d\/ \((\d+) files, \d+ matches\)$/gm)].reduce((sum, hit) => sum + +hit[1], 0);
@@ -94,15 +93,15 @@ test("a long search tail folds by directory and the counts add up", async () => 
 });
 
 test("a list that fits whole is not folded", async () => {
-	const full = "1 files, 1 matches, searched 1 of 1 files\nd/a (1 match): x\n[all 1 files listed]";
+	const full = "1 files, 1 matches, searched 1 of 1 files\nd/a (1 match)\n[all 1 files listed]";
 	const exact = { ...reference.settings, "tools.artifactSpillThreshold": 5 + full.length / 1024 };
-	expect(await setup(engine(["d/a"], { "d/a": [1, "x"] }), exact).files({ pattern: "x" })).toBe(full);
+	expect(await setup(engine(["d/a"], { "d/a": 1 }), exact).files({ pattern: "x" })).toBe(full);
 });
 
 test("a mask that matches a directory takes all its files", async () => {
 	// The directory name has mask characters: it is walked by path.
 	const natives = {
-		...engine([], { "src[1]/a.ts": [1, "x"] }, 1),
+		...engine([], { "src[1]/a.ts": 1 }, 1),
 		glob: async ({ pattern, path }) => ({ matches: path === "/repo" && pattern === "src*" ? [{ path: "src[1]", fileType: 2 }] : /^(\*\*\/\*|src\/\*\*)$/.test(pattern) && path === "/repo/src[1]" ? [{ path: "a.ts", fileType: 1 }] : [] }),
 	};
 	// A mask that ends with a separator is the directory with all inside it.
@@ -116,7 +115,7 @@ test("a real file over 4 MiB is named; links and hidden files the engine read ar
 	for (const name of ["small.ts", "node_modules/n.js"]) await writeFile(join(dir, name), "a");
 	for (const name of ["link.ts", "node_modules/link.js"]) await symlink(join(dir, "small.ts"), join(dir, name));
 	// The engine read three files: big.ts, small.ts and the hidden n.js.
-	const natives = engine(["big.ts", "small.ts", "link.ts", "node_modules/n.js", "node_modules/link.js"], { "big.ts": [1, "a"] }, 3);
+	const natives = engine(["big.ts", "small.ts", "link.ts", "node_modules/n.js", "node_modules/link.js"], { "big.ts": 1 }, 3);
 	const text = await setup(natives, undefined, dir).files({ pattern: "a" });
 	expect(text.split("\n").slice(0, 2)).toEqual(["1 files, 1 matches, searched 2 of 2 files", "searched in part (first 4 MiB): big.ts"]);
 }));
