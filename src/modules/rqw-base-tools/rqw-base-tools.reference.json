@@ -65,6 +65,9 @@
 						"path",
 						"replace_all"
 					]
+				},
+				{
+					"description": "Hashline patches. Use only lines visible in latest `read`/`search`; elisions are unseen.\n\n```text\n*** Begin Patch\n[PATH#TAG]\nPUT 3.=3:\n+replacement\n*** End Patch\n```\n`TAG`: required 4-hex snapshot; `N,M`: original line numbers. Repeat the header per file.\n\nOps:\n- `PUT N.=M:` replaces inclusive N–M with `+` body; `PUT N*:` replaces the syntax block at N.\n- `PUT <N:` inserts before N; `PUT >N:` after N; `PUT >$:` appends. `PUT >N*:` inserts after block N at sibling depth; insert inside with `PUT >M:` at its closing line.\n- `CUT N.=M`/`CUT N*` deletes and captures, optionally as `@name`.\n- `PUT <N @name`, `PUT >N @name`, `PUT N.=M @name`, or `PUT N* @name` pastes. Range/block paste requires a named register; gap paste may be anonymous. Register pastes have no body.\n- `REM` deletes the file; `MV DEST` moves/renames after prior section edits.\n\nRules:\n- Body rows start `+`; lone `+` writes blank. Rest is verbatim, including indent. Never send removed `-` lines, bare context, or unchanged lines. Range/body lengths are independent. Literal leading `-`/`+`: `+- text`/`++ text`.\n- Re-read after each edit: tag/numbers change. Touch only changed lines; split nonadjacent changes. Additions use gaps. Ranges never start/end mid-expression/block.\n- Block ops target the opener of one multi-line node, never its closer/last/inner line; use range/gap for one statement. Anchor decorators/attributes/doc-comments at the first decorator; standalone line comments stay separate.\n- Markdown heading blocks include deeper headings until the next same/higher heading; inserted sections end blank.\n- Move via `CUT` then `PUT`; registers persist across sections. Do not restyle unrelated code."
 				}
 			]
 		},

@@ -227,6 +227,7 @@ test("the guard names the first change, once per session, and our text is applie
 		[() => {}, "setting edit.mode changed", undefined, { ...reference.settings, "edit.mode": "apply_patch" }],
 		[() => {}, "engine grep changed", { ...engine([]), grep: undefined }],
 		[body => (tool(body, "edit").input_schema.properties = { definition: {}, syntax: {}, type: {} })],
+		[body => (tool(body, "edit").description = reference.tools.edit.alt[2].description)],
 	];
 	for (const [change, want, natives, current] of cases) {
 		const { handlers, ctx, seen } = setup(natives, current), send = async session => {
