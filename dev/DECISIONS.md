@@ -2155,3 +2155,13 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** скилл написан по одному прогону (18.18.8 → 18.20.2): чего в нём не было, в скилле нет. Он материал разработки: в `install.manifest.json` его нет, `src/` и `~/.omp/agent` не менялись. Навыки `release-ompcli-vsix` и `reviewer` в него не скопированы, даны ссылкой. Правок скилла по итогам evals не больше пяти кругов. По правилу 38 `dev/PROCESS.md` следующий апдейт OMP обновляет и этот скилл.
 
 **Носители правила:** `dev/agents/omp-upgrade/SKILL.md`, `dev/agents/omp-upgrade/references/`, `dev/agents/omp-upgrade/evals/evals.json`, `AGENTS.md`, `dev/agents/README.md`.
+
+## D-126 — Gemini 4 в харнесе, короткие имена в пикере
+
+**Решение:** `antigravity-cli` открыт; три модели `antigravity-cli/gemini-4-hydrogen`, `-argon`, `-carbon` стоят в `enabledModels`, `perCall` и карте порогов 400k (`rqw-runtime-config`). Имена в пикере (`rqw-harness-interface`): `Hydrogen-4`, `Argon-4`, `Carbon-4`, `DeepSeek Flash Go`, `DeepSeek Flash OpenRouter`.
+
+**Основание:** слова владельца от 2026-11-16: «занос, э-э-э, Гемини на постоянку в runtime», «префикс «гемини» четыре убрать», «один называться «Go», а второй будет, э-э-э, «Open router»» (f63dcd9c); «гидроген-4, аргон-4, карбон-4 … всё минимально» (b2dcc8fa).
+
+**Проверка:** `bun test dev/tests`: 96 pass, 0 fail.
+
+**Носители правила:** `src/modules/rqw-runtime-config/config.yml`, `src/modules/rqw-harness-interface/model-picker.json`.

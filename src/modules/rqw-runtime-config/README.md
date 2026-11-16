@@ -4,13 +4,13 @@ RQW Runtime Config: общие настройки OMP 18.20.2 одним фай�
 
 **Назначение:**
 1. общие настройки харнеса: провайдеры, модели, роли, тулы, интерфейс, служебное.
-2. порог сжатия контекста 400k: `compaction.modelThresholds`, 18 моделей, значение `f400000`.
+2. порог сжатия контекста 400k: `compaction.modelThresholds`, 21 модель, значение `f400000`.
 
 **Правило:** один ключ лежит в одном месте. Здесь только настройки, которые не принадлежат ни одному плагину. Свои настройки несут `rqw-base-tools`, `rqw-harness-interface`, `rqw-codex-adapter`. Итоговый конфиг это сумма их файлов.
 
 **Вход:** `config.yml`, 57 значений. Запись `config` в [манифесте](../../../install.manifest.json).
 
-**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`. Остальные 94 провайдера стоят в `disabledProviders`: белого списка в OMP нет. `enabledModels`: десять точных имён. Роль `perCall`: 80 моделей, которые можно назвать сабагенту. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter сюда не входит: его кладут руками в `~/.omp/agent/models.yml`.
+**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `antigravity-cli`. Остальные 93 провайдера стоят в `disabledProviders`: белого списка в OMP нет. `enabledModels`: 13 точных имён, из них три Gemini 4 через `antigravity-cli`. Роль `perCall`: 83 модели, которые можно назвать сабагенту. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter сюда не входит: его кладут руками в `~/.omp/agent/models.yml`.
 
 **Хуки:** нет.
 

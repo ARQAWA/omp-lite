@@ -40,7 +40,7 @@ test("opening makes the first move, confirms in order and warns on failure", asy
 	const s = session(); s.start();
 	expect(s.open(down)).toEqual({ consume: true });
 	expect(s.rows()).toHaveLength(9);
-	expect(s.rows()[5]).toContain("DeepSeek Flash OpenCodeGo");
+	expect(s.rows()[5]).toContain("DeepSeek Flash Go");
 	expect(s.open(down)).toBeUndefined();
 	s.dialogs[0].handleInput(right); s.dialogs[0].handleInput("\x1b[13;2~"); await flush();
 	expect(s.calls).toEqual([["model", flash], ["effort", "max"]]);
@@ -94,7 +94,7 @@ test("edges do not wrap and efforts choose the nearest lower or minimum", async 
 });
 
 test("enabledModels restricts the list; failed and empty config show all", async () => {
-	for (const [config, expected] of [[["opencode-go/*"], "OpenCodeGo"], [[], "Opus"], [new Error("failed"), "Opus"]]) {
+	for (const [config, expected] of [[["opencode-go/*"], "Flash Go"], [[], "Opus"], [new Error("failed"), "Opus"]]) {
 		const s = session({ config }); s.start(); await flush();
 		expect(s.commands).toEqual([[process.execPath, ["config", "get", "enabledModels", "--json"]]]);
 		s.open(up); expect(s.rows()[5]).toContain(expected);

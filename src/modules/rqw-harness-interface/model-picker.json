@@ -27,7 +27,10 @@
     "max": "#ff4757"
   },
   "aliases": {
-    "opencode-go/deepseek-v4.1-flash": "DeepSeek Flash OpenCodeGo",
-    "openrouter/deepseek/deepseek-v4.1-flash-1017": "DeepSeek Flash OpenRouter"
+    "opencode-go/deepseek-v4.1-flash": "DeepSeek Flash Go",
+    "openrouter/deepseek/deepseek-v4.1-flash-1017": "DeepSeek Flash OpenRouter",
+    "antigravity-cli/gemini-4-hydrogen": "Hydrogen-4",
+    "antigravity-cli/gemini-4-argon": "Argon-4",
+    "antigravity-cli/gemini-4-carbon": "Carbon-4"
   }
 }
