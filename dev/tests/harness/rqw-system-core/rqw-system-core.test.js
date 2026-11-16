@@ -10,7 +10,7 @@ const rule = async name => {
 };
 const main = await rule("rqw-system-core-main");
 const sub = await rule("rqw-system-core-subagent");
-// OMP 18.20.2 capability/rule.ts ruleAppliesToAgent.
+// OMP 18.21.0 capability/rule.ts ruleAppliesToAgent.
 const applies = (pattern, name) => pattern === name || new Bun.Glob(pattern).match(name);
 
 function run(messages, kind) {

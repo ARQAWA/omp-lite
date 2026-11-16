@@ -2207,3 +2207,24 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** в замере правки отсев не сработал ни разу: модели слали по одному файлу на вызов. По 2 круга, одна задача. Снимки после `write` и `grep` не копятся. Где снимка нет, секция со старой меткой отсеивается, хотя родной `edit` её принял бы: модель получает причину и текущую метку и досылает одну секцию. Сухой прогон правки добавляет в своё хранилище ещё одну версию файла. Формы `edit` у gemini с живого запроса не сняты. Сжатый текст `hashline` взят из исходников OMP (`packages/coding-agent/src/edit/hashline-compact.md`), с живого запроса не снят. На режимах `patch` и `apply_patch` сторож предупредит: сборка их не использует. Патч с `MV`, `REM`, вставкой из буфера (`PUT` без тела), строкой-маркером внутри, другим видом заголовка или файлом `.ipynb` не режется. Сухой прогон не проверяет показанные строки (`enforceSeenLines: false`): хранилище сессии расширению недоступно (`packages/coding-agent/src/edit/store.ts`, `getEditStore(session)`), а неточная копия дала бы ложный отсев. Отказ родного `edit` по непоказанной строке отменяет вызов целиком, как без отсева.
 
 **Носители правила:** `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.texts.json`, `rqw-base-tools.yml`, `rqw-base-tools.reference.json`, `README.md`, `src/modules/rqw-system-core/SYSTEM.md`, `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`, `routing.test.js`.
+
+## D-129 — харнес на OMP 18.21.0: минимальный апдейт
+
+**Решение:** харнес переведён с OMP 18.20.2 на 18.21.0 минимальной правкой:
+
+1. `rqw-runtime-config`: новый провайдер `modal` закрыт в `disabledProviders` (93 → 94 закрытых). Открыты прежние пять.
+2. `rqw-windows-pack`: пин `omp.exe` в `vscode/runtime.json` на релиз `v18.21.0` (sha256 `2880d63e3d23156516b0200fd96a48fac9423cbd9959449efec79279a67ec314`, 254140416 байт); версия расширения 0.0.15 → 0.0.16.
+3. `INSTALL.md`, шаг 1: `omp/18.21.0`.
+4. версия 18.20.2 → 18.21.0 в README и комментариях модулей и в двух тестах.
+
+Эталон сторожа `rqw-base-tools`, якоря `EDITS.task` и `EDITS.eval`, памятка и остальной код не менялись.
+
+**Основание:** слова владельца от 2026-11-16: «надо обновить нашу версию OMP до актуальной.»; «Надо полный апгрейд сделать с учётом Windows и маркетплейса. Прочитай скиллу MPgrade. Апгрейд и по нему действуй.»; «А если план до- если слепое ревью п- типа выпустит план, то сразу его собирай без спрашивания меня.»; «да 21 берем»; «Код ревью пусть делает Gemini 4 Hydra medium».
+
+**Проверка:** снимки запроса до отправки: бинари 18.20.2 и 18.21.0, копии `~/.omp/agent`, ключ-пустышка. Шесть родных описаний (`read`, `bash`, `edit`, `glob`, `grep`, `write`) и их поля на 18.21.0 равны эталону. В полном запросе 12 из 13 описаний равны, схемы равны; отличается `task`: OMP убрал агента `seance`. Системный промпт равен, сообщения равны кроме даты. Настройки: 62 ключа и 7 листьев `tools.*` равны. Внутренние импорты грузятся. Моделей 6003 = 6003. `bun test dev/tests`: 98 pass, 0 fail. План принят blind review: 7 кругов, два чистых подряд, 28 из 28.
+
+**Причина:** OMP 18.21.0: `packages/catalog/src/compat/provider-ids.ts` (96 → 97, новый `modal`); `packages/coding-agent/src/prompts/tools/task.md` (без `seance`); `packages/coding-agent/src/extensibility/extensions/lifecycle-mirror.ts` (`agent_pause` сессии приходит расширению как `agent_end`).
+
+**Границы:** тег `v18.22.0` есть, релиза у него на момент апдейта нет: владелец выбрал 18.21.0. На VDI не проверено. `Update` на VDI новый харнес не возьмёт: нужен VSIX 0.0.16. Модель с именем Hydra в OMP нет: код-ревью делает `antigravity-cli/gemini-4-hydrogen` medium.
+
+**Носители правила:** `src/modules/rqw-runtime-config/config.yml`, `README.md`; `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`, `README.md`, `voice/index.js`; `INSTALL.md`; `src/modules/rqw-codex-adapter/README.md`, `index.js`, `agentsmd.js`; `src/modules/rqw-system-core/README.md`; `src/modules/rqw-harness-interface/model-picker.js`; `dev/tests/repository/rqw-windows-pack.test.js`; `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`.
