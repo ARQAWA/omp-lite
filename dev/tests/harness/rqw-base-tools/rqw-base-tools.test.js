@@ -228,6 +228,7 @@ test("the guard names the first change, once per session, and our text is applie
 		[() => {}, "engine grep changed", { ...engine([]), grep: undefined }],
 		[body => (tool(body, "edit").input_schema.properties = { definition: {}, syntax: {}, type: {} })],
 		[body => (tool(body, "edit").description = reference.tools.edit.alt[2].description)],
+		[body => (tool(body, "read").description = tool(body, "read").description.replace("- Directory", "- Selected file: `[a#1A2B]`\n- Directory"))],
 	];
 	for (const [change, want, natives, current] of cases) {
 		const { handlers, ctx, seen } = setup(natives, current), send = async session => {

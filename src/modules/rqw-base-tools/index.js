@@ -179,7 +179,8 @@ const canon = name => name.replace(/^_/, "");
 const toolsOf = payload => [payload, payload?.tools, payload?.functions, payload?.config?.tools, payload?.request?.tools, payload?.toolConfig?.tools].filter(Array.isArray).flat()
 	.flatMap(tool => tool?.functionDeclarations ?? [tool?.function ?? tool?.toolSpec ?? tool]).filter(tool => typeof tool?.name === "string" && tool.description);
 // OMP lists its shell builtins in bash (prompts/tools/bash.md): the list follows the platform, not a change.
-const BUILTINS = /^In-process builtins, ahead of PATH: .*$/m;
+// In the hashline mode `read` gets one more line (prompts/tools/read.md, IS_HL_MODE).
+const BUILTINS = /^In-process builtins, ahead of PATH: .*$|^- Selected file: .*\n/m;
 const native = text => String(text).replace(BUILTINS, "").trim();
 
 /** The first native tool or setting that moved away from the reference. */

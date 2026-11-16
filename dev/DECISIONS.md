@@ -2194,7 +2194,7 @@ Blind и high больше не различаются ни моделью, ни
 1. `edit.mode: hashline`. OMP сам даёт `replace` deepseek и другим слабым моделям (`packages/coding-agent/src/utils/edit-mode.ts`).
 2. правка по файлам разбирает секции `[путь#метка]`; сухой прогон в режиме `hashline`. Разбор патча `apply_patch` удалён.
 3. снимки файлов из ответов `read` и `edit` копятся в своём `EditStore` и идут в сухой прогон: без них он отклонял старую метку, которую родной `edit` принимает.
-4. у `edit` два текста: `hashline` и `replace`. Сторож знает обе формы `edit` и `read` (`alt` в эталоне).
+4. у `edit` два текста: `hashline` и `replace`. Сторож знает формы `edit` (`alt` в эталоне) и строку `Selected file` в `read`.
 5. `SYSTEM.md`: префикс строки `12:`; «all ready changes in one response».
 6. перехват bash: правила `sed -i`, `perl -i`, `awk -i inplace` убраны. Правила чтения, поиска и списков остались.
 
