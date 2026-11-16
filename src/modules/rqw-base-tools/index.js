@@ -173,7 +173,7 @@ async function runFiles(params, cwd, load, pi, signal) {
 
 // ---- texts and guard ----
 
-const canon = name => name.replace(/^_/, "").replace(/^apply_patch$/, "edit");
+const canon = name => name.replace(/^_/, "");
 // Every wire form: flat, nested `function`, Google `functionDeclarations`, Bedrock `toolSpec`. With inline tool descriptors
 // OMP sends no descriptions and keeps the native texts in the system prompt: nothing to check or replace.
 const toolsOf = payload => [payload, payload?.tools, payload?.functions, payload?.config?.tools, payload?.request?.tools, payload?.toolConfig?.tools].filter(Array.isArray).flat()
@@ -190,12 +190,13 @@ function checkReference(tools, current, isChild) {
 		// A subagent may run without some tools.
 		if (!tool && isChild) continue;
 		if (!tool) return `rqw-base-tools: native ${name} is missing`;
-		if (native(tool.description) !== native(want.description)) return `rqw-base-tools: native ${name} changed description`;
+		// `alt`: the other native forms, by edit mode and by model.
+		const forms = [want, ...(want.alt ?? [])];
+		if (!forms.some(form => form.description && native(tool.description) === native(form.description))) return `rqw-base-tools: native ${name} changed description`;
 		// Apple and Devin send the schema as a JSON string.
 		const schema = tool.parameters ?? tool.input_schema ?? tool.inputSchema?.json ?? tool.inputSchema ?? tool.parametersJsonSchema ?? tool.jsonSchemaString;
 		const fields = Object.keys((typeof schema === "string" ? JSON.parse(schema) : schema)?.properties ?? tool.format ?? {}).sort().join();
-		// GPT gets `edit` as a free-form tool: both field sets are native.
-		if (fields !== want.fields.join() && !(name === "edit" && fields === "i,input")) return `rqw-base-tools: native ${name} changed fields`;
+		if (!forms.some(form => fields === form.fields?.join())) return `rqw-base-tools: native ${name} changed fields`;
 	}
 	for (const [key, want] of Object.entries(current ? reference.settings : {})) {
 		if (current[key] !== want) return `rqw-base-tools: setting ${key} changed`;
@@ -218,7 +219,8 @@ function rewrite(tools) {
 	// A last part `{ native: marker }` is the live native text from the marker on: OMP's own lines stay OMP's.
 	const pick = tools.some(tool => canon(tool.name) === "files") ? 0 : 1;
 	for (const tool of tools) {
-		const name = canon(tool.name), text = tool.description;
+		// OMP gives some models `edit` in the replace mode: it has its own text.
+		const text = tool.description, name = canon(tool.name) === "edit" && text.includes("old_string") ? "replace" : canon(tool.name);
 		if (!Object.hasOwn(texts.native, name)) continue;
 		const parts = [].concat(texts.native[name]), marker = parts.at(-1).native;
 		const own = parts.filter(part => !part.native).map(part => typeof part === "string" ? part : part[pick]).join("");
@@ -230,14 +232,13 @@ function rewrite(tools) {
 
 // ---- per-file patches ----
 
-const BEGIN = "*** Begin Patch", END = "*** End Patch", SECTION = /^\*\*\* (?:Add|Delete|Update) File: (.*)$/;
-const wrap = sections => [BEGIN, ...sections.flatMap(section => section.lines), END, ""].join("\n");
+const SECTION = /^\s*\[([^\]\n#]+)(?:#[^\]\n]*)?\]\s*$/, ENVELOPE = /^\*\*\* (?:Begin|End) Patch\s*$/;
+const wrap = sections => `${sections.flatMap(section => section.lines).join("\n")}\n`;
 
-/** File sections of a patch envelope; empty when the input is not a plain envelope. */
+/** File sections of a hashline patch, without the optional envelope; empty when the input starts with something else. */
 function splitPatch(input) {
-	const lines = input.trim().split("\n"), sections = [];
-	if (lines[0].trim() !== BEGIN || lines.at(-1).trim() !== END) return [];
-	for (const line of lines.slice(1, -1)) {
+	const sections = [];
+	for (const line of input.trim().split("\n").filter(line => !ENVELOPE.test(line))) {
 		const path = SECTION.exec(line)?.[1].trim();
 		if (path !== undefined) sections.push({ path, lines: [] });
 		else if (!sections.length && line.trim()) return [];
@@ -247,15 +248,12 @@ function splitPatch(input) {
 }
 
 /** Leaves out the files that fail a dry run. Undefined: the patch goes to the native edit as it is. */
-async function partialPatch(input, cwd, dryRunner) {
+async function partialPatch(input, cwd, dry) {
 	// One file under two names, a link too, is one file.
 	const sections = splitPatch(input).map(section => ({ ...section, full: real(resolve(cwd, section.path)) })), key = section => section.full;
 	const paths = [...new Set(sections.map(key))];
-	// Only the native edit resolves URL targets, paths it rewrites (a leading `@`, `[`, `:`, `~`, `\\`; an unusual
-	// space) and a missing file it finds elsewhere by name. A Windows drive letter is not a scheme.
-	if (paths.length < 2 || /^\*\*\* (?:(?:Add|Delete|Update) File|Move to): *(?:[@[:~]|\\\\|[\w+.-]{2,}:\/|.*[^\S \n])/m.test(input)) return;
-	if (sections.some(section => !section.lines[0].startsWith("*** Add") && !existsSync(section.full))) return;
-	const dry = await dryRunner();
+	// Only the native edit resolves a URL target and finds a missing file elsewhere by its name.
+	if (paths.length < 2 || sections.some(section => !existsSync(section.full))) return;
 	if (!(await dry(input)).isError) return;
 	const skipped = [];
 	for (const full of paths) {
@@ -266,16 +264,17 @@ async function partialPatch(input, cwd, dryRunner) {
 	return { input: wrap(sections.filter(section => !skipped.some(entry => entry.full === key(section)))), skipped };
 }
 
-// One staging pass of the native edit engine; the writer keeps the disk untouched.
-async function dryRunner(pi, load, cwd) {
+// One staging pass of the native edit engine; the writer keeps the disk untouched. `store`: the snapshots of the
+// files that a read showed or an edit wrote; with them the engine accepts an older tag, as the session does.
+async function dryRunner(pi, load, cwd, store) {
 	const natives = await load(NATIVES), edit = await settings(pi, load, ["edit.fuzzyMatch", "edit.fuzzyThreshold", "edit.blockAutoGenerated"]);
 	const policy = {
-		cwd, mode: "apply_patch", allowFuzzy: edit["edit.fuzzyMatch"], fuzzyThreshold: edit["edit.fuzzyThreshold"],
+		cwd, mode: "hashline", allowFuzzy: edit["edit.fuzzyMatch"], fuzzyThreshold: edit["edit.fuzzyThreshold"],
 		blockAutoGenerated: edit["edit.blockAutoGenerated"], enforceSeenLines: false, maxColumns: 0, planActive: false,
 		urlSchemes: [], urlAliasSchemes: [], planWritableRoots: [], homeDir: homedir(), rawInput: false,
 	};
 	return async input => {
-		const session = new natives.EditSession(new natives.EditStore(), policy);
+		const session = new natives.EditSession(store ?? new natives.EditStore(), policy);
 		try {
 			session.setArgsJson(JSON.stringify({ input }));
 			session.finish();
@@ -336,10 +335,11 @@ function wholeFile(event) {
 /** `load` imports an OMP module; tests replace it. */
 export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 	const z = pi.zod, text = z.string().optional(), flag = z.boolean().optional();
-	let session, keys;
+	let session, keys, store;
 	pi.on("session_start", async (_event, ctx) => {
 		session = ctx.sessionManager;
 		keys = { ...(await load(`${OMP}tools/approval-cache`)), ...(await load(`${OMP}tools/approval-targets`)) };
+		store = await load(NATIVES).then(natives => new natives.EditStore(), () => {});
 	});
 	pi.registerTool({
 		name: "files",
@@ -378,7 +378,7 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 		if (canon(event.toolName) !== "edit" || typeof input !== "string") return;
 		// Fail open: an error or a slow dry run leaves the patch to the native edit.
 		const partial = await Promise.race([
-			partialPatch(input, ctx.cwd, () => dryRunner(pi, load, ctx.cwd)).catch(() => {}),
+			dryRunner(pi, load, ctx.cwd, store).then(dry => partialPatch(input, ctx.cwd, dry)).catch(() => {}),
 			new Promise(done => setTimeout(done, DRY_RUN_MS).unref()),
 		]);
 		if (!partial) return;
@@ -386,7 +386,9 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 		return { input: { input: partial.input } };
 	});
 	pi.on("tool_result", event => {
-		const content = wholeFile(event), skipped = skips.get(event.toolCallId);
+		const content = wholeFile(event), skipped = skips.get(event.toolCallId), details = event.details, name = canon(event.toolName);
+		const seen = name === "read" ? [details?.meta?.source] : name === "edit" ? details?.perFileResults ?? [details] : [];
+		try { for (const entry of seen) (entry?.path ?? entry?.value) && store?.recordSnapshotFile(entry.path ?? entry.value); } catch {}
 		if (content) return { content };
 		if (skips.delete(event.toolCallId)) return skippedResult(event, skipped);
 	});

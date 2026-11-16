@@ -1,5 +1,5 @@
 edit:
-  mode: apply_patch
+  mode: hashline
 grep:
   contextBefore: 3
   contextAfter: 3

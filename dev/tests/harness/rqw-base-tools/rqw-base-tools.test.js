@@ -11,11 +11,12 @@ const yml = Bun.YAML.parse(await Bun.file(new URL("../../../../src/modules/rqw-b
 
 // The dry run of the fake engine fails on every file with `bad` in its path.
 class EditSession {
+	constructor(store) { EditSession.store = store; }
 	setArgsJson(json) { this.input = JSON.parse(json).input; }
 	finish() {}
 	close() {}
 	async apply() {
-		const bad = /File: (\S*bad\S*)/.exec(this.input);
+		const bad = /\[(\S*bad[^#\]]*)/.exec(this.input);
 		return bad ? { isError: true, text: `no match in ${bad[1]}` } : { isError: false, text: "ok" };
 	}
 }
@@ -30,7 +31,7 @@ function setup(natives = engine([]), current = reference.settings, cwd = "/repo"
 	const handlers = {}, tools = [], seen = [], field = () => ({ optional: field });
 	plugin(
 		{ zod: { string: field, boolean: field, object: shape => shape }, pi: { settings: current }, on: (name, fn) => (handlers[name] = fn), registerTool: tool => tools.push(tool) },
-		async name => name.endsWith("pi-natives") ? { FileType: { File: 1, Dir: 2 }, EditSession, EditStore: class {}, ...natives }
+		async name => name.endsWith("pi-natives") ? { FileType: { File: 1, Dir: 2 }, EditSession, EditStore: class { seen = []; recordSnapshotFile(path) { this.seen.push(path); } }, ...natives }
 			: name.endsWith("registry") ? { lookup: key => ({ get: all => all[key] }) }
 			: { approvalDirectoryKey: dir => `${dir}/`, approvalTreeSearchKey: key => `tree ${key}` },
 	);
@@ -171,9 +172,8 @@ test("six native descriptions become ours; schemas and messages stay", async () 
 	expect(seen).toEqual([]);
 });
 
-test("with files, the GPT names and another builtins list: the nested form is rewritten once", async () => {
+test("with files and another builtins list: the nested form is rewritten once", async () => {
 	const { handlers, ctx, seen } = setup(), flat = payload();
-	tool(flat, "edit").name = "apply_patch";
 	tool(flat, "bash").description = tool(flat, "bash").description.replace(/(ahead of PATH: ).*/, "$1awk");
 	const body = { tools: [...flat.tools, { name: "files", description: texts.files }].map(entry => ({ type: "function", function: entry })) };
 	await handlers.before_provider_request({ payload: body }, ctx);
@@ -221,9 +221,9 @@ test("the guard names the first change, once per session, and our text is applie
 		[body => (tool(body, "grep").description += " new"), "native grep changed description"],
 		[body => (tool(body, "bash").input_schema.properties.extra = {}), "native bash changed fields"],
 		[body => body.tools.splice(body.tools.indexOf(tool(body, "read")), 1), "native read is missing"],
-		[() => {}, "setting edit.mode changed", undefined, { ...reference.settings, "edit.mode": "hashline" }],
+		[() => {}, "setting edit.mode changed", undefined, { ...reference.settings, "edit.mode": "apply_patch" }],
 		[() => {}, "engine grep changed", { ...engine([]), grep: undefined }],
-		[body => (tool(body, "edit").input_schema.properties = { i: {}, input: {} })],
+		[body => (tool(body, "edit").input_schema.properties = { definition: {}, syntax: {}, type: {} })],
 	];
 	for (const [change, want, natives, current] of cases) {
 		const { handlers, ctx, seen } = setup(natives, current), send = async session => {
@@ -241,6 +241,13 @@ test("the guard names the first change, once per session, and our text is applie
 	}
 });
 
+test("edit in the replace mode is native and gets its own text", async () => {
+	const { handlers, ctx, seen } = setup(), body = payload(), { description, fields } = reference.tools.edit.alt[1];
+	Object.assign(tool(body, "edit"), { description, input_schema: { properties: Object.fromEntries(fields.map(field => [field, {}])) } });
+	await handlers.before_provider_request({ payload: body }, ctx);
+	expect([tool(body, "edit").description, seen]).toEqual([texts.native.replace, []]);
+});
+
 test("a subagent without a tool is not a change", async () => {
 	const { handlers, ctx, seen } = setup(), body = payload();
 	body.tools.splice(body.tools.indexOf(tool(body, "edit")), 1);
@@ -255,9 +262,8 @@ test("the settings file sets every guarded setting", () => {
 
 // ---- per-file patches ----
 
-const patch = (...sections) => `*** Begin Patch\n${sections.join("\n")}\n*** End Patch\n`;
-const a = "*** Update File: a.txt\n@@\n-old\n+new", bad = "*** Update File: bad.txt\n@@\n-WRONG\n+new";
-const alias = "*** Delete File: ./bad.txt", c = "*** Add File: C:/repo/c.txt\n+c";
+const patch = (...sections) => `${sections.join("\n")}\n`;
+const a = "[a.txt#AAAA]\nPUT 1.=1:\n+new", bad = "[bad.txt#BBBB]\nPUT 9.=9:\n+new", alias = "[./bad.txt#BBBB]\nREM", c = "[m.txt]\nREM", bad2 = "[bad2.txt#DDDD]\nREM";
 const call = (input, toolName = "edit") => ({ toolName, toolCallId: "one", input: { input } });
 const result = more => ({ toolName: "edit", toolCallId: "one", isError: false, content: [{ type: "text", text: "Success." }], ...more });
 const note = [texts.skipped.head, "[bad.txt]: no match in bad.txt", texts.skipped.section, `${bad}\n${alias}`, texts.skipped.tail].join("\n");
@@ -269,8 +275,8 @@ const repo = (run, natives) => tmp(async dir => {
 
 test("a file that does not match is left out whole; the answer is an error with a note and a red entry", () => repo(async ({ handlers, ctx }, dir) => {
 	const done = { path: "/repo/a.txt", diff: "+new" }, failed = { path: join(dir, "bad.txt"), diff: "", isError: true, errorText: "no match in bad.txt" };
-	for (const [name, details, written] of [["edit", { diff: "d", firstChangedLine: 3, perFileResults: [done] }, done], ["apply_patch", undefined]]) {
-		expect(await handlers.tool_call(call(patch(a, bad, c, alias), name), ctx)).toEqual({ input: { input: patch(a, c) } });
+	for (const [name, details, written] of [["edit", { diff: "d", firstChangedLine: 3, perFileResults: [done] }, done], ["_edit", undefined]]) {
+		expect(await handlers.tool_call(call(`*** Begin Patch\n${patch(a, bad, c, alias)}*** End Patch`, name), ctx)).toEqual({ input: { input: patch(a, c) } });
 		const native = result({ details });
 		expect(handlers.tool_result(native)).toEqual({
 			isError: true,
@@ -293,11 +299,9 @@ test("a native failure after the cut keeps its error and details behind the note
 test("the native edit gets the patch as it is in every other case", async () => {
 	const broken = { ...engine([]), EditSession: class { constructor() { throw new Error("engine changed"); } } };
 	const same = [
-		[patch(a, c)], [patch(bad, alias)], [patch(bad, "*** Update File: bad2.txt\n@@\n-x\n+y")], [patch(a, bad, "*** Add File: local://x.txt\n+x")],
-		[patch(a, bad, "*** Update File: m.txt\n*** Move to: @local://m.txt")], [patch(a, bad, "*** Add File: [a.txt]\n+x")], [patch(a, bad, "*** Add File: a\u00a0b.txt\n+x")],
+		[patch(a, c)], [patch(bad, alias)], [patch(bad, bad2)], [`x\n${patch(a, bad)}`], [undefined], [patch(a, bad), "write"], [patch(a, bad), "edit", broken],
 		// The engine may find a missing file elsewhere by its name.
-		[patch(a, bad, "*** Update File: gone.txt\n@@\n-x\n+y")],
-		["[a.txt#AB12]\n+x"], [patch(a, bad), "write"], [patch(a, bad), "edit", broken],
+		[patch(a, bad, "[gone.txt#EEEE]\nREM")],
 	];
 	for (const [input, name, natives] of same) await repo(async ({ handlers, ctx }) => {
 		expect(await handlers.tool_call(call(input, name), ctx)).toBeUndefined();
@@ -311,13 +315,21 @@ test("a link to a file is that file; a denied call leaves nothing behind", () =>
 	await writeFile(join(dir, "bad2.txt"), "old");
 	const { handlers, ctx } = setup(undefined, undefined, dir);
 	expect(await handlers.tool_call(call(patch(a, bad)), ctx)).toBeUndefined();
-	await handlers.tool_call(call(patch(a, "*** Update File: bad2.txt\n@@\n-x\n+y")), ctx);
+	await handlers.tool_call(call(patch(a, bad2)), ctx);
 	handlers.tool_execution_end({ toolCallId: "one" });
 	expect(handlers.tool_result(result())).toBeUndefined();
 	// The next call with the same id starts clean too.
-	await handlers.tool_call(call(patch(a, "*** Update File: bad2.txt\n@@\n-x\n+y")), ctx);
+	await handlers.tool_call(call(patch(a, bad2)), ctx);
 	await handlers.tool_call(call("x"), ctx);
 	expect(handlers.tool_result(result())).toBeUndefined();
+}));
+
+test("the dry run gets the files that a read showed or an edit wrote", () => repo(async ({ handlers, ctx }) => {
+	await handlers.session_start({}, ctx);
+	handlers.tool_result(read({ meta: { source: { type: "path", value: "/r.txt" } } }));
+	handlers.tool_result(result({ details: { path: "/e.txt" } }));
+	await handlers.tool_call(call(patch(a, bad)), ctx);
+	expect(EditSession.store.seen).toEqual(["/r.txt", "/e.txt"]);
 }));
 
 // ---- whole-file mark ----
