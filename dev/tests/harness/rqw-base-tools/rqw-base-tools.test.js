@@ -302,6 +302,8 @@ test("the native edit gets the patch as it is in every other case", async () => 
 		[patch(a, c)], [patch(bad, alias)], [patch(bad, bad2)], [`x\n${patch(a, bad)}`], [undefined], [patch(a, bad), "write"], [patch(a, bad), "edit", broken],
 		// The engine may find a missing file elsewhere by its name.
 		[patch(a, bad, "[gone.txt#EEEE]\nREM")],
+		// A move between files: the source must not be cut without the paste.
+		[patch("[a.txt#AAAA]\nCUT 1.=1", "[m.txt]\nPUT <1", bad)], [patch(a, bad, "[m.txt]\nPUT <1 @name")],
 	];
 	for (const [input, name, natives] of same) await repo(async ({ handlers, ctx }) => {
 		expect(await handlers.tool_call(call(input, name), ctx)).toBeUndefined();
