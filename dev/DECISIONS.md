@@ -2196,13 +2196,14 @@ Blind и high больше не различаются ни моделью, ни
 3. снимки файлов из ответов `read` и `edit` копятся в своём `EditStore` и идут в сухой прогон: без них он отклонял старую метку, которую родной `edit` принимает.
 4. у `edit` два текста: `hashline` и `replace`. Сторож знает обе формы `edit` и `read` (`alt` в эталоне).
 5. `SYSTEM.md`: префикс строки `12:`; «all ready changes in one response».
+6. перехват bash: правила `sed -i`, `perl -i`, `awk -i inplace` убраны. Правила чтения, поиска и списков остались.
 
 **Основание:** слова владельца от 2026-11-16: «опираться на дефолты omp»; «верное применяется, неверное отбрасывается»; «собирай ветку ... самое минимальное».
 
 **Причина:** OMP 18.20.2, `crates/pi-edit/src/modes/hashline/patcher.rs` `stage_patch`: первая ошибка секции отменяет весь вызов. `packages/agent/src/agent-loop.ts`: вызовы `replace` идут по очереди, отказ одного не останавливает пачку.
 
-**Проверка:** `bun test dev/tests`: 98 pass, 0 fail. Пробы: 57 прогонов (`~/Downloads/bench-reports/waves/probes/`). Замер правки: 20 прогонов, 5 моделей, 2 круга, сборка D-127 против этой (`~/Downloads/bench-reports/waves/edit2/runs.json`).
+**Проверка:** `bun test dev/tests`: 98 pass, 0 fail. Пробы: 57 прогонов (`~/Downloads/bench-reports/waves/probes/`). Замер правки: 20 прогонов, 5 моделей, 2 круга, сборка D-127 против этой (`~/Downloads/bench-reports/waves/edit2/runs.json`). Переименование в 7 файлах: 40 прогонов, отказов `edit` 0 из 37 (`edit3/`, `edit4/`). Без перехвата bash: 30 прогонов (`free/`): переименование у sol 6,5 → 4,5 запроса, sonnet 4,5 → 3, deepseek 5 → 4; сбор контекста без перехвата чтения: deepseek в 1 прогоне из 2 ушёл в `cat` и `sed -n`, 19 запросов вместо 9.
 
 **Границы:** в замере правки отсев не сработал ни разу: модели слали по одному файлу на вызов. По 2 круга, одна задача. Снимки после `write` и `grep` не копятся. Формы `edit` у gemini с живого запроса не сняты.
 
-**Носители правила:** `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.texts.json`, `rqw-base-tools.yml`, `rqw-base-tools.reference.json`, `README.md`, `src/modules/rqw-system-core/SYSTEM.md`, `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`.
+**Носители правила:** `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.texts.json`, `rqw-base-tools.yml`, `rqw-base-tools.reference.json`, `README.md`, `src/modules/rqw-system-core/SYSTEM.md`, `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`, `routing.test.js`.

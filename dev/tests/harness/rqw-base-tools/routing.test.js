@@ -15,14 +15,11 @@ test("native bash routing is enabled for file reads and searches", () => {
 	for (const command of ["find . -maxdepth 2", "find src -type f", "fd -e rs", "locate file"]) expect(route(command)).toBe("glob");
 });
 
-test("custom routing retains native edit, write and managed service rules", () => {
-	expect(route("sed -i 's/a/b/' file")).toBe("edit");
-	expect(route("perl -pi -e 's/a/b/' file")).toBe("edit");
-	expect(route("awk -i inplace '{print}' file")).toBe("edit");
+test("custom routing retains native write and managed service rules; an in-place edit passes", () => {
 	expect(route("printf 'value' > file")).toBe("write");
 	expect(route("cat <<'EOF' > file")).toBe("write");
 	expect(route("nohup node server.js")).toBe("bash");
 	expect(route("bun run dev")).toBe("bash");
 	expect(route("cargo watch --watch src")).toBe("bash");
-	for (const command of ["git status", "wc -l file", "echo hi | grep hi"]) expect(route(command)).toBeUndefined();
+	for (const command of ["git status", "wc -l file", "echo hi | grep hi", "sed -i 's/a/b/' file", "perl -pi -e 's/a/b/' file", "awk -i inplace '{print}' file"]) expect(route(command)).toBeUndefined();
 });

@@ -31,15 +31,6 @@ bashInterceptor:
     - pattern: ^\s*(find|fd|locate)\s+
       tool: glob
       message: "Use the `glob` tool instead of find/fd. It respects .gitignore and is faster for glob patterns."
-    - pattern: ^\s*sed\s+(-i|--in-place)
-      tool: edit
-      message: "Use the `edit` tool instead of sed -i. It provides diff preview and fuzzy matching."
-    - pattern: "^\\s*perl\\s+.*-[pn]?i"
-      tool: edit
-      message: "Use the `edit` tool instead of perl -i. It provides diff preview and fuzzy matching."
-    - pattern: ^\s*awk\s+.*-i\s+inplace
-      tool: edit
-      message: "Use the `edit` tool instead of awk -i inplace. It provides diff preview and fuzzy matching."
     - pattern: "^\\s*(?:(?:echo|printf)\\s+|cat\\s*<<|cat(?=\\s+(?:\\d+|&)?>)\\s+)(?:(?:\\\\[\\s\\S]|\\$\\((?:[^()\"'`]|\"[^\"]*\"|'[^']*'|`[^`]*`|\\([^()]*\\))*\\)|\\$\\{[^{}]*\\}|`[^`]*`|\\$(?!\\((?:[^()\"'`]|\"[^\"]*\"|'[^']*'|`[^`]*`|\\([^()]*\\))*\\)|\\{[^{}]*\\})|`(?![^`]*`)|[^\"'>;&|\\n\\\\$`]|(?<=[<>])&|(?<![<>])&(?=>)|(?<=(?:^|\\s)[02-9])>{1,2}\\|?|\"[^\"]*\"|'[^']*')|(?<!\\||>|(?:^|\\s)[02-9])>{1,2}\\|?\\s*(?:\"/dev/(?:null|tty|stdout|stderr)\"|'/dev/(?:null|tty|stdout|stderr)'|/dev/(?:null|tty|stdout|stderr))(?=[\\s;&|]|$))*(?<!\\||>|(?:^|\\s)[02-9])>{1,2}\\|?\\s*(?!(?:\"/dev/(?:null|tty|stdout|stderr)\"|'/dev/(?:null|tty|stdout|stderr)'|/dev/(?:null|tty|stdout|stderr))(?:[\\s;&|]|$))[$\\w./~\"'-]"
       tool: write
       message: "Use the `write` tool instead of echo/cat redirection. It handles encoding and provides confirmation. `write` replaces the whole file; to append to an existing file, use `edit` to insert after its last line."
