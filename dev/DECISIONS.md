@@ -2228,3 +2228,13 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** тег `v18.22.0` есть, релиза у него на момент апдейта нет: владелец выбрал 18.21.0. На VDI не проверено. `Update` на VDI новый харнес не возьмёт: нужен VSIX 0.0.16. Модель с именем Hydra в OMP нет: код-ревью делает `antigravity-cli/gemini-4-hydrogen` medium.
 
 **Носители правила:** `src/modules/rqw-runtime-config/config.yml`, `README.md`; `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`, `README.md`, `voice/index.js`; `INSTALL.md`; `src/modules/rqw-codex-adapter/README.md`, `index.js`, `agentsmd.js`; `src/modules/rqw-system-core/README.md`; `src/modules/rqw-harness-interface/model-picker.js`; `dev/tests/repository/rqw-windows-pack.test.js`; `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`.
+
+## D-130 — выпуск RQW Windows Pack 0.0.16
+
+**Решение:** расширение `arqawa.ompcli` 0.0.16 опубликовано в Marketplace под именем `RQW Windows Pack`. В нём `omp.exe` 18.21.0 и харнес D-129.
+
+**Основание:** слова владельца: «Надо полный апгрейд сделать с учётом Windows и маркетплейса». `Update` на VDI новый `runtime.json` не ставит: новый `omp.exe` приходит только через магазин.
+
+**Проверка:** ревизия payload `c7a018db4dcd6023c95c2d1061a504ce4414af09`. VSIX 210969060 байт, sha256 `755459a0978adba38eb48c6d0f7098509c998867b49772e4d8b4f5c6c62ca7ad`. Ответ Marketplace: `{"version":"0.0.16","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-16T22:22:27.577Z"}`. `bun test dev/tests`: 98 pass, 0 fail, 972 проверки, 18 файлов.
+
+**Границы:** Windows VDI не проверено.
