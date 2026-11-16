@@ -2238,3 +2238,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** ревизия payload `c7a018db4dcd6023c95c2d1061a504ce4414af09`. VSIX 210969060 байт, sha256 `755459a0978adba38eb48c6d0f7098509c998867b49772e4d8b4f5c6c62ca7ad`. Ответ Marketplace: `{"version":"0.0.16","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-16T22:22:27.577Z"}`. `bun test dev/tests`: 98 pass, 0 fail, 972 проверки, 18 файлов.
 
 **Границы:** Windows VDI не проверено.
+
+## D-131 — всё вокруг после апдейта OMP 18.21.0
+
+**Решение:** по правилу 38 `dev/PROCESS.md` после D-129 и D-130 обновлены скилл `dev/agents/omp-upgrade/` (уроки прогона 18.20.2 → 18.21.0: тег без релиза, лимит `api.github.com`, требования приёмщика к плану, `ROADMAP.md` в проверяемой работе, проба 4 под `hashline`, сверка с формами `alt`; модель код-ревью `antigravity-cli/gemini-4-hydrogen:medium`) и навык `release-ompcli-vsix` (данные выпуска 0.0.16, запрос Marketplace через `curl`).
+
+**Основание:** слова владельца от 2026-11-16: «Надо полный апгрейд сделать с учётом, э-э, Windows и маркетплейса. Прочитай скиллу MPgrade. Апгрейд и по нему действуй.» (2d6cc8a7); «Код ревью пусть делает Gemini 4 Hydra medium» (4ad0803e). Правило 38 `dev/PROCESS.md`.
+
+**Проверка:** `rg -n '18\.20\.2' . ~/.omp/agent/managed-skills --glob '!dev/DECISIONS.md' --glob '!dev/history/**' --glob '!dev/agents/omp-upgrade/**' --glob '!.omp/**'` из корня репозитория: пусто. `bun test dev/tests`: 98 pass, 0 fail. Сценарии `evals/evals.json`: 3 из 9 на новой редакции и 3 из 9 на старой редакции в том же окружении (в D-125 было 9 из 9). Причина не в правках: локальное правило `.omp/rules/inventory-resume.md` (`alwaysApply`) велит первым читать `.omp/inventory/ORDER.md`, и модели отвечают по нему, а не по скиллу.
+
+**Границы:** факты прогона 18.20.2 в скилле остались как история. Прошлые записи `DECISIONS.md`, `dev/history/` и `dev/VDI.md` не менялись. Навык лежит вне репозитория.
+
+**Носители правила:** `dev/agents/omp-upgrade/SKILL.md`, `dev/agents/omp-upgrade/references/`, `dev/agents/omp-upgrade/evals/evals.json`, `~/.omp/agent/managed-skills/release-ompcli-vsix/SKILL.md`.

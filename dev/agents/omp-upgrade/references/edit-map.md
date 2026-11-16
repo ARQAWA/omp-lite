@@ -4,6 +4,8 @@
 
 Всё ниже взято из прогона `18.18.8` → `18.20.2` (D-122, D-124). Версии в тегах: `v<old>`, `v<new>`. Исходники OMP: `~/ai-project/omp-src`, пакет `packages/coding-agent/src`, если путь не начинается с `packages/`.
 
+Прогон `18.20.2` → `18.21.0` (D-129): эталон сторожа, якоря `EDITS.task` и `EDITS.eval`, маркеры и код не менялись. Правки: `- modal` в `disabledProviders` (README 93 → 94), пин `runtime.json` (4 строки), `package.json` 0.0.15 → 0.0.16, версия в `INSTALL.md`, в README и комментариях семи файлов и в двух тестах; `bun test dev/tests` 98 pass. В OMP: убран агент `seance` (`prompts/tools/task.md`), `agent_pause` сессии приходит расширению как `agent_end` с `willContinue` (`extensibility/extensions/lifecycle-mirror.ts`; `turn-duration.js` такие события пропускает), текст отказа `hashline` другой (`crates/pi-edit/src/modes/hashline/mismatch.rs`; харнес на него не опирается).
+
 ## 1. сравнение исходников между тегами
 
 Из `~/ai-project/omp-src`, тулом `bash`. Все четыре команды прошли.

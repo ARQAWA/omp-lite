@@ -26,6 +26,8 @@ curl -s https://api.github.com/repos/can1357/oh-my-pi/releases/tags/v<new> | jq 
 
 В примере sha256 бинаря `e2de0974ce581bfcf2044ea795c712fa240fdf8304f7bdb4b3d81b154d2b57fc` совпал с `digest` `omp-darwin-arm64`, `--version` дал `omp/18.20.2`. Из той же выдачи берутся адрес, sha256 и размер `omp-windows-x64.exe` для `runtime.json` (18.20.2: `6dbb8ac30106f163fcb61d818e6756799a816cb58d63fc3e11a0d7af56abfb90`, `252504064`).
 
+18.21.0: `api.github.com` без входа упёрся в лимит 60 запросов в час. Та же выдача через `gh`: `gh api repos/can1357/oh-my-pi/releases/tags/v<new> --jq '.published_at, (.assets[] | "\(.name) \(.size) \(.digest)")'`. Бинарь `omp-darwin-arm64` sha256 `0f8b23c275682c5adaae373bdfe377c8800ebc7ba07b31959a2328ff7a5deaa1`; `omp-windows-x64.exe`: `2880d63e3d23156516b0200fd96a48fac9423cbd9959449efec79279a67ec314`, `254140416`. Качай с `curl -fsSL`: без `-f` на месте бинаря ляжет текст `Not Found`.
+
 ## 2. снимок запроса до отправки (фаза B)
 
 Идея: бинарь запускается на копии `~/.omp/agent`, с ключом-пустышкой. Расширение `cap.js` ловит запрос в хуке `before_provider_request`, пишет его в `CAP_OUT` и выходит. Четыре прогона: старый (`omp`) и новый (`/tmp/omp-up/omp`) бинарь, каждый `native` (без наших расширений, `--no-extensions`) и `full` (с ними). `native` даёт родные тексты, `full` даёт итог харнеса.
@@ -84,6 +86,8 @@ const msgs=p=>JSON.stringify(p.messages); print('messages same?', msgs(caps['old
 
 Как читать результат 18.20.2: старый бинарь: у всех шести `desc SAME`. Поля `edit` показывают `DIFF i,input`: это допустимая пара (`apply_patch` через `i`, `input`). Новый бинарь: `read`, `bash`, `glob`, `write` дали `desc DIFF`, `grep` и `edit` `SAME`. `full`: `bash`, `eval`, `task`, `wait`, `todo` разные. `system same? false`, `messages same? true`.
 
+С D-128 у `edit` несколько родных форм (`alt` в эталоне), а в `read` есть строка `- Selected file:`. Сравнивай как сторож (`rqw-base-tools/index.js`, `BUILTINS`, `native`): `const BU=/^In-process builtins, ahead of PATH: .*$|^- Selected file: .*\n/m, nz=s=>String(s).replace(BU,'').trim();` и для каждого тула `const forms=[w,...(w.alt??[])]`: описание равно, если `forms.some(x=>x.description&&nz(x.description)===nz(t.description))`, поля равны, если `forms.some(x=>x.fields?.join()===fields)`. Результат 18.21.0: старый и новый бинарь, все шесть `SAME`; `full`: отличается только `task` (OMP убрал агента `seance`), `system` равен, `messages` равны кроме строки с датой (`Today: ...`): маскируй дату перед сравнением.
+
 Второй скрипт пишет описания `bash`, `eval`, `task` и `system` в файлы и сравнивает построчно:
 
 ```js
@@ -101,6 +105,8 @@ print(await sh(`cd ${B} && for k in bash eval task sys; do echo "##### $k"; diff
 ## 3. ключи конфига (фаза B)
 
 Все ключи четырёх фрагментов `config` манифеста: старый и новый бинарь на копиях агента отдают равные действующие значения. В примере: 63 ключа, `all effective values equal`. Ключ идёт целиком, пока он известный id настройки (`id: "..."` в `packages/coding-agent/src`), иначе спускаемся по словарю.
+
+18.21.0: 62 ключа равны; ключ `tools` целиком `config get` не отдаёт («Unknown setting») ни старым, ни новым бинарём: спроси листья `tools.*` (7 равны).
 
 ```js
 const L='/Users/arkadijcukavin/ai-project/omp-lite', B='/tmp/omp-up';
@@ -233,6 +239,8 @@ print(await sh(`cd ${R} && git show v<new>:packages/catalog/src/compat/provider-
 ```
 
 Результат 18.20.2: ids 92 → 96, новые `antigravity-cli`, `chutes`, `liquid`, `nace`. Закрыть их все в `disabledProviders` (было 90, стало 94).
+
+Результат 18.21.0: ids 96 → 97, новый `modal` (закрыт, стало 94 закрытых; открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `antigravity-cli`).
 
 ## 6. метки обрезки в наших текстах (фаза B)
 

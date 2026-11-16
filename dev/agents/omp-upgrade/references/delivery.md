@@ -101,6 +101,8 @@ git fetch -q origin && git rev-parse main origin/main && git status --porcelain 
 
 Второй Mac и проверка на VDI за владельцем: на втором Mac `git pull`, `omp update`, `INSTALL.md`.
 
+18.21.0: слово на VSIX было в самом заказе («с учётом, э-э, Windows и маркетплейса», 2d6cc8a7), отдельный вопрос не задавался. Запрос Marketplace делай `curl`, как в навыке: Python на этом Mac падает с `CERTIFICATE_VERIFY_FAILED`. Итог выпуска 0.0.16: в записи D-130.
+
 ## 4. всё вокруг (фаза H, правило 38)
 
 Правило 38 в `dev/PROCESS.md`: «обновление OMP идёт вместе с обновлением сборки: пин `omp.exe` в `runtime.json`, версия расширения, VSIX. обновление OMP или сборки обновляет и всё вокруг: README, комментарии с версией, тесты, `INSTALL.md`, `DECISIONS.md`, навыки в репозитории и в `~/.omp/agent/managed-skills`. старую версию, старые пути и старую механику найди поиском по ним.» Запись: D-124.

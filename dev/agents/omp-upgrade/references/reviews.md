@@ -1,12 +1,12 @@
-# Код-ревью Sol low и blind review
+# Код-ревью и blind review
 
 Когда читать: фаза C (blind review плана), фаза F (код-ревью и blind review ветки), фаза H (blind review «всего вокруг»).
 
-Порядок владельца (96d42d82): код-ревью `openai-codex/gpt-6.1-sol:low` в цикле, пока один прогон не станет чистым. Потом blind review, пока не будет чисто. Цикл повторять, пока оба не чистые подряд и между ними нет правок. Ревьюеры работают только на чтение. Работа сабагентов: свежий агент каждый круг, отработавшего гасить (`write` с `path: proc://<id>/kill` и `content: ""`).
+Порядок владельца (96d42d82), модель по слову владельца 4ad0803e: код-ревью `antigravity-cli/gemini-4-hydrogen:medium` в цикле, пока один прогон не станет чистым. Потом blind review, пока не будет чисто. Цикл повторять, пока оба не чистые подряд и между ними нет правок. Ревьюеры работают только на чтение. Работа сабагентов: свежий агент каждый круг, отработавшего гасить (`write` с `path: proc://<id>/kill` и `content: ""`).
 
-## 1. код-ревью Sol low
+## 1. код-ревью
 
-Задание лежит в файле `/tmp/omp-up/CODEREVIEW.md`, один на все круги. Сабагент получает вызов `task`: `context: "code review, read-only"`, `name: SolReview<n>`, `model: openai-codex/gpt-6.1-sol:low`, `solutionSpace: "deep read-only code review; findings open"`, `task`:
+Задание лежит в файле `/tmp/omp-up/CODEREVIEW.md`, один на все круги. Сабагент получает вызов `task`: `context: "code review, read-only"`, `name: GemReview<n>`, `model: antigravity-cli/gemini-4-hydrogen:medium`, `solutionSpace: "deep read-only code review; findings open"`, `task`:
 
 ```
 Read `/tmp/omp-up/CODEREVIEW.md` and do exactly what it says. It is your full brief: scope, questions, answer format. Read-only: change nothing. Our eval guard blocks eval code containing the literal text `agent(` or `workpool(`: build such strings by concatenation.
@@ -100,3 +100,9 @@ print('rows', ids.length+jids.length, 'missing', missing, 'updates.md', !!upd, '
 - «всё вокруг» (правило 38, D-124, навык, комментарий теста): раунд 1 `FINDINGS`, `ordered 3, done 3, missing 0, wrong 0, extra 4`. Две находки: в правиле 38 лишние фразы «VSIX выпускай только по слову владельца» и запрет править историю: убраны (`dev/PROCESS.md`, amend коммита). Две находки про записи в `.omp/inventory/ORDER.md` и `JOURNAL.md`: возражение в `updates.md` (правило проекта `.omp/rules/inventory-resume.md`: каждый заказ владельца дословно в `ORDER.md`), статус `settled`. Раунды 2 и 3 CLEAN (`ordered 3, done 3, 0, 0, 0`, ответ полный 9 из 9). Принято.
 
 Вывод: ревьюер считает extra всё сверх слов владельца, даже разумные фразы. Не добавляй своего; записи журнала проекта защищай правилом проекта.
+
+## 4. что было в 18.21.0
+
+- план: один сбор, семь кругов, чистые 6 и 7 подряд, 28 из 28. Находки кругов 1-5: имя модели «Hydra» (возражение: в OMP это `gemini-4-hydrogen`, settled); удаление своего локального тега в `omp-src` (settled); в плане не было проверки видимости в Marketplace, чтения `ROADMAP.md` после компакта, работы сабагентами и их гашения, числа строк по файлам (всё дописано).
+- ветка: код-ревью `antigravity-cli/gemini-4-hydrogen:medium` CLEAN с первого круга (7 вопросов, `bun test dev/tests` 98 pass). Blind: один сбор, три круга, чистые 2 и 3 подряд, 31 из 31. Находка круга 1: в `ROADMAP.md` не стояли галочки готовых фаз и строки C и F расходились с новыми словами владельца (исправлено).
+- вопросы код-ревью под малый апдейт (эталон и якоря не менялись) лежали в `/tmp/omp-up/CODEREVIEW.md`: якоря `EDITS.task` и `EDITS.eval` против новых текстов; эталон сторожа со всеми формами `alt`; `disabledProviders` против `provider-ids.ts`; пин `runtime.json` против релиза; механики `src/modules/*`; нет лишнего; тесты.

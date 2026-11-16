@@ -100,7 +100,7 @@ export default function log(pi) {
 1. reminder: `Answer only yes or no: does my message contain a section titled Workflow?` ждём `yes`; в log `reminder: true` у главного.
 2. files: `Call the files tool once with path "." and pattern "Probe token". Then reply with the first line of its output only.` ждём строку `1 files, 1 matches, ...`.
 3. read: `Read a.txt with the read tool. Reply with the last line of the tool result only.` ждём `[whole file: 3 lines]`.
-4. patch: `Call the edit tool once. The patch: update a.txt replacing line "beta" with "BETA"; update b.txt replacing line "zzz" with "ZZZ". Send both files in one patch. Then reply with the first line of the tool result.` ждём: результат начинается с `Partial patch:`, в `a.txt` есть `BETA`, `b.txt` не изменён.
+4. patch (файл `$P/p4.txt` с этим текстом, запуск с `"$(< p4.txt)"` вместо промпта в кавычках): `Read a.txt with the read tool. Then call the edit tool exactly once, with both sections in one patch: section one is the header of a.txt copied from the read result, then the lines 'PUT 2.=2:' and '+BETA'; section two is the header '[b.txt#0000]' exactly as written here (do not read b.txt, do not correct the tag), then the lines 'PUT 2.=2:' and '+TWO'. Then reply with the first line of the edit tool result only.` ждём: результат начинается с `Partial patch:`, в `a.txt` есть `BETA`, `b.txt` не изменён. только модели с `edit` в режиме `hashline` (luna, haiku); у deepseek `edit` в режиме `replace`: пробу 4 пропусти.
 5. eval guard: `Run the eval tool once, language js, code: await agent("x"). Reply with the tool result text only.` ждём текст `Direct agent() and workpool() calls are blocked in eval`.
 6. subagent AGENTS.md: `I explicitly ask you to spawn exactly one subagent with the task tool, model "<M>:<L>". Its task: "Reply with the Probe token line from your AGENTS.md context. Do not read any files." Reply with what it returned.` ждём `Probe token: <slug>-7319`; в сессии сабагент не читал файлы.
 7. web_search: `Use the web_search tool once to find the latest release tag of the GitHub repo can1357/oh-my-pi. Reply with the tag only.` ждём тег вида `v18.x`; в сессии вызван `web_search`, без ошибки.
@@ -139,3 +139,16 @@ export default function log(pi) {
 |`tui`|6 из 6|статуслайн `CC 44% · CX 66% · Go 20%/52% · cmp 0`; сторож молчит; пикер открыт и закрыт; `read 1`; `⏱ 8s` тусклый; выход чистый, процесса нет|
 
 Правило итога: сбой по вине модели (ответила не то, не вызвала тул) не ломает апдейт, если тул отвечал верно и поведение доказано на другой модели.
+
+## Итоги 18.21.0
+
+|набор|итог|что было не PASS|
+|---|---|---|
+|`luna`|8 из 9|проба 4 в старой редакции: модель поставила номер строки, отсев не сработал. Проба 9: `parallel`, `all_turns`, `low`, `priority`|
+|`haiku`|6 из 8|проба 3 FAIL-модель: ответ `gamma`, тул верен. Проба 4 в старой редакции, как у luna|
+|`dsgo`|7 из 8|проба 4: `edit` в режиме `replace`, один файл на вызов|
+|`dsor`|7 из 8|проба 4: то же|
+|`tui`|5 из 6|статуслайн `CC 80% · CX 55% · Go 96%/48% · cmp 0`; сторож молчит; пикер; `read 1`; `⏱ 12s`. `/exit` после хода не завершил процесс за 5 с: так же без расширений и на бинаре 18.20.2; в простое выход за 0,3 с|
+|проба 4, новая редакция|PASS|главный на `anthropic/claude-haiku-5-5` medium: ответ `Partial patch: the files below did not match and are NOT changed...`, `a.txt` с `BETA`, `b.txt` цел|
+
+Исполнители проб: модельные наборы `anthropic/claude-sonnet-5-5:medium`, интерфейс `openai-codex/gpt-6.1-terra:high`.
