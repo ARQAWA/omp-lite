@@ -121,7 +121,7 @@ export default function log(pi) {
 2. сторож: в выводе НЕТ `rqw-base-tools:` (предупреждений сторожа быть не должно).
 3. пикер: послать Shift+Up (`\x1b[1;2A`): появился заголовок из `~/.omp/agent/extensions/rqw-harness-interface/model-picker.json` (поле `title`). потом Esc: закрылся.
 4. ход: ввести `Read a.txt with the read tool, then reply ok.` и Enter. дождаться конца хода. есть строка счётчика тулов (метка `read` из `tool-summary.json`, число 1) и тусклая метка времени хода `⏱ `.
-5. выход: `/exit` или два Ctrl+C.
+5. выход: `/exit` по одной букве с паузой 0,4 с, через 2 с Enter; или два Ctrl+C.
 
 Отчёт: каждая проверка PASS/FAIL с цитатой из вывода без ANSI.
 ````
@@ -148,7 +148,7 @@ export default function log(pi) {
 |`haiku`|6 из 8|проба 3 FAIL-модель: ответ `gamma`, тул верен. Проба 4 в старой редакции, как у luna|
 |`dsgo`|7 из 8|проба 4: `edit` в режиме `replace`, один файл на вызов|
 |`dsor`|7 из 8|проба 4: то же|
-|`tui`|5 из 6|статуслайн `CC 80% · CX 55% · Go 96%/48% · cmp 0`; сторож молчит; пикер; `read 1`; `⏱ 12s`. `/exit` после хода не завершил процесс за 5 с: так же без расширений и на бинаре 18.20.2; в простое выход за 0,3 с|
+|`tui`|6 из 6|статуслайн `CC 80% · CX 55% · Go 96%/48% · cmp 0`; сторож молчит; пикер; `read 1`; `⏱ 12s`; `/exit` после хода: выход за 0,3 с, «Closing session…». Первый прогон дал ложный FAIL выхода: драйвер вставлял `/exit` целиком|
 |проба 4, новая редакция|PASS|главный на `anthropic/claude-haiku-5-5` medium: ответ `Partial patch: the files below did not match and are NOT changed...`, `a.txt` с `BETA`, `b.txt` цел|
 
 Исполнители проб: модельные наборы `anthropic/claude-sonnet-5-5:medium`, интерфейс `openai-codex/gpt-6.1-terra:high`.
