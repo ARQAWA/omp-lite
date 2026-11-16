@@ -263,9 +263,9 @@ async function partialPatch(input, cwd, dry) {
 	if (!(await dry(input)).isError) return;
 	const skipped = [];
 	for (const full of paths) {
-		const own = sections.filter(section => key(section) === full), outcome = await dry(wrap(own));
+		const own = sections.filter(section => key(section) === full), patch = wrap(own), outcome = await dry(patch);
 		// A section that changes nothing passes alone, but the native edit rejects the whole patch for it.
-		if (outcome.isError || outcome.files?.some(file => !file.diff)) skipped.push({ path: own[0].path, full, reason: outcome.text, patch: own.flatMap(section => section.lines).join("\n") });
+		if (outcome.isError || outcome.files?.some(file => !file.diff)) skipped.push({ path: own[0].path, full, reason: outcome.text, patch });
 	}
 	if (!skipped.length || skipped.length === paths.length) return;
 	return { input: wrap(sections.filter(section => !skipped.some(entry => entry.full === key(section)))), skipped };
