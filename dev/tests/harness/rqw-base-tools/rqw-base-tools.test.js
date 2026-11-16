@@ -9,7 +9,8 @@ import texts from "../../../../src/modules/rqw-base-tools/rqw-base-tools.texts.j
 
 const yml = Bun.YAML.parse(await Bun.file(new URL("../../../../src/modules/rqw-base-tools/rqw-base-tools.yml", import.meta.url)).text());
 
-// The dry run of the fake engine fails on every file with `bad` in its path.
+// The dry run of the fake engine fails on every file with `bad` in its path. A `+same` body changes nothing:
+// alone it passes without a diff, with another file it fails.
 class EditSession {
 	constructor(store) { EditSession.store = store; }
 	setArgsJson(json) { this.input = JSON.parse(json).input; }
@@ -17,7 +18,9 @@ class EditSession {
 	close() {}
 	async apply() {
 		const bad = /\[(\S*bad[^#\]]*)/.exec(this.input);
-		return bad ? { isError: true, text: `no match in ${bad[1]}` } : { isError: false, text: "ok" };
+		if (bad) return { isError: true, text: `no match in ${bad[1]}` };
+		if (!this.input.includes("+same")) return { isError: false, text: "ok" };
+		return this.input.match(/^\[/gm).length > 1 ? { isError: true, text: "no change" } : { isError: false, text: "no change", files: [{ diff: "" }] };
 	}
 }
 // counts: path -> match count
@@ -31,7 +34,7 @@ function setup(natives = engine([]), current = reference.settings, cwd = "/repo"
 	const handlers = {}, tools = [], seen = [], field = () => ({ optional: field });
 	plugin(
 		{ zod: { string: field, boolean: field, object: shape => shape }, pi: { settings: current }, on: (name, fn) => (handlers[name] = fn), registerTool: tool => tools.push(tool) },
-		async name => name.endsWith("pi-natives") ? { FileType: { File: 1, Dir: 2 }, EditSession, EditStore: class { seen = []; recordSnapshotFile(path) { this.seen.push(path); } }, ...natives }
+		async name => name.endsWith("pi-natives") ? { FileType: { File: 1, Dir: 2 }, EditSession, EditStore: class { seen = []; recordSnapshotFile(path) { this.seen.push(path); } relocate(from, to) { this.seen.push(`${from}>${to}`); } }, ...natives }
 			: name.endsWith("registry") ? { lookup: key => ({ get: all => all[key] }) }
 			: { approvalDirectoryKey: dir => `${dir}/`, approvalTreeSearchKey: key => `tree ${key}` },
 	);
@@ -263,7 +266,7 @@ test("the settings file sets every guarded setting", () => {
 // ---- per-file patches ----
 
 const patch = (...sections) => `${sections.join("\n")}\n`;
-const a = "[a.txt#AAAA]\nPUT 1.=1:\n+new", bad = "[bad.txt#BBBB]\nPUT 9.=9:\n+new", alias = "[./bad.txt#BBBB]\nREM", c = "[m.txt]\nREM", bad2 = "[bad2.txt#DDDD]\nREM";
+const a = "[a.txt#AAAA]\nPUT 1.=1:\n+new", bad = "[bad.txt#BBBB]\nPUT 9.=9:\n+new", alias = "[./bad.txt#BBBB]\nPUT 1.=1:\n+x", c = "[m.txt]\nPUT 1.=1:\n+x", bad2 = "[bad2.txt#DDDD]\nPUT 1.=1:\n+x";
 const call = (input, toolName = "edit") => ({ toolName, toolCallId: "one", input: { input } });
 const result = more => ({ toolName: "edit", toolCallId: "one", isError: false, content: [{ type: "text", text: "Success." }], ...more });
 const note = [texts.skipped.head, "[bad.txt]: no match in bad.txt", texts.skipped.section, `${bad}\n${alias}`, texts.skipped.tail].join("\n");
@@ -288,6 +291,8 @@ test("a file that does not match is left out whole; the answer is an error with 
 	await handlers.tool_call(call(patch(a, bad)), ctx);
 	const one = { diff: "d", path: "/repo/a.txt" };
 	expect(handlers.tool_result(result({ details: one })).details.perFileResults[0]).toBe(one);
+	// A section that changes nothing is left out too.
+	expect(await handlers.tool_call(call(patch(a, "[m.txt]\nPUT 1.=1:\n+same")), ctx)).toEqual({ input: { input: patch(a) } });
 }));
 
 test("a native failure after the cut keeps its error and details behind the note", () => repo(async ({ handlers, ctx }) => {
@@ -301,9 +306,9 @@ test("the native edit gets the patch as it is in every other case", async () => 
 	const same = [
 		[patch(a, c)], [patch(bad, alias)], [patch(bad, bad2)], [`x\n${patch(a, bad)}`], [undefined], [patch(a, bad), "write"], [patch(a, bad), "edit", broken],
 		// The engine may find a missing file elsewhere by its name.
-		[patch(a, bad, "[gone.txt#EEEE]\nREM")],
-		// A move between files: the source must not be cut without the paste. A renamed file may land on a skipped one.
-		[patch("[a.txt#AAAA]\nCUT 1.=1", "[m.txt]\nPUT <1", bad)], [patch(a, bad, "[m.txt]\nPUT <1 @name")], [patch("[a.txt#AAAA]\nMV bad.txt", bad)],
+		[patch(a, bad, "[gone.txt#EEEE]\nPUT 1.=1:\n+x")],
+		// A move between files: the source must not be cut without the paste. A renamed file may land on a skipped one. A removal drops snapshots.
+		[patch("[a.txt#AAAA]\nCUT 1.=1", "[m.txt]\nPUT <1", bad)], [patch(a, bad, "[m.txt]\nPUT <1 @name")], [patch("[a.txt#AAAA]\nMV bad.txt", bad)], [patch(a, bad, "[m.txt]\nREM")],
 		// The native edit ignores the rows after the end of a patch.
 		[`${patch(bad)}*** End Patch\n${c}`],
 	];
@@ -331,9 +336,9 @@ test("a link to a file is that file; a denied call leaves nothing behind", () =>
 test("the dry run gets the files that a read showed or an edit wrote", () => repo(async ({ handlers, ctx }) => {
 	await handlers.session_start({}, ctx);
 	handlers.tool_result(read({ meta: { source: { type: "path", value: "/r.txt" } } }));
-	handlers.tool_result(result({ details: { path: "/e.txt" } }));
+	handlers.tool_result(result({ details: { path: "/e.txt", sourcePath: "/s.txt" } }));
 	await handlers.tool_call(call(patch(a, bad)), ctx);
-	expect(EditSession.store.seen).toEqual(["/r.txt", "/e.txt"]);
+	expect(EditSession.store.seen).toEqual(["/r.txt", "/s.txt>/e.txt", "/e.txt"]);
 }));
 
 // ---- whole-file mark ----

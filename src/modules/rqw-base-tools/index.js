@@ -254,14 +254,15 @@ async function partialPatch(input, cwd, dry) {
 	const sections = splitPatch(input).map(section => ({ ...section, full: real(resolve(cwd, section.path)) })), key = section => section.full;
 	const paths = [...new Set(sections.map(key))];
 	// Only the native edit resolves a URL target and finds a missing file elsewhere by its name.
-	// A cut or a paste uses the clipboard of the whole patch and of the session; a move writes one more file:
-	// such a patch is not split.
-	if (paths.length < 2 || /^\s*(?:CUT\b|MV\b|PUT\b.*[^:\s]\s*$)/m.test(input) || sections.some(section => !existsSync(section.full))) return;
+	// A cut or a paste uses the clipboard of the whole patch and of the session; a move writes one more file;
+	// the dry run of a removal drops the snapshots of the file: such a patch is not split.
+	if (paths.length < 2 || /^\s*(?:(?:CUT|MV|REM)\b|PUT\b.*[^:\s]\s*$)/m.test(input) || sections.some(section => !existsSync(section.full))) return;
 	if (!(await dry(input)).isError) return;
 	const skipped = [];
 	for (const full of paths) {
 		const own = sections.filter(section => key(section) === full), outcome = await dry(wrap(own));
-		if (outcome.isError) skipped.push({ path: own[0].path, full, reason: outcome.text, patch: own.flatMap(section => section.lines).join("\n") });
+		// A section that changes nothing passes alone, but the native edit rejects the whole patch for it.
+		if (outcome.isError || outcome.files?.some(file => !file.diff)) skipped.push({ path: own[0].path, full, reason: outcome.text, patch: own.flatMap(section => section.lines).join("\n") });
 	}
 	if (!skipped.length || skipped.length === paths.length) return;
 	return { input: wrap(sections.filter(section => !skipped.some(entry => entry.full === key(section)))), skipped };
@@ -391,7 +392,14 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 	pi.on("tool_result", event => {
 		const content = wholeFile(event), skipped = skips.get(event.toolCallId), details = event.details, name = canon(event.toolName);
 		const seen = name === "read" ? [details?.meta?.source] : name === "edit" ? details?.perFileResults ?? [details] : [];
-		try { for (const entry of seen) (entry?.path ?? entry?.value) && store?.recordSnapshotFile(entry.path ?? entry.value); } catch {}
+		try {
+			for (const entry of seen) {
+				const path = entry?.path ?? entry?.value;
+				// A renamed file keeps its snapshots under the new name, as in the session.
+				entry?.sourcePath && store?.relocate(entry.sourcePath, path);
+				path && store?.recordSnapshotFile(path);
+			}
+		} catch {}
 		if (content) return { content };
 		if (skips.delete(event.toolCallId)) return skippedResult(event, skipped);
 	});
