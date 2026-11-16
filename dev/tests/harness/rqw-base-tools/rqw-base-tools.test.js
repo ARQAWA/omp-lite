@@ -292,6 +292,8 @@ test("a file that does not match is left out whole; the answer is an error with 
 	await handlers.tool_call(call(patch(a, bad)), ctx);
 	const one = { diff: "d", path: "/repo/a.txt" };
 	expect(handlers.tool_result(result({ details: one })).details.perFileResults[0]).toBe(one);
+	// A cut without a paste is an ordinary section.
+	expect(await handlers.tool_call(call(patch("[a.txt#AAAA]\nCUT 1.=1", bad)), ctx)).toEqual({ input: { input: "[a.txt#AAAA]\nCUT 1.=1" } });
 	// A section that changes nothing is left out too. The spaces at the end of a body row stay.
 	expect(await handlers.tool_call(call(patch("[m.txt]\nPUT 1.=1:\n+same", `${a}  \n`)), ctx)).toEqual({ input: { input: `${a}  \n` } });
 }));
