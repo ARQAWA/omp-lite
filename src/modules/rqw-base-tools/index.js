@@ -233,12 +233,13 @@ function rewrite(tools) {
 // ---- per-file patches ----
 
 const SECTION = /^\s*\[([^\]\n#]+)(?:#[^\]\n]*)?\]\s*$/;
-const wrap = sections => `${sections.flatMap(section => section.lines).join("\n")}\n`;
+const wrap = sections => sections.flatMap(section => section.lines).join("\n");
 
 /** File sections of a hashline patch, without the optional envelope; empty when the input is not plain sections. */
 function splitPatch(input) {
 	const sections = [];
-	for (const line of input.trim().replace(/^\*\*\* Begin Patch\s*\n/, "").replace(/\n\*\*\* End Patch$/, "").split("\n")) {
+	// Body rows keep their spaces: only the envelope rows go.
+	for (const line of input.replace(/^\s*\*\*\* Begin Patch[ \t]*\n/, "").replace(/\n\*\*\* End Patch\s*$/, "").split("\n")) {
 		const path = SECTION.exec(line)?.[1].trim();
 		if (path !== undefined) sections.push({ path, lines: [] });
 		// The native parser stops at a marker row inside the patch and reads other header forms: no split then.

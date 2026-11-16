@@ -265,7 +265,7 @@ test("the settings file sets every guarded setting", () => {
 
 // ---- per-file patches ----
 
-const patch = (...sections) => `${sections.join("\n")}\n`;
+const patch = (...sections) => sections.join("\n");
 const a = "[a.txt#AAAA]\nPUT 1.=1:\n+new", bad = "[bad.txt#BBBB]\nPUT 9.=9:\n+new", alias = "[./bad.txt#BBBB]\nPUT 1.=1:\n+x", c = "[m.txt]\nPUT 1.=1:\n+x", bad2 = "[bad2.txt#DDDD]\nPUT 1.=1:\n+x";
 const call = (input, toolName = "edit") => ({ toolName, toolCallId: "one", input: { input } });
 const result = more => ({ toolName: "edit", toolCallId: "one", isError: false, content: [{ type: "text", text: "Success." }], ...more });
@@ -279,7 +279,7 @@ const repo = (run, natives) => tmp(async dir => {
 test("a file that does not match is left out whole; the answer is an error with a note and a red entry", () => repo(async ({ handlers, ctx }, dir) => {
 	const done = { path: "/repo/a.txt", diff: "+new" }, failed = { path: join(dir, "bad.txt"), diff: "", isError: true, errorText: "no match in bad.txt" };
 	for (const [name, details, written] of [["edit", { diff: "d", firstChangedLine: 3, perFileResults: [done] }, done], ["_edit", undefined]]) {
-		expect(await handlers.tool_call(call(`*** Begin Patch\n${patch(a, bad, c, alias)}*** End Patch`, name), ctx)).toEqual({ input: { input: patch(a, c) } });
+		expect(await handlers.tool_call(call(`*** Begin Patch\n${patch(a, bad, c, alias)}\n*** End Patch\n`, name), ctx)).toEqual({ input: { input: patch(a, c) } });
 		const native = result({ details });
 		expect(handlers.tool_result(native)).toEqual({
 			isError: true,
@@ -291,8 +291,8 @@ test("a file that does not match is left out whole; the answer is an error with 
 	await handlers.tool_call(call(patch(a, bad)), ctx);
 	const one = { diff: "d", path: "/repo/a.txt" };
 	expect(handlers.tool_result(result({ details: one })).details.perFileResults[0]).toBe(one);
-	// A section that changes nothing is left out too.
-	expect(await handlers.tool_call(call(patch(a, "[m.txt]\nPUT 1.=1:\n+same")), ctx)).toEqual({ input: { input: patch(a) } });
+	// A section that changes nothing is left out too. The spaces at the end of a body row stay.
+	expect(await handlers.tool_call(call(patch("[m.txt]\nPUT 1.=1:\n+same", `${a}  \n`)), ctx)).toEqual({ input: { input: `${a}  \n` } });
 }));
 
 test("a native failure after the cut keeps its error and details behind the note", () => repo(async ({ handlers, ctx }) => {
@@ -310,7 +310,7 @@ test("the native edit gets the patch as it is in every other case", async () => 
 		// A move between files: the source must not be cut without the paste. A renamed file may land on a skipped one. A removal drops snapshots.
 		[patch("[a.txt#AAAA]\nCUT 1.=1", "[m.txt]\nPUT <1", bad)], [patch(a, bad, "[m.txt]\nPUT <1 @name")], [patch("[a.txt#AAAA]\nMV bad.txt", bad)], [patch(a, bad, "[m.txt]\nREM")],
 		// The native edit ignores the rows after the end of a patch.
-		[`${patch(bad)}*** End Patch\n${c}`],
+		[`${patch(bad)}\n*** End Patch\n${c}`],
 	];
 	for (const [input, name, natives] of same) await repo(async ({ handlers, ctx }) => {
 		expect(await handlers.tool_call(call(input, name), ctx)).toBeUndefined();

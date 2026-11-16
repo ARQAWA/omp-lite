@@ -35,7 +35,7 @@
 			}
 		],
 		"edit": [
-			"Changes existing files. One call carries every ready change: any number of files, one `[PATH#TAG]` section per file.\nFiles apply independently. A file whose section fails is skipped and not changed; every other file is written. The answer names each skipped file with the reason: fix its section and send only it again.\nA failed call whose answer does not start with `Partial patch`: nothing was written; fix and resend the whole call.\nNext step: a narrow check through `bash`.\n\n",
+			"Changes existing files. One call carries every ready change: any number of files, one `[PATH#TAG]` section per file.\nFiles apply independently. A file whose section fails is skipped and not changed; every other file is written. The answer names each skipped file with the reason: fix its section and send only it again.\nAn error without `Partial patch` rejects the whole call: fix and resend it. A write error may leave some files written: check them first.\nNext step: a narrow check through `bash`.\n\n",
 			{
 				"native": "Hashline patches"
 			}
