@@ -232,16 +232,17 @@ function rewrite(tools) {
 
 // ---- per-file patches ----
 
-const SECTION = /^\s*\[([^\]\n#]+)(?:#[^\]\n]*)?\]\s*$/, ENVELOPE = /^\*\*\* (?:Begin|End) Patch\s*$/;
+const SECTION = /^\s*\[([^\]\n#]+)(?:#[^\]\n]*)?\]\s*$/;
 const wrap = sections => `${sections.flatMap(section => section.lines).join("\n")}\n`;
 
-/** File sections of a hashline patch, without the optional envelope; empty when the input starts with something else. */
+/** File sections of a hashline patch, without the optional envelope; empty when the input is not plain sections. */
 function splitPatch(input) {
 	const sections = [];
-	for (const line of input.trim().split("\n").filter(line => !ENVELOPE.test(line))) {
+	for (const line of input.trim().replace(/^\*\*\* Begin Patch\s*\n/, "").replace(/\n\*\*\* End Patch$/, "").split("\n")) {
 		const path = SECTION.exec(line)?.[1].trim();
 		if (path !== undefined) sections.push({ path, lines: [] });
-		else if (!sections.length && line.trim()) return [];
+		// The native parser stops at a marker row inside the patch and reads other header forms: no split then.
+		else if (/^\s*(?:\[|\*\*\*)/.test(line) || (!sections.length && line.trim())) return [];
 		sections.at(-1)?.lines.push(line);
 	}
 	return sections;

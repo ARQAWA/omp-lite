@@ -304,6 +304,8 @@ test("the native edit gets the patch as it is in every other case", async () => 
 		[patch(a, bad, "[gone.txt#EEEE]\nREM")],
 		// A move between files: the source must not be cut without the paste. A renamed file may land on a skipped one.
 		[patch("[a.txt#AAAA]\nCUT 1.=1", "[m.txt]\nPUT <1", bad)], [patch(a, bad, "[m.txt]\nPUT <1 @name")], [patch("[a.txt#AAAA]\nMV bad.txt", bad)],
+		// The native edit ignores the rows after the end of a patch.
+		[`${patch(bad)}*** End Patch\n${c}`],
 	];
 	for (const [input, name, natives] of same) await repo(async ({ handlers, ctx }) => {
 		expect(await handlers.tool_call(call(input, name), ctx)).toBeUndefined();
