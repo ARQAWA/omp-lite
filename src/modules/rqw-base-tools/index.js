@@ -180,7 +180,7 @@ const toolsOf = payload => [payload, payload?.tools, payload?.functions, payload
 	.flatMap(tool => tool?.functionDeclarations ?? [tool?.function ?? tool?.toolSpec ?? tool]).filter(tool => typeof tool?.name === "string" && tool.description);
 // OMP lists its shell builtins in bash (prompts/tools/bash.md): the list follows the platform, not a change.
 const BUILTINS = /^In-process builtins, ahead of PATH: .*$/m;
-const native = text => String(text).replace(BUILTINS, "");
+const native = text => String(text).replace(BUILTINS, "").trim();
 
 /** The first native tool or setting that moved away from the reference. */
 function checkReference(tools, current, isChild) {
