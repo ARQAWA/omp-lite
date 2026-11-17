@@ -2287,7 +2287,7 @@ Blind и high больше не различаются ни моделью, ни
 
 **Основание:** слова владельца: «Надо полный апгрейд сделать с учётом, э-э, Windows и маркетплейса» (2d6cc8a7); «доделать 18.21.0 и сразу второй круг на 18.22.0» (bad2a1ae); «да закрой» (89b9cf6b). Правило 38 `dev/PROCESS.md`.
 
-**Проверка:** `rg -n '18\.21\.0|0\.0\.16' . ~/.omp/agent/managed-skills --glob '!dev/DECISIONS.md' --glob '!dev/history/**' --glob '!dev/agents/omp-upgrade/**' --glob '!.omp/**' --glob '!dev/VDI.md'` из корня репозитория: два совпадения в `release-ompcli-vsix/SKILL.md`, данные прошлых выпусков и времени проверки. `bun test dev/tests`: 98 pass, 0 fail.
+**Проверка:** `rg -n '18\.21\.0|0\.0\.16' . ~/.omp/agent/managed-skills --glob '!dev/DECISIONS.md' --glob '!dev/history/**' --glob '!dev/agents/omp-upgrade/**' --glob '!.omp/**' --glob '!dev/VDI.md'` из корня репозитория: два совпадения в `release-ompcli-vsix/SKILL.md`, данные прошлых выпусков и времени проверки. Старая механика, та же команда с шаблоном `ida\.[a-z]|ghidra|JSON/JSONL by jq filter, video|16 значений|xd://eval/ida` (прежние имена `ida` и `ghidra` вместо `dsm`, прежняя строка родного `read`, прежнее число настроек): пусто, `exit=1`. Старые пути, та же команда с шаблоном `omp-18-21-0|v18\.21\.0|ompcli-0\.0\.16`: пусто, `exit=1`. Комментарии с версией: `rg -n 'OMP 1\d\.\d+' src dev/tests` даёт только `18.22.0`. `bun test dev/tests`: 98 pass, 0 fail.
 
 **Границы:** факты прогонов 18.20.2 и 18.21.0 в скилле остались как история. Прошлые записи `DECISIONS.md`, `dev/history/` и `dev/VDI.md` не менялись. Навык лежит вне репозитория.
 
