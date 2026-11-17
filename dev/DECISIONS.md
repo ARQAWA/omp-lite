@@ -2352,3 +2352,17 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** Windows VDI не проверено.
 
 **Носители правила:** `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`; `dist/ompcli-0.0.18-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
+
+## D-140 — hotfix: пикер читает enabledModels внутри OMP
+
+**Решение:** пикер `rqw-harness-interface` берёт `enabledModels` через `cfgEnabledModels.get(settings)` в момент открытия. Внешний запуск `omp config get enabledModels --json` убран. Он мог не ответить или не успеть, и тогда пикер показывал все модели провайдеров.
+
+**Основание:** слова владельца от 2026-11-18: «Module Picker сломался, и он показывает все модели провайдеров, а не только те, которые мы выбрали»; «Сначала сделай ход-фикс, сделай комит, пуш в мейн»; «Минимальное количество строк кода, минимальное количество тестов».
+
+**Причина:** OMP 18.22.1, `extensibility/extensions/model-api.ts`: `ctx.models.list()` отдаёт все модели без `enabledModels`; `session/model-controls.ts`, `getAvailableModels()`, фильтрует по `cfgEnabledModels.get(settings)`.
+
+**Проверка:** `bun test dev/tests`: 98 pass, 0 fail. В бинаре 18.22.1 импорт работает: 13 шаблонов, 96 моделей в `ctx.models.list()`.
+
+**Границы:** второй Mac и VDI не проверены. Приёмка без ревью, по слову владельца.
+
+**Носители правила:** `src/modules/rqw-harness-interface/model-picker.js`, `README.md`; `dev/tests/harness/rqw-harness-interface/model-picker.test.js`.

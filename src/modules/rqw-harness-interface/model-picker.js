@@ -1,3 +1,5 @@
+import { cfgEnabledModels } from "@oh-my-pi/pi-coding-agent/config/model-settings";
+import { settings } from "@oh-my-pi/pi-coding-agent/config/settings";
 import data from "./model-picker.json";
 
 const id = model => `${model.provider}/${model.id}`;
@@ -82,26 +84,20 @@ function picker(models, initial, effort, theme, done) {
 }
 
 export default function modelPicker(pi) {
-	let generation = 0, unsubscribe, open = false, patterns = [];
+	let generation = 0, unsubscribe, open = false;
 	const start = (_event, ctx) => {
 		if (ctx.agent.kind !== "main") return;
 		const owner = ++generation;
-		open = false; patterns = []; unsubscribe?.(); unsubscribe = undefined;
+		open = false; unsubscribe?.(); unsubscribe = undefined;
 		if (ctx.mode !== "tui" || !ctx.hasUI) return;
-		// OMP 18.22.1 model-api.ts lists available models without enabledModels.
-		void (async () => {
-			try {
-				const result = await pi.exec(process.execPath, ["config", "get", "enabledModels", "--json"]);
-				if (owner === generation && result.code === 0) patterns = JSON.parse(result.stdout).value;
-			} catch {}
-		})();
 		unsubscribe = ctx.ui.onTerminalInput(input => {
 			const key = arrow(input);
 			if (open || !key || key[1] !== "2" || key[2] === "3") return;
 			open = true;
 			void (async () => {
 				try {
-					const models = enabled(ctx.models.list(), patterns);
+					// OMP 18.22.1 model-api.ts lists models without enabledModels; session/model-controls.ts filters by cfgEnabledModels.
+					const models = enabled(ctx.models.list(), cfgEnabledModels.get(settings));
 					if (!models.length) return ctx.ui.notify(data.noModelsAvailable, "warning");
 					const current = ctx.models.current() ?? ctx.model;
 					const selected = models.find(model => same(model, current)) ?? models[0];

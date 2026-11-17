@@ -1,5 +1,8 @@
-import { expect, test } from "bun:test";
-import modelPicker from "../../../../src/modules/rqw-harness-interface/model-picker.js";
+import { expect, mock, test } from "bun:test";
+let config = [];
+mock.module("@oh-my-pi/pi-coding-agent/config/model-settings", () => ({ cfgEnabledModels: { get: () => config } }));
+mock.module("@oh-my-pi/pi-coding-agent/config/settings", () => ({ settings: {} }));
+const { default: modelPicker } = await import("../../../../src/modules/rqw-harness-interface/model-picker.js");
 import data from "../../../../src/modules/rqw-harness-interface/model-picker.json";
 
 const model = (provider, id, name, efforts) => ({ provider, id, name, thinking: { efforts } });
@@ -11,11 +14,10 @@ const up = "\x1b[1;2A", down = "\x1b[1;2B", left = "\x1b[D", right = "\x1b[C";
 const strip = text => text.replace(/\x1b\[[\d;]*m/g, "").replaceAll("**", "");
 const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 
-function session({ models = [opus, flash, router, plain], config = [], level = "high", setModel } = {}) {
-	const events = {}, inputs = [], dialogs = [], calls = [], notes = [], commands = [];
+function session({ models = [opus, flash, router, plain], level = "high", setModel } = {}) {
+	const events = {}, inputs = [], dialogs = [], calls = [], notes = [];
 	const pi = {
 		on: (event, fn) => events[event] = fn,
-		exec: (command, args) => { commands.push([command, args]); return config instanceof Error ? Promise.reject(config) : Promise.resolve({ stdout: JSON.stringify({ value: config }), code: 0 }); },
 		getThinkingLevel: () => level,
 		setModel: value => { calls.push(["model", value]); return setModel ? setModel(value) : Promise.resolve(true); },
 		setThinkingLevel: value => calls.push(["effort", value]),
@@ -33,7 +35,7 @@ function session({ models = [opus, flash, router, plain], config = [], level = "
 	const start = (event = "session_start", context = ctx) => events[event]({}, context);
 	const open = (key = up) => inputs[0](key);
 	const rows = (width = 120) => dialogs.at(-1).render(width).map(strip);
-	return { events, inputs, dialogs, calls, notes, commands, ctx, start, open, rows };
+	return { events, inputs, dialogs, calls, notes, ctx, start, open, rows };
 }
 
 test("opening makes the first move, confirms in order and warns on failure", async () => {
@@ -93,10 +95,9 @@ test("edges do not wrap and efforts choose the nearest lower or minimum", async 
 	z.dialogs[0].handleInput("\r"); await flush(); expect(z.calls).toEqual([["model", opus], ["effort", "low"]]);
 });
 
-test("enabledModels restricts the list; failed and empty config show all", async () => {
-	for (const [config, expected] of [[["opencode-go/*"], "Flash Go"], [[], "Opus"], [new Error("failed"), "Opus"]]) {
-		const s = session({ config }); s.start(); await flush();
-		expect(s.commands).toEqual([[process.execPath, ["config", "get", "enabledModels", "--json"]]]);
+test("enabledModels restricts the list; empty config shows all", () => {
+	for (const [value, expected] of [[["opencode-go/*"], "Flash Go"], [[], "Opus"]]) {
+		config = value; const s = session(); s.start();
 		s.open(up); expect(s.rows()[5]).toContain(expected);
 	}
 });
