@@ -88,7 +88,7 @@ export default function modelPicker(pi) {
 		const owner = ++generation;
 		open = false; patterns = []; unsubscribe?.(); unsubscribe = undefined;
 		if (ctx.mode !== "tui" || !ctx.hasUI) return;
-		// OMP 18.22.0 model-api.ts lists available models without enabledModels.
+		// OMP 18.22.1 model-api.ts lists available models without enabledModels.
 		void (async () => {
 			try {
 				const result = await pi.exec(process.execPath, ["config", "get", "enabledModels", "--json"]);

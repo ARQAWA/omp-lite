@@ -2312,3 +2312,21 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** ревью запускает только сабагент первого уровня с `spawns`; `sonic`, `scout` и сабагент сабагента говорят родителю. Числа «после правок» это оценки, замера не было. Windows VDI не проверено.
 
 **Носители правила:** `src/modules/rqw-reviewer/agents/collector.md`, `agents/acceptor.md`, `skills/reviewer/SKILL.md`, `README.md`; `dev/history/review.md` пункты 38-39.
+
+## D-136 — харнес на OMP 18.22.1: минимальный апдейт
+
+**Решение:** харнес переведён с OMP 18.22.0 на 18.22.1 минимальной правкой:
+
+1. `rqw-runtime-config`: закрыт новый провайдер `bifrost`. Добавлены `openai-codex/gpt-6.2-astra` и `openai-codex/gpt-6.2-sol`, удалены `openai-codex/gpt-6-astra`, `openai-codex/gpt-6-sol` и `openai-codex/gpt-6.1-sol`; порог 400k перенесён на `gpt-6.2-sol`.
+2. `rqw-windows-pack`: пин `omp.exe` на 18.22.1 (sha256 `d63d0633e1f30e8ec2c0ec5ee7b89ffb81380229595f5c5fda0b668feee22b88`, 254686208 байт); версия расширения 0.0.17 → 0.0.18.
+3. `INSTALL.md`: проверка `omp/18.22.1`; версии в README, комментариях и тестах обновлены.
+
+**Основание:** слова владельца от 2026-11-18: «да давай погнали»; «Самое главное надо добавить модели новые GPT 62 Astra и 62 Sol. и убрать старые модели GPT6 Sol, GPT 6.1 Sol и GPT-6 Astra.»
+
+**Проверка:** снимки запросов до отправки: сторож 6/6; 69 настроек равны, внутренние импорты грузятся; id провайдеров 97 → 98. `omp models find gpt-6` на 18.22.1 показывает новые модели. `bun test dev/tests`: 98 pass, 0 fail, 973 проверки, 18 файлов.
+
+**Причина:** OMP 18.22.1: `packages/catalog/src/compat/provider-ids.ts`.
+
+**Границы:** VDI не проверено; VSIX 0.0.18 только по слову владельца; вопрос о блоке браузера открыт.
+
+**Носители правила:** `src/modules/rqw-runtime-config/config.yml`, `README.md`; `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`, `README.md`, `voice/index.js`; `INSTALL.md`; `src/modules/rqw-codex-adapter/README.md`, `index.js`, `agentsmd.js`; `src/modules/rqw-harness-interface/model-picker.js`; `src/modules/rqw-system-core/README.md`; `dev/tests/repository/rqw-windows-pack.test.js`; `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`; `dev/DECISIONS.md`.

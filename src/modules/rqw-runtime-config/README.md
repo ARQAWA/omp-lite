@@ -1,6 +1,6 @@
 # rqw-runtime-config
 
-RQW Runtime Config: общие настройки OMP 18.22.0 одним файлом. Кода нет.
+RQW Runtime Config: общие настройки OMP 18.22.1 одним файлом. Кода нет.
 
 **Назначение:**
 1. общие настройки харнеса: провайдеры, модели, роли, тулы, интерфейс, служебное.
@@ -10,7 +10,7 @@ RQW Runtime Config: общие настройки OMP 18.22.0 одним фай�
 
 **Вход:** `config.yml`, 57 значений. Запись `config` в [манифесте](../../../install.manifest.json).
 
-**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `antigravity-cli`. Остальные 94 провайдера стоят в `disabledProviders`: белого списка в OMP нет. `enabledModels`: 13 точных имён, из них три Gemini 4 через `antigravity-cli`. Роль `perCall`: 83 модели, которые можно назвать сабагенту. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter сюда не входит: его кладут руками в `~/.omp/agent/models.yml`.
+**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `antigravity-cli`. Остальные 95 провайдеров стоят в `disabledProviders`: белого списка в OMP нет. `enabledModels`: 13 точных имён, из них три Gemini 4 через `antigravity-cli`. Роль `perCall`: 82 модели, которые можно назвать сабагенту. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter сюда не входит: его кладут руками в `~/.omp/agent/models.yml`.
 
 **Хуки:** нет.
 
@@ -26,4 +26,4 @@ RQW Runtime Config: общие настройки OMP 18.22.0 одним фай�
 - Новую модель надо дописать в три места: `enabledModels`, `perCall`, карта порогов.
 - Модель вне карты порогов сжимается по правилам OMP.
 
-**Механика OMP 18.22.0**, каталог `packages/coding-agent/src`: `config/compaction-threshold.ts` (формы порога, точное имя главнее шаблона), `config/model-settings.ts` (`modelRoles`, `enabledModels`, `disabledProviders`), `session/settings.ts` (`providers.openrouterVariant`, `retry.fallbackChains`), `tools/settings.ts` (`tools.approvalMode`, `dev.autoqaConsent`).
+**Механика OMP 18.22.1**, каталог `packages/coding-agent/src`: `config/compaction-threshold.ts` (формы порога, точное имя главнее шаблона), `config/model-settings.ts` (`modelRoles`, `enabledModels`, `disabledProviders`), `session/settings.ts` (`providers.openrouterVariant`, `retry.fallbackChains`), `tools/settings.ts` (`tools.approvalMode`, `dev.autoqaConsent`).
