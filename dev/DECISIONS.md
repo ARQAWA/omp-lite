@@ -2250,3 +2250,21 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** факты прогона 18.20.2 в скилле остались как история. Прошлые записи `DECISIONS.md`, `dev/history/` и `dev/VDI.md` не менялись. Навык лежит вне репозитория.
 
 **Носители правила:** `dev/agents/omp-upgrade/SKILL.md`, `dev/agents/omp-upgrade/references/`, `dev/agents/omp-upgrade/evals/evals.json`, `AGENTS.md`, `~/.omp/agent/managed-skills/release-ompcli-vsix/SKILL.md`.
+
+## D-132 — харнес на OMP 18.22.0: минимальный апдейт
+
+**Решение:** харнес переведён с OMP 18.21.0 на 18.22.0 минимальной правкой:
+
+1. `rqw-base-tools`: эталон `read` дополнен родным `executable metadata`; `disassembler.backend: none` закрывает новый `dsm`.
+2. `rqw-windows-pack`: пин `omp.exe` на `v18.22.0` (sha256 `3987213b123ff424d66aa061f916314007bcb07226fafe15da70e3abd87569d7`, 254575104 байт); версия расширения 0.0.16 → 0.0.17.
+3. `INSTALL.md`, шаг 1: `omp/18.22.0`; версии в README, комментариях и двух тестах обновлены.
+
+**Основание:** слова владельца от 2026-11-16: «Надо полный апгрейд сделать с учётом, э-э, Windows и маркетплейса. Прочитай скиллу MPgrade. Апгрейд и по нему действуй.» (2d6cc8a7); «А если план до- если слепое ревью п- типа выпустит план, то сразу его собирай без спрашивания меня.» (77a9b8e7); выбор в форме: «доделать 18.21.0 и сразу второй круг на 18.22.0» (bad2a1ae); про `dsm`: «да закрой» (89b9cf6b).
+
+**Проверка:** снимки запроса до отправки на копиях агента с ключом-пустышкой: шесть родных описаний и поля равны эталону; 13 тулов и системный промпт равны 18.21.0, `dsm` в системном промпте и описании `eval` нет. Настройки: 68 ключей равны до новой настройки. Внутренние импорты грузятся, моделей 6003 = 6003. `bun test dev/tests`: 98 pass, 0 fail. План принят blind review: два чистых круга подряд.
+
+**Причина:** OMP 18.22.0: `packages/coding-agent/src/prompts/tools/read.md`, `disasm/settings.ts`, `disasm/active.ts`, `disasm/prelude-definition.ts`.
+
+**Границы:** новый текст `read` харнеса не дополнялся. На VDI не проверено; `Update` с новым пином не ставит харнес, нужен VSIX 0.0.17. Выпуск VSIX и живые пробы идут после сборки.
+
+**Носители правила:** `src/modules/rqw-base-tools/rqw-base-tools.reference.json`, `rqw-base-tools.yml`, `README.md`; `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`, `README.md`, `voice/index.js`; `INSTALL.md`; `src/modules/rqw-runtime-config/config.yml`, `README.md`; `src/modules/rqw-codex-adapter/README.md`, `index.js`, `agentsmd.js`; `src/modules/rqw-system-core/README.md`; `src/modules/rqw-harness-interface/model-picker.js`; `dev/tests/repository/rqw-windows-pack.test.js`; `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`.

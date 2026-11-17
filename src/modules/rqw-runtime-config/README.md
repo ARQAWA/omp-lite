@@ -1,6 +1,6 @@
 # rqw-runtime-config
 
-RQW Runtime Config: общие настройки OMP 18.21.0 одним файлом. Кода нет.
+RQW Runtime Config: общие настройки OMP 18.22.0 одним файлом. Кода нет.
 
 **Назначение:**
 1. общие настройки харнеса: провайдеры, модели, роли, тулы, интерфейс, служебное.
@@ -26,4 +26,4 @@ RQW Runtime Config: общие настройки OMP 18.21.0 одним фай�
 - Новую модель надо дописать в три места: `enabledModels`, `perCall`, карта порогов.
 - Модель вне карты порогов сжимается по правилам OMP.
 
-**Механика OMP 18.21.0**, каталог `packages/coding-agent/src`: `config/compaction-threshold.ts` (формы порога, точное имя главнее шаблона), `config/model-settings.ts` (`modelRoles`, `enabledModels`, `disabledProviders`), `session/settings.ts` (`providers.openrouterVariant`, `retry.fallbackChains`), `tools/settings.ts` (`tools.approvalMode`, `dev.autoqaConsent`).
+**Механика OMP 18.22.0**, каталог `packages/coding-agent/src`: `config/compaction-threshold.ts` (формы порога, точное имя главнее шаблона), `config/model-settings.ts` (`modelRoles`, `enabledModels`, `disabledProviders`), `session/settings.ts` (`providers.openrouterVariant`, `retry.fallbackChains`), `tools/settings.ts` (`tools.approvalMode`, `dev.autoqaConsent`).

@@ -1,4 +1,4 @@
-// RQW voice dictation, OMP 18.21.0. Lives only in an OMP CLI tab on Windows: ffmpeg records, Soniox transcribes.
+// RQW voice dictation, OMP 18.22.0. Lives only in an OMP CLI tab on Windows: ffmpeg records, Soniox transcribes.
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";

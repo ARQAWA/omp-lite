@@ -38,8 +38,8 @@ test("a pinned file is downloaded once and only with the pinned size and hash", 
 	expect(readdirSync(dirname(file))).toEqual(["omp.exe"]);
 });
 
-test("the pins name every bundled program of OMP 18.21.0", () => {
+test("the pins name every bundled program of OMP 18.22.0", () => {
 	const pin = pins();
-	expect([pin.version, pin.assets.omp.file, pin.assets.model.file, pin.ffmpeg.file]).toEqual(["18.21.0", "omp.exe", "embeddinggemma-2-Q8_0.gguf", "ffmpeg.exe"]);
+	expect([pin.version, pin.assets.omp.file, pin.assets.model.file, pin.ffmpeg.file]).toEqual(["18.22.0", "omp.exe", "embeddinggemma-2-Q8_0.gguf", "ffmpeg.exe"]);
 	for (const name of ["llama-server.exe", "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll"]) expect({ ...pin.llama.files, ...pin.vc.files }[name]).toMatch(/^[a-f0-9]{64}$/);
 });

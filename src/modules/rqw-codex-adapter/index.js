@@ -1,4 +1,4 @@
-// RQW Codex Adapter, OMP 18.21.0: opt-in delegation, AGENTS.md for subagents, live Codex web search, Codex transport.
+// RQW Codex Adapter, OMP 18.22.0: opt-in delegation, AGENTS.md for subagents, live Codex web search, Codex transport.
 import { existsSync } from "node:fs";
 import { withOAuthAccess } from "@oh-my-pi/pi-ai";
 import { lookup } from "@oh-my-pi/pi-coding-agent/config/registry";

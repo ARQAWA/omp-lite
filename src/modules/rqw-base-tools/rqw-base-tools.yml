@@ -19,6 +19,8 @@ astGrep:
   enabled: false
 find:
   enabled: "off"
+disassembler:
+  backend: none
 bashInterceptor:
   enabled: true
   patterns:

@@ -23,7 +23,7 @@ enabledModels:
 # The :floor variant is what reaches the OpenRouter flex tier.
 providers:
   openrouterVariant: floor
-# Only anthropic, openai-codex, opencode-go, openrouter and antigravity-cli stay open: every other model provider of OMP 18.21.0.
+# Only anthropic, openai-codex, opencode-go, openrouter and antigravity-cli stay open: every other model provider of OMP 18.22.0.
 disabledProviders:
   - google
   - local
