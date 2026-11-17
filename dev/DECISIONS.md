@@ -2280,3 +2280,15 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** Windows VDI не проверено.
 
 **Носители правила:** `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`; `dist/ompcli-0.0.17-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
+
+## D-134 — всё вокруг после апдейта OMP 18.22.0
+
+**Решение:** по правилу 38 `dev/PROCESS.md` после D-132 и D-133 обновлены скилл `dev/agents/omp-upgrade/` (уроки 34-42, скрипт сверки как сторож, итоги проб и ревью 18.22.0) и навык `release-ompcli-vsix` (данные выпуска 0.0.17).
+
+**Основание:** слова владельца: «Надо полный апгрейд сделать с учётом, э-э, Windows и маркетплейса» (2d6cc8a7); «доделать 18.21.0 и сразу второй круг на 18.22.0» (bad2a1ae); «да закрой» (89b9cf6b). Правило 38 `dev/PROCESS.md`.
+
+**Проверка:** `rg -n '18\.21\.0|0\.0\.16' . ~/.omp/agent/managed-skills --glob '!dev/DECISIONS.md' --glob '!dev/history/**' --glob '!dev/agents/omp-upgrade/**' --glob '!.omp/**' --glob '!dev/VDI.md'` из корня репозитория: два совпадения в `release-ompcli-vsix/SKILL.md`, данные прошлых выпусков и времени проверки. `bun test dev/tests`: 98 pass, 0 fail.
+
+**Границы:** факты прогонов 18.20.2 и 18.21.0 в скилле остались как история. Прошлые записи `DECISIONS.md`, `dev/history/` и `dev/VDI.md` не менялись. Навык лежит вне репозитория.
+
+**Носители правила:** `dev/agents/omp-upgrade/SKILL.md`, `dev/agents/omp-upgrade/references/`, `dev/agents/omp-upgrade/evals/evals.json`, `~/.omp/agent/managed-skills/release-ompcli-vsix/SKILL.md`.

@@ -65,17 +65,18 @@ print(results)
 Первый скрипт: описания шести родных тулов против эталона `rqw-base-tools.reference.json` (старый и новый бинарь, `native`) и описания всех тулов старого против нового (`full`).
 
 ```js
-const B='/tmp/omp-up', L='/Users/arkadijcukavin/ai-project/omp-lite';
+const B=process.env.CAP_DIR??'/tmp/omp-up', L=process.env.REPO_DIR??'/Users/arkadijcukavin/ai-project/omp-lite';
 const load=async n=>JSON.parse(await Bun.file(`${B}/cap-${n}.json`).text());
 const caps={}; for (const n of ['old-native','old-full','new-native','new-full']) caps[n]=await load(n);
 const tools=p=>Object.fromEntries((p.tools??[]).map(t=>[t.name.replace(/^_/,''), t]));
 const ref=JSON.parse(await Bun.file(L+'/src/modules/rqw-base-tools/rqw-base-tools.reference.json').text());
+const BU=/^In-process builtins, ahead of PATH: .*$|^- Selected file: .*\n/m, nz=s=>String(s).replace(BU,'').trim();
 for (const v of ['old','new']) {
   const T=tools(caps[v+'-native']);
   print(v, 'tools:', Object.keys(T).join(','));
   for (const [n,w] of Object.entries(ref.tools)) { const t=T[n=== 'edit'&&!T.edit?'apply_patch':n]; if(!t){print(' ',n,'MISSING');continue}
-    const fields=Object.keys(t.input_schema?.properties??{}).sort().join();
-    print(' ',n,'desc', t.description===w.description?'SAME':'DIFF', 'fields', fields===w.fields.join()?'SAME':'DIFF '+fields); }
+    const fields=Object.keys(t.input_schema?.properties??{}).sort().join(), forms=[w,...(w.alt??[])];
+    print(' ',n,'desc', forms.some(x=>x.description&&nz(x.description)===nz(t.description))?'SAME':'DIFF', 'fields', forms.some(x=>x.fields?.join()===fields)?'SAME':'DIFF '+fields); }
 }
 // full: compare final descriptions old vs new for all tools
 const Fo=tools(caps['old-full']), Fn=tools(caps['new-full']);
@@ -86,7 +87,9 @@ const msgs=p=>JSON.stringify(p.messages); print('messages same?', msgs(caps['old
 
 Как читать результат 18.20.2: старый бинарь: у всех шести `desc SAME`. Поля `edit` показывают `DIFF i,input`: это допустимая пара (`apply_patch` через `i`, `input`). Новый бинарь: `read`, `bash`, `glob`, `write` дали `desc DIFF`, `grep` и `edit` `SAME`. `full`: `bash`, `eval`, `task`, `wait`, `todo` разные. `system same? false`, `messages same? true`.
 
-С D-128 у `edit` несколько родных форм (`alt` в эталоне), а в `read` есть строка `- Selected file:`. Сравнивай как сторож (`rqw-base-tools/index.js`, `BUILTINS`, `native`): `const BU=/^In-process builtins, ahead of PATH: .*$|^- Selected file: .*\n/m, nz=s=>String(s).replace(BU,'').trim();` и для каждого тула `const forms=[w,...(w.alt??[])]`: описание равно, если `forms.some(x=>x.description&&nz(x.description)===nz(t.description))`, поля равны, если `forms.some(x=>x.fields?.join()===fields)`. Результат 18.21.0: старый и новый бинарь, все шесть `SAME`; `full`: отличается только `task` (OMP убрал агента `seance`), `system` равен, `messages` равны кроме строки с датой (`Today: ...`): маскируй дату перед сравнением.
+С D-128 скрипт сравнивает как сторож: формы `alt`, вырез `BUILTINS`, `.trim()`. Результат 18.21.0: старый и новый бинарь, все шесть `SAME`; `full`: отличается только `task` (OMP убрал агента `seance`), `system` равен, `messages` равны кроме строки с датой (`Today: ...`): маскируй дату перед сравнением.
+
+Результат 18.22.0 на старом эталоне: новый бинарь, `read` `DIFF` (добавлено «executable metadata, »), остальные пять `SAME`; `full`: отличается `eval` (строка `dsm`), `system` отличается (блок `dsm`). С `disassembler.backend: none` `system` и все тулы равны 18.21.0.
 
 Второй скрипт пишет описания `bash`, `eval`, `task` и `system` в файлы и сравнивает построчно:
 
