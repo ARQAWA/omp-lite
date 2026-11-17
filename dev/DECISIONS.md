@@ -2340,3 +2340,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `JSON.parse` `evals/evals.json` проходит; поиск по скиллу: `gpt-6.1-terra:high`, `gpt-6-luna:medium`, `claude-haiku-5-5:medium` остались только в итогах прошлых прогонов.
 
 **Носители правила:** `dev/agents/omp-upgrade/SKILL.md`, `references/reviews.md`, `references/delivery.md`, `references/wire-snapshot.md`, `references/probes.md`, `evals/evals.json`.
+
+## D-138 — выпуск RQW Windows Pack 0.0.18
+
+**Решение:** расширение `arqawa.ompcli` 0.0.18 опубликовано в Marketplace под именем `RQW Windows Pack`. В нём `omp.exe` 18.22.1 и харнес D-136.
+
+**Основание:** слова владельца: «Да-да, выпускай, конечно.» `Update` на VDI новый `runtime.json` не ставит: новый `omp.exe` приходит только через магазин.
+
+**Проверка:** ревизия payload `12fa07de8f18d863640994bbb1e3939bb0449a46`. `ompcli-0.0.18-win32-x64.vsix`: 211236412 байт, sha256 `c880ec7af92755f84816d1e55214bb8806b8a9ef7bdeb82bb7909fb9a44d1396`. Ответ Marketplace: `{"version":"0.0.18","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-17T23:08:50.32Z"}`. `bun test dev/tests`: 98 pass, 0 fail, 973 проверки, 18 файлов.
+
+**Границы:** Windows VDI не проверено.
+
+**Носители правила:** `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`; `dist/ompcli-0.0.18-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
