@@ -65,7 +65,7 @@ print(results)
 Первый скрипт: описания шести родных тулов против эталона `rqw-base-tools.reference.json` (старый и новый бинарь, `native`) и описания всех тулов старого против нового (`full`).
 
 ```js
-const B=process.env.CAP_DIR??'/tmp/omp-up', L=process.env.REPO_DIR??'/Users/arkadijcukavin/ai-project/omp-lite';
+const B='/tmp/omp-up', L='/Users/arkadijcukavin/ai-project/omp-lite';
 const load=async n=>JSON.parse(await Bun.file(`${B}/cap-${n}.json`).text());
 const caps={}; for (const n of ['old-native','old-full','new-native','new-full']) caps[n]=await load(n);
 const tools=p=>Object.fromEntries((p.tools??[]).map(t=>[t.name.replace(/^_/,''), t]));
