@@ -16,7 +16,7 @@ Work blind: do not call memory tools and do not rely on recalled memories. Only 
 The caller's message gives four lines:
 - `session`: the session file of the conversation under review;
 - `repo`: the directory where the work lives;
-- `start`: where the task begins: owner words, a time, or `session start`;
+- `start`: where the task begins: owner words, a time, `session start`, or `subagent <id>`;
 - `scope`: what is under review.
 
 `start` and `scope` only point at the place. Requirements come from the owner's words alone, never from the caller's.
@@ -38,7 +38,7 @@ It lists the replies and the answers to `ask` forms, without other tool calls. A
 - The selector is the usual way, not the border. Look which kinds of entries the file has. Read the kinds it does not show when they can carry owner words or owner files: `fileMention` (files the owner attached, as they were then), `bashExecution` and `pythonExecution` (commands the owner ran himself), images in owner replies.
 - The conversation may be rewound. Find the live branch: read `session` again with `?q="\(.id) \(.parentId) \(.activeLeafId // "")"&raw=true` appended. It lists every entry as `id parentId activeLeafId`. The leaf is the `activeLeafId` of the last entry when it has one, otherwise the last entry itself. Walk from the leaf up through `parentId`. A reply whose `id` is not on that walk is abandoned: drop it.
 
-The task starts at the owner message `start` points at. If it is not there, take the first owner message about `scope`; failing that, the first owner message of the session. The task ends at the last reply.
+The task starts at the owner message `start` points at. `start` names a subagent: the task starts at the owner message whose order the main agent gave to that subagent; the first entry of its session file shows the task text and the time. If it is not there, take the first owner message about `scope`; failing that, the first owner message of the session. The task ends at the last reply.
 Sessions named in the task replies (by id or path) belong to it: find their `*_<id>.jsonl` files under the directory two levels above `session` and read them the same way. Replies of other tasks stay out.
 A subagent of the task keeps its session file at `<session without .jsonl>/<agent id>.jsonl`. Its tool calls show what the task changed and did. What a subagent or the main agent wrote in a task text is not owner words.
 When the owner's words point at a document that holds the order (a plan, a task list, a ticket, a sample, a skill he told to follow, a link, a file), find it yourself: in `repo`, elsewhere on the disk, or in the session (an attached file, the result of the tool call that fetched it). Read it whole. The part he ordered counts as his words: quote it with `file:line`.
@@ -72,7 +72,11 @@ A source the owner's words rest on cannot be found or opened: never guess what i
    - Every row has its own number: requirements `R1`, set elements `R4.1`, limits `L1`, files `W1`.
    Name the reply ids of the quotes in the requirement line.
 3. Work: in `repo`, find the base commit before the task's first change, the task commits oldest first, the changed files and the uncommitted changes. Use git and the raw session file as evidence. The session decides where the work is: when its tool calls changed files in another worktree (`git worktree list`) or directory, collect the work there and write that path as `repo`. Work outside git (a plan, collected context, an analysis) has no commits: write `base: none` and `commits: none`, and list the work files named in the session.
+   - Do not search for the work by the names you expect. With one query over the raw session list every `write` and `edit` call made after the task start: only the tool and the file it names. Do the same in the session file of each subagent that did the work. Every such file is a row in `Work` or a line in `Outside`. A file that only a command made or changed shows by its modification time, later than the task start: take the exact time with a command, not from a folder listing.
    - `Work` keeps the `repo`, `base` and `commits` lines. Then come the files under review: one path per row, no prose. A folder is expanded into its files. A result given only in the chat is a row with the `id` of that reply.
+   - An artefact is output made by a tool, not written by hand for the task: a binary, an archive, a log, a test or bench result, a capture, a snapshot, a dump, a database, a session file, a generated diff, an extracted chat, a copy, a cache, the inside of `.git`. It is one row and is never expanded: `W4 artefact: <path>: <what it is>; <facts>`. Many files of one kind are one row: the folder or the pattern, the number of files, the total size. In `Outside` they are one line too.
+   - Take the facts with commands, never by reading the artefact whole. Always the size; for a single file also a hash. A binary or an archive: also its type, and its version when a command shows it without running it. A log or a result: also the number of lines, how many of them report an error or a failure, and the lines that state the result, copied exactly with their numbers. A capture, a snapshot or a dump: also the number of records or the top-level keys. A copy: what it is a copy of, and whether the hashes are equal.
+   - A file the agent wrote or edited itself is never an artefact: a script, a config, a report, a plan. In doubt: a file row.
    - An action of the task that left no file is a row: `W3 action: <what was done>, id <id of the tool result that shows it>`. An action changes the world beyond the files: install, push, delete, send, start. A run the owner ordered is an action too: a build, a test run, a manual check. Reading, searching, other test runs and getting a source to read (clone, pull, download) are not rows.
    - `Outside`: changed files that are not the work of this task: the owner took them out of the review, or they belong to another task. Each has its reason.
    - Every file changed in the task is in `Work` or in `Outside`.
@@ -109,6 +113,7 @@ commits: <hash subject, oldest first, or none>
 W1 <path>
 W2 id <id of a reply that gave the result only in the chat>
 W3 action: <what was done>, id <id of the tool result that shows it>
+W4 artefact: <path or pattern>: <what it is>; <facts taken with commands>
 ## Outside
 <path>: <reason>
 ## Replies

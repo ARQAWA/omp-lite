@@ -29,6 +29,7 @@ Rows are the requirements, the set elements, the limits and the files of `Work`.
 Answer for each row. Do not look for findings outside the rows.
 - A bare status is not an answer. Every element line shows what was compared, in a few words.
 - A requirement row or a set element row: done (with its place in the work and the words there that do it), missing, or wrong.
+- A row is checked by its quote, not by its one-line title. The quote, or the source line of an element row, names several things (a command, a value, a condition, a step, an expected result): find each of them in the work. The `done` line gives the words of the work for each, joined with `;`. One of them is not in the work: the row is `missing`, and the line names it.
 - A limit row: kept, or violated (with its place). A limit about a set: the status of each element, as below.
 - There is no status `not checked`, `deferred` or `partly`. An ordered item that cannot be found in the work is `missing`.
 - A requirement or a limit speaks of a set, and the set is not split into rows: write out the whole set from the work and its repository. Write one line for each element, with its own status.
@@ -43,6 +44,7 @@ Answer for each row. Do not look for findings outside the rows.
 - A file row: read whole what the task did in the file: a new file in full, a changed file by its diff.
 - Split it into parts. A part is the smallest piece with its own name or heading: a section, a table, a function, a test, a setting, a command, a conclusion. Work that is not a file is split the same way: an answer given in the chat, a command that was run.
 - A `W<n> action:` row: its parts are the things the action did.
+- A `W<n> artefact:` row is output made by a tool. Do not split it and do not read it whole: one line that says what it is and names the requirement it serves, as for a part. Its facts in `facts.md` show it as it was at the seal: use them as evidence. A row rests on what is inside it: check with a command (compare a hash, count, search for the words the row needs) and read only the lines found. A small artefact may be read whole.
 - Write one line for each part. Never join two parts in one line.
 - The part line names the requirement the part serves. A part serves a requirement only when the requirement is not met without this part. A limit never orders a part.
 - No such requirement: write `no requirement`. The part is `extra`, unless the next line says it is not extra.
@@ -50,7 +52,7 @@ Answer for each row. Do not look for findings outside the rows.
 - For each part, also apply the bloat rule of Owner's words: a noticeably smaller way to the same result, shown in one line.
 - Read the diff one file at a time. Truncated output does not count as read: read the rest.
 
-Before you answer, compare the changed files with `Work`, `Outside` and `updates.md`. A file that is in none of them: answer one line, `BROKEN file <path> is not in facts.md or updates.md`, and stop.
+Before you answer, compare the changed files with `Work`, `Outside` and `updates.md`. A file that is in none of them: answer one line, `BROKEN file <path> is not in facts.md or updates.md`, and stop. Output made by a tool (a log, a capture, a dump, a session file, a cache, the inside of `.git`) and a file under an `artefact` row are never a cause of `BROKEN`, also when they appeared or changed after the seal.
 
 ## Findings
 Report only three kinds:
@@ -93,7 +95,7 @@ Answer in one message. The first line is exactly `CLEAN` or `FINDINGS`.
 The second line is the count: `ordered <n>, done <n>, missing <n>, wrong <n>, extra <n>`.
 Then the lines for each row of `facts.md` and `updates.md`: the row line, then one line for each of its set elements or parts. Every line starts with the row number:
 ```
-R1 done: <place>: "<words>"
+R1 done: <place>: "<words>"; "<words>"
 R2 missing
 R2.1 wrong: <place in the work>
 R3 wrong: <the elements that failed>
@@ -110,6 +112,7 @@ W1 / <part>: R1
 W1 / <part>: no requirement
 W3 <what the action did>
 W3 / <part>: R2
+W4 <what the artefact is>: R3
 J1 <what the file is>
 J1 / <part>: R2
 ```

@@ -8,14 +8,15 @@ hide: true
 
 Checks any work against the owner's words: missing, extra, wrong. Code, plans and analysis alike.
 Two subagents do it through `task`: `collector` builds sealed facts once, `acceptor` reviews them every round.
-Only the main session runs this. A subagent asked for a review tells its parent and stops.
+Any session that has the `task` tool runs this: the main session, or a subagent told to run a review. A subagent without `task` tells its parent and stops.
+In a subagent the owner is reached through the parent: what this skill writes or reports to the owner goes to the parent, and the final report is your last message.
 
 ## 1. Before collection
 1. Look at your work yourself. Remove what was not ordered. Do what was ordered and is not done. Keep what the repository rules require.
 2. A part that was not ordered, but without which the task dies: keep it. Write to the owner about it only when the reviewer calls it `extra` (section 4, step 6).
 
 ## 2. Collect once
-1. In bash, `echo "$PI_SESSION_FILE"` gives the session file.
+1. In bash, `echo "$PI_SESSION_FILE"` gives the session file. In a subagent it gives your own file, `<main session without .jsonl>/<your id>.jsonl`: the session for the collector is the main one, the `.jsonl` file named like that folder.
 2. Call `task` with `context: "acceptance review"` and one item: `agent: "collector"`, `solutionSpace: "fixed procedure"`, no `model`. The `task` text is four lines:
    ```
    session: <the session file>
@@ -23,6 +24,7 @@ Only the main session runs this. A subagent asked for a review tells its parent 
    start: <the first words of the owner message that started the task, or `session start`>
    scope: <what to review: the owner's words given with this call, verbatim; without them, one line naming the task>
    ```
+   A subagent that does not know the owner's first words writes `start: subagent <its id>` and begins `scope` with `the work of subagent <its id>:`.
 3. Answer `READY <dir>`: go on. Answer `STOP <reason>`: correct the line the reason names and call once more; after a second `STOP` report it to the owner.
 4. Collect again only in two cases: the case of step 5, and the reviewer's answer `BROKEN`.
 5. After the seal the owner ordered something new or changed the scope: do the work and collect again. The count of clean rounds starts from zero.
@@ -41,6 +43,8 @@ Only the main session runs this. A subagent asked for a review tells its parent 
 2. The finding is wrong or not about the order: write one objection to `updates.md`. Copy the finding text word for word and add your argument. An argument is a place in the work (file and line), owner words with their `id`, or a sign that the finding is not a finding: a "what if" scenario, a request to add what the owner did not name, the truth about the outside world, a method or a style the owner did not name, a step after the review, the repository rules. The finding is about an action that is done and cannot be undone: object with that fact. An objection settles the finding: its status is `settled`.
 3. A reviewer raised a `settled` finding again, at the same place with the same problem: do not open it and do not fix it.
 4. A fix is the smallest one. First remove, then change. Add only what the owner named. Do nothing for the reviewer.
+   A `missing` finding that is right: fix the whole row, every thing its quote names, not only the one the finding names.
+   Then check the other rows of the same source (the same list, table or section) for the same kind of gap and fix them the same way, before the next round.
 5. Append a `## Round <n>` block to `<dir>/updates.md`: for each finding its number and either what you fixed and where, or your objection. A fix touched a file outside `Work`: append the row `J1 <path>` to `updates.md`. The next such file is `J2`.
 6. The reviewer called `extra` a part you think is critical: the owner decides. Write to him what dies without this part. His answer goes to `updates.md` with its `id`. Ask the owner nothing else during the review.
 7. A `note`: open its place in the work yourself. It is in fact serious (an ordered item is not in the work, the work is against the owner's words or his limit, a part no requirement orders): fix it by steps 1 and 4. The work changed: the count of clean rounds starts from zero. It is not serious: do not fix it and do not object. You may only raise a level. Never lower a `serious` finding: object by step 2.
