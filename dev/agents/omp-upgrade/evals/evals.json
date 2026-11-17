@@ -35,10 +35,10 @@
     {
       "id": 3,
       "prompt": "апдейт OMP собран и стоит на маке. какими моделями и на каком уровне гонять живые пробы харнеса и что они проверяют? ничего не запускай, только читай.",
-      "expected_output": "Агент читает dev/agents/omp-upgrade/SKILL.md и references/probes.md. Модели только дешёвые, с уровнями: openai-codex/gpt-6-luna medium, anthropic/claude-haiku-5-5 medium, opencode-go/deepseek-v4.1-flash low и openrouter/deepseek/deepseek-v4.1-flash-1017 low. Пробы: памятка, тул files, read, частичный патч, сторож eval, AGENTS.md у сабагента, web_search, описания тулов в запросе, флаги Codex (только Luna), интерфейс TUI. Ничего не запускает.",
+      "expected_output": "Агент читает dev/agents/omp-upgrade/SKILL.md и references/probes.md. Модели только дешёвые, с уровнями: openai-codex/gpt-6-luna high, anthropic/claude-haiku-5-5 high, opencode-go/deepseek-v4.1-flash low и openrouter/deepseek/deepseek-v4.1-flash-1017 low. Пробы: памятка, тул files, read, частичный патч, сторож eval, AGENTS.md у сабагента, web_search, описания тулов в запросе, флаги Codex (только Luna), интерфейс TUI. Ничего не запускает.",
       "assertions": [
-        "Ответ называет openai-codex/gpt-6-luna на уровне medium.",
-        "Ответ называет anthropic/claude-haiku-5-5 на уровне medium.",
+        "Ответ называет openai-codex/gpt-6-luna на уровне high.",
+        "Ответ называет anthropic/claude-haiku-5-5 на уровне high.",
         "Ответ называет opencode-go/deepseek-v4.1-flash на уровне low.",
         "Ответ называет openrouter/deepseek/deepseek-v4.1-flash-1017 на уровне low.",
         "Среди моделей для проб нет Opus, Fable, Mythos, gpt-6.1-sol и gpt-6.1-terra.",

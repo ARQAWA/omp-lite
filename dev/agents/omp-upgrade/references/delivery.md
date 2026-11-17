@@ -6,7 +6,7 @@
 
 ## 1. коммит и Mac (фаза E)
 
-Это сделал один сабагент `MacInstall` (`openai-codex/gpt-6.1-terra:high`, `solutionSpace: "fixed procedure: commit, omp update, INSTALL.md"`). Контекст и задание дословно, кроме шага 2 (убрано самоисправление в скобке). Версию и имя ветки замени:
+Это делает один сабагент `MacInstall` (`openai-codex/gpt-6.1-terra:xhigh`, `solutionSpace: "fixed procedure: commit, omp update, INSTALL.md"`). Контекст и задание дословно, кроме шага 2 (убрано самоисправление в скобке). Версию и имя ветки замени:
 
 ````
 # Goal
@@ -38,7 +38,7 @@ Report with evidence: commit hash; version before/after `omp update` and its out
 
 ## 2. merge, push, рантайм из `main`, уборка (фаза G)
 
-Сделал сабагент `MergeShip` (`openai-codex/gpt-6.1-terra:high`, `solutionSpace: "fixed procedure"`) после приёмки ревью. Контекст и задание:
+Делает сабагент `MergeShip` (`openai-codex/gpt-6.1-terra:xhigh`, `solutionSpace: "fixed procedure"`) после приёмки ревью. Контекст и задание:
 
 ````
 # Goal
@@ -67,13 +67,13 @@ Report with exact outputs: merge result, push result, equal hashes, cmp results 
 
 Проверка главным после сабагента: `git fetch -q origin && git rev-parse main origin/main && git worktree list && git branch -a && git status --short && omp --version` (хеши равны, worktree один, ветки `omp-18-20-2` нет).
 
-Уборка главным: `rm -rf /tmp/omp-up` (после доставки; `/tmp/omp-up-changelog.md` удалён после blind review плана) и проверка процессов: `ps -axo pid,command`, отбор строк `omp-up|probe-` (в примере: `no probe processes`); `read` с путём `proc://` (живых агентов нет). Папку ревью blind удаляй по приёмке (`reviews.md`).
+Уборку делает сабагент на `openai-codex/gpt-6.1-terra:xhigh`: `rm -rf /tmp/omp-up` (после доставки; `/tmp/omp-up-changelog.md` удалён после blind review плана) и проверка процессов: `ps -axo pid,command`, отбор строк `omp-up|probe-` (в примере: `no probe processes`). Главный проверяет `read` с путём `proc://` (живых агентов нет). Папку ревью blind удаляй по приёмке (`reviews.md`).
 
 ## 3. VSIX (фаза G, только по слову владельца)
 
 `Update` во вкладке VDI на новом `runtime.json` отказывает (`OMP CLI bootstrap changed. Update OMP CLI in Marketplace.`): VDI получает новый OMP только новым VSIX. Выпуск внешнее действие: сначала вопрос «выпускать vsix <версия>?» (в 18.20.2: 0.0.15). Без «да» не выпускай. Владелец ответил «да давай».
 
-Процедуру ведёт навык `release-ompcli-vsix` (`~/.omp/agent/managed-skills/release-ompcli-vsix/SKILL.md`): версия расширения, сборка `bun dev/scripts/rqw-windows-pack/build/index.js`, упаковка `vsce`, проверки VSIX, публикация, проверка в Marketplace, запись выпуска. В этот скилл её не копируй. Отдавай её сабагенту (`VsixRelease`, `openai-codex/gpt-6.1-terra:high`, `solutionSpace: "fixed release procedure"`) с таким контекстом (версию и хеш замени):
+Процедуру ведёт навык `release-ompcli-vsix` (`~/.omp/agent/managed-skills/release-ompcli-vsix/SKILL.md`): версия расширения, сборка `bun dev/scripts/rqw-windows-pack/build/index.js`, упаковка `vsce`, проверки VSIX, публикация, проверка в Marketplace, запись выпуска. В этот скилл её не копируй. Отдавай её сабагенту (`VsixRelease`, `openai-codex/gpt-6.1-terra:xhigh`, `solutionSpace: "fixed release procedure"`) с таким контекстом (версию и хеш замени):
 
 ````
 # Goal

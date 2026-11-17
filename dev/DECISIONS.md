@@ -2330,3 +2330,13 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** VDI не проверено; VSIX 0.0.18 только по слову владельца; вопрос о блоке браузера открыт.
 
 **Носители правила:** `src/modules/rqw-runtime-config/config.yml`, `README.md`; `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`, `README.md`, `voice/index.js`; `INSTALL.md`; `src/modules/rqw-codex-adapter/README.md`, `index.js`, `agentsmd.js`; `src/modules/rqw-harness-interface/model-picker.js`; `src/modules/rqw-system-core/README.md`; `dev/tests/repository/rqw-windows-pack.test.js`; `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`; `dev/DECISIONS.md`.
+
+## D-137 — исполнители и уровни проб в скилле omp-upgrade
+
+**Решение:** в `dev/agents/omp-upgrade/` все исполнители работ идут на `openai-codex/gpt-6.1-terra:xhigh`: снимок ветки, коммит и установка, пробы, интерфейс, merge и уборка, выпуск VSIX. Код-ревью остаётся `antigravity-cli/gemini-4-hydrogen:medium`. `collector` и `acceptor` берут модель из своего профиля, в скилле её нет. Пробы: `openai-codex/gpt-6-luna` и `anthropic/claude-haiku-5-5` на `high`, оба DeepSeek на `low`.
+
+**Основание:** слова владельца 2026-11-18: «все рабочие элементы должен делать тераэxстраHай»; «Код-ревью должен делать Гидроген Medium»; «коллектор и ассептор, они уже прописаны в профиле. Там их не надо в скилле самом прописывать»; «Луны и Hаyk на Hай-ризнинге»; «план правки скилла принимаю».
+
+**Проверка:** `JSON.parse` `evals/evals.json` проходит; поиск по скиллу: `gpt-6.1-terra:high`, `gpt-6-luna:medium`, `claude-haiku-5-5:medium` остались только в итогах прошлых прогонов.
+
+**Носители правила:** `dev/agents/omp-upgrade/SKILL.md`, `references/reviews.md`, `references/delivery.md`, `references/wire-snapshot.md`, `references/probes.md`, `evals/evals.json`.

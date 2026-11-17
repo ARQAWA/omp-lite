@@ -8,17 +8,17 @@
 
 |слаг|модель `--model`|`--thinking`|пробы|
 |---|---|---|---|
-|`luna`|`openai-codex/gpt-6-luna`|`medium`|1-9 (проба 9 только Luna)|
-|`haiku`|`anthropic/claude-haiku-5-5`|`medium`|1-8|
+|`luna`|`openai-codex/gpt-6-luna`|`high`|1-9 (проба 9 только Luna)|
+|`haiku`|`anthropic/claude-haiku-5-5`|`high`|1-8|
 |`dsgo`|`opencode-go/deepseek-v4.1-flash`|`low`|1-8|
 |`dsor`|`openrouter/deepseek/deepseek-v4.1-flash-1017`|`low`|1-8|
 |`tui`|`opencode-go/deepseek-v4.1-flash`|`low`|интерфейс (TUI)|
 
-В пробе 6 модель сабагента задаётся как `<модель>:<уровень>`, например `openai-codex/gpt-6-luna:medium`.
+В пробе 6 модель сабагента задаётся как `<модель>:<уровень>`, например `openai-codex/gpt-6-luna:high`.
 
 ## Распределение сабагентов
 
-Один сабагент на модель, своя папка `/tmp/omp-up/probe-<slug>`. Исполнители проб в 18.20.2: четыре модельных набора вёл `anthropic/claude-sonnet-5-5:medium`, интерфейс вёл `openai-codex/gpt-6.1-terra:high`. Все пять шли параллельно, вместе с первым кругом код-ревью. Спецификация проб лежала в `/tmp/omp-up/PROBES.md` (текст ниже), каждому сабагенту отдаются общий контекст и своё задание. Отработавшего гасить.
+Один сабагент на модель, своя папка `/tmp/omp-up/probe-<slug>`. Исполнители всех пяти наборов: `openai-codex/gpt-6.1-terra:xhigh` (2026-11-18). Все пять шли параллельно, вместе с первым кругом код-ревью. Спецификация проб лежала в `/tmp/omp-up/PROBES.md` (текст ниже), каждому сабагенту отдаются общий контекст и своё задание. Отработавшего гасить.
 
 Общий контекст (`context` вызова `task`):
 
@@ -37,9 +37,9 @@ Live proof that the omp-lite harness works on OMP 18.20.2 (already installed on 
 Задания (`name`, `model`, `solutionSpace: "fixed probe procedure"`):
 
 ````
-ProbeLuna: Probe set: sections "подготовка" and "пробы" 1-9 of `/tmp/omp-up/PROBES.md`. slug `luna`, folder `/tmp/omp-up/probe-luna`. Model `openai-codex/gpt-6-luna`, thinking `medium` (flags `--model openai-codex/gpt-6-luna --thinking medium`; in probe 6 the subagent model is `openai-codex/gpt-6-luna:medium`). Probe 9 applies to you.
+ProbeLuna: Probe set: sections "подготовка" and "пробы" 1-9 of `/tmp/omp-up/PROBES.md`. slug `luna`, folder `/tmp/omp-up/probe-luna`. Model `openai-codex/gpt-6-luna`, thinking `high` (flags `--model openai-codex/gpt-6-luna --thinking high`; in probe 6 the subagent model is `openai-codex/gpt-6-luna:high`). Probe 9 applies to you.
 
-ProbeHaiku: Probe set: sections "подготовка" and "пробы" 1-8 of `/tmp/omp-up/PROBES.md`. slug `haiku`, folder `/tmp/omp-up/probe-haiku`. Model `anthropic/claude-haiku-5-5`, thinking `medium` (flags `--model anthropic/claude-haiku-5-5 --thinking medium`; in probe 6 the subagent model is `anthropic/claude-haiku-5-5:medium`). Skip probe 9.
+ProbeHaiku: Probe set: sections "подготовка" and "пробы" 1-8 of `/tmp/omp-up/PROBES.md`. slug `haiku`, folder `/tmp/omp-up/probe-haiku`. Model `anthropic/claude-haiku-5-5`, thinking `high` (flags `--model anthropic/claude-haiku-5-5 --thinking high`; in probe 6 the subagent model is `anthropic/claude-haiku-5-5:high`). Skip probe 9.
 
 ProbeDsGo: Probe set: sections "подготовка" and "пробы" 1-8 of `/tmp/omp-up/PROBES.md`. slug `dsgo`, folder `/tmp/omp-up/probe-dsgo`. Model `opencode-go/deepseek-v4.1-flash`, thinking `low` (flags `--model opencode-go/deepseek-v4.1-flash --thinking low`; in probe 6 the subagent model is `opencode-go/deepseek-v4.1-flash:low`). Skip probe 9.
 
