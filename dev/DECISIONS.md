@@ -2268,3 +2268,15 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** новый текст `read` харнеса не дополнялся. На VDI не проверено; `Update` с новым пином не ставит харнес, нужен VSIX 0.0.17. Выпуск VSIX и живые пробы идут после сборки.
 
 **Носители правила:** `src/modules/rqw-base-tools/rqw-base-tools.reference.json`, `rqw-base-tools.yml`, `README.md`; `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`, `README.md`, `voice/index.js`; `INSTALL.md`; `src/modules/rqw-runtime-config/config.yml`, `README.md`; `src/modules/rqw-codex-adapter/README.md`, `index.js`, `agentsmd.js`; `src/modules/rqw-system-core/README.md`; `src/modules/rqw-harness-interface/model-picker.js`; `dev/tests/repository/rqw-windows-pack.test.js`; `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`.
+
+## D-133 — выпуск RQW Windows Pack 0.0.17
+
+**Решение:** расширение `arqawa.ompcli` 0.0.17 опубликовано в Marketplace под именем `RQW Windows Pack`. В нём `omp.exe` 18.22.0 и харнес D-132.
+
+**Основание:** слова владельца: «Надо полный апгрейд сделать с учётом, э-э, Windows и маркетплейса.» (2d6cc8a7); выбор в форме: «доделать 18.21.0 и сразу второй круг на 18.22.0» (bad2a1ae). `Update` на VDI новый `runtime.json` не ставит: новый `omp.exe` приходит только через магазин.
+
+**Проверка:** ревизия payload `1e855b1767a580fbba76c2b2883ba58449c8d932`. `ompcli-0.0.17-win32-x64.vsix`: 211127594 байта, sha256 `fd18219bacfe5ce73e26ef4f2efdf763d4656e109b7d68401523f54a6b08bb73`. Ответ Marketplace: `{"version":"0.0.17","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-17T05:41:10.333Z"}`. `bun test dev/tests`: 98 pass, 0 fail, 973 проверки, 18 файлов.
+
+**Границы:** Windows VDI не проверено.
+
+**Носители правила:** `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`; `dist/ompcli-0.0.17-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
