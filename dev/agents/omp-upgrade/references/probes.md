@@ -163,3 +163,7 @@ export default function log(pi) {
 |`dsor`|7 из 7||
 |`dsgo`|6 из 7|проба 1 FAIL-модель; `reminder: true` 6 из 6 запусков и ещё 5 из 5 в повторе|
 |`tui`|6 из 6||
+
+## Итоги 18.22.1
+
+Исполнители: `openai-codex/gpt-6.1-terra:xhigh`. `luna` high 9/9, `haiku` high 8/8, `dsgo` low 7/7, `dsor` low 7/7, `tui` 5/5; без повторов. Снимок ветки: a-g PASS, `system` равен побайтно.

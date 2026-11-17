@@ -26,7 +26,7 @@ Git commit in the worktree; OMP binary on this Mac; `~/.omp/agent` per `INSTALL.
 # Change
 1. In the worktree: `git status --short` must list only modified files (no untracked). Commit all with message `omp-18-20-2: харнес на OMP 18.20.2 (D-122)`. Report the commit hash and `git show --stat HEAD`.
 2. `omp --version` (expect `omp/18.18.8` before update). Run `omp update` (non-interactive; if it asks, answer to proceed). Then `omp --version`. It MUST print `omp/18.20.2`. Any other version: STOP and report, do not install.
-3. Follow `INSTALL.md` of the worktree exactly, from the worktree root as "корень репозитория": sections 1-5. In section 4 keep `config.bak` and restore the previous `modelRoles.default`. In section 5 step 4 run instead `omp -p --no-session --model opencode-go/deepseek-v4.1-flash --thinking low "ответь одним словом: ок"` (owner rule: cheap models only).
+3. Follow `INSTALL.md` of the worktree exactly, from the worktree root as "корень репозитория": sections 1-5. In section 4 keep `config.bak` and restore the previous `modelRoles.default`; parse the old `~/.omp/agent/config.yml` with `Bun.YAML.parse` (PyYAML failed on it in 18.22.1). In section 5 step 4 run instead `omp -p --no-session --model opencode-go/deepseek-v4.1-flash --thinking low "ответь одним словом: ок"` (owner rule: cheap models only).
 
 # Acceptance
 Report with evidence: commit hash; version before/after `omp update` and its output tail; count of `files` entries copied and that every `cmp` is silent (except `stt.windows.json`, which INSTALL says not to compare); that no `remove` path exists; that `~/.omp/agent/config.yml` equals the merged fragments except `modelRoles.default` (state its value); `disabledProviders` contains `antigravity-cli`, `chutes`, `liquid`, `nace`; the `omp -p` answer and any stderr.
@@ -69,9 +69,9 @@ Report with exact outputs: merge result, push result, equal hashes, cmp results 
 
 Уборку делает сабагент на `openai-codex/gpt-6.1-terra:xhigh`: `rm -rf /tmp/omp-up` (после доставки; `/tmp/omp-up-changelog.md` удалён после blind review плана) и проверка процессов: `ps -axo pid,command`, отбор строк `omp-up|probe-` (в примере: `no probe processes`). Главный проверяет `read` с путём `proc://` (живых агентов нет). Папку ревью blind удаляй по приёмке (`reviews.md`).
 
-## 3. VSIX (фаза G, только по слову владельца)
+## 3. VSIX (фаза G, сразу после доставки)
 
-`Update` во вкладке VDI на новом `runtime.json` отказывает (`OMP CLI bootstrap changed. Update OMP CLI in Marketplace.`): VDI получает новый OMP только новым VSIX. Выпуск внешнее действие: сначала вопрос «выпускать vsix <версия>?» (в 18.20.2: 0.0.15). Без «да» не выпускай. Владелец ответил «да давай».
+`Update` во вкладке VDI на новом `runtime.json` отказывает (`OMP CLI bootstrap changed. Update OMP CLI in Marketplace.`): VDI получает новый OMP только новым VSIX. Выпускай сразу после доставки, без вопроса владельцу (слова владельца от 2026-11-18).
 
 Процедуру ведёт навык `release-ompcli-vsix` (`~/.omp/agent/managed-skills/release-ompcli-vsix/SKILL.md`): версия расширения, сборка `bun dev/scripts/rqw-windows-pack/build/index.js`, упаковка `vsce`, проверки VSIX, публикация, проверка в Marketplace, запись выпуска. В этот скилл её не копируй. Отдавай её сабагенту (`VsixRelease`, `openai-codex/gpt-6.1-terra:xhigh`, `solutionSpace: "fixed release procedure"`) с таким контекстом (версию и хеш замени):
 
@@ -104,6 +104,8 @@ git fetch -q origin && git rev-parse main origin/main && git status --porcelain 
 18.21.0: слово на VSIX было в самом заказе («с учётом, э-э, Windows и маркетплейса», 2d6cc8a7), отдельный вопрос не задавался. Запрос Marketplace делай `curl`, как в навыке: Python на этом Mac падает с `CERTIFICATE_VERIFY_FAILED`. Итог выпуска 0.0.16: в записи D-130.
 
 18.22.0: слово владельца на выпуск было в заказе («с учётом, э-э, Windows и маркетплейса», 2d6cc8a7), отдельный вопрос не задавался. `ompcli-0.0.17-win32-x64.vsix`: 211127594 байта, sha256 `fd18219bacfe5ce73e26ef4f2efdf763d4656e109b7d68401523f54a6b08bb73`; Marketplace `validated`, `2026-11-17T05:41:10.333Z` (D-133).
+
+18.22.1: установка на Mac — 29 файлов, `cmp` по 28 молчит; fast-forward `b2da724..12fa07d`. VSIX выпущен по новому правилу: `ompcli-0.0.18-win32-x64.vsix`, 211236412 байт, sha256 `c880ec7af92755f84816d1e55214bb8806b8a9ef7bdeb82bb7909fb9a44d1396`; Marketplace `validated`, `2026-11-17T23:08:50.32Z`; 13 минут (D-138).
 
 ## 4. всё вокруг (фаза H, правило 38)
 

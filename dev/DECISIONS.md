@@ -2353,6 +2353,18 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители правила:** `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`; `dist/ompcli-0.0.18-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
 
+## D-139 — всё вокруг после апдейта OMP 18.22.1
+
+**Решение:** по правилу 38 `dev/PROCESS.md` после D-136, D-137 и D-138 обновлены скилл `dev/agents/omp-upgrade/` (уроки 43-45, правило VSIX и граница blind review ветки, итоги апдейта, проб и ревью 18.22.1) и навык `release-ompcli-vsix` (данные выпуска 0.0.18, выпуск без вопроса владельцу).
+
+**Основание:** слова владельца от 2026-11-18 на вопрос «выпускать vsix 0.0.18?»: «Да-да, выпускай, конечно. Это должно делаться автоматически, без вопросов.»; про временный план: «А нахуй ты правишь временный план? ... Он же временный» и «это всё выходит за рамки ревью, и получается, что у нас работа вся полностью принята». Правило 38 `dev/PROCESS.md`.
+
+**Проверка:** из корня worktree по `references/delivery.md`: `/opt/homebrew/bin/rg -n '18\.22\.0|0\.0\.17|gpt-6-astra|gpt-6-sol|gpt-6\.1-sol|ompcli-build|ompcli-runtime|src/modules/ompcli|modules/ompcli|только по слову владельца|выпускать vsix' . ~/.omp/agent/managed-skills ~/.omp/agent/skills --glob '!dev/DECISIONS.md' --glob '!dev/history/**'; echo "exit=$?"`. Итог: `exit=0`, 22 совпадения, все история: итоги прогонов 18.21.0 и 18.22.0 в скилле, данные прошлых выпусков в навыке выпуска, шаблоны поиска, цитата вопроса в правиле 10, урок 15 и отрицательная проверка eval. Действующих мест со старым нет. `bun test dev/tests`: 98 pass, 0 fail.
+
+**Границы:** прошлые записи `DECISIONS.md`, `dev/history/`, `dev/VDI.md` и `.omp/` не менялись. Навык выпуска лежит вне репозитория.
+
+**Носители правила:** `dev/agents/omp-upgrade/SKILL.md`, `dev/agents/omp-upgrade/references/`, `dev/agents/omp-upgrade/evals/evals.json`, `~/.omp/agent/managed-skills/release-ompcli-vsix/SKILL.md`.
+
 ## D-140 — hotfix: пикер читает enabledModels внутри OMP
 
 **Решение:** пикер `rqw-harness-interface` берёт `enabledModels` через `cfgEnabledModels.get(settings)` в момент открытия. Внешний запуск `omp config get enabledModels --json` убран. Он мог не ответить или не успеть, и тогда пикер показывал все модели провайдеров.
