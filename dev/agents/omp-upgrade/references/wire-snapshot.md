@@ -85,7 +85,7 @@ const sys=p=>JSON.stringify(p.system); print('system same?', sys(caps['old-full'
 const msgs=p=>JSON.stringify(p.messages); print('messages same?', msgs(caps['old-full'])===msgs(caps['new-full']));
 ```
 
-Как читать результат 18.20.2: старый бинарь: у всех шести `desc SAME`. Поля `edit` показывают `DIFF i,input`: это допустимая пара (`apply_patch` через `i`, `input`). Новый бинарь: `read`, `bash`, `glob`, `write` дали `desc DIFF`, `grep` и `edit` `SAME`. `full`: `bash`, `eval`, `task`, `wait`, `todo` разные. `system same? false`, `messages same? true`.
+Как читать результат 18.20.2: старый бинарь: у всех шести `desc SAME`. Поля `edit` тогдашний скрипт (до D-128, без форм `alt`) показывал `DIFF i,input`: это допустимая пара (`apply_patch` через `i`, `input`); нынешний скрипт даёт `SAME`. Новый бинарь: `read`, `bash`, `glob`, `write` дали `desc DIFF`, `grep` и `edit` `SAME`. `full`: `bash`, `eval`, `task`, `wait`, `todo` разные. `system same? false`, `messages same? true`.
 
 С D-128 скрипт сравнивает как сторож: формы `alt`, вырез `BUILTINS`, `.trim()`. Результат 18.21.0: старый и новый бинарь, все шесть `SAME`; `full`: отличается только `task` (OMP убрал агента `seance`), `system` равен, `messages` равны кроме строки с датой (`Today: ...`): маскируй дату перед сравнением.
 
