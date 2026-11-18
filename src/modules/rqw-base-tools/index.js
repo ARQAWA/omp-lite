@@ -1,29 +1,30 @@
-// RQW Base Tools: the `files` tool, our texts for six native tools, a guard,
-// per-file patches and the whole-file mark.
-// Marked workaround: the OMP engine (`@oh-my-pi/pi-natives`) is imported from an
+// RQW Base Tools: Cursor-style file tools over OMP, texts and guards.
+// Marked workaround: the OMP engine and native tool classes are imported from an
 // extension. OMP has no standard way for it; the guard checks these exports.
 
-import { constants, existsSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { access, lstat } from "node:fs/promises";
+import { isUtf8 } from "node:buffer";
+import { createReadStream, existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import reference from "./rqw-base-tools.reference.json";
 import texts from "./rqw-base-tools.texts.json";
 
-const TIMEOUT_MS = 30000, DRY_RUN_MS = 10000, MAX_FILE_BYTES = 4 * 1024 * 1024, RESERVE_KB = 5;
-const NATIVES = "@oh-my-pi/pi-natives", OMP = "@oh-my-pi/pi-coding-agent/", SPILL = "tools.artifactSpillThreshold";
+const TIMEOUT_MS = 30000, DRY_RUN_MS = 10000, MAX_FILE_BYTES = 4 * 1024 * 1024;
+const NATIVES = "@oh-my-pi/pi-natives", OMP = "@oh-my-pi/pi-coding-agent/", TUI = "@oh-my-pi/pi-tui/tools/output-meta";
 // OMP resolves its own packages for an extension only when the specifier is written out.
 const MODULES = {
 	[NATIVES]: () => import("@oh-my-pi/pi-natives"),
+	[TUI]: () => import("@oh-my-pi/pi-tui/tools/output-meta"),
 	[`${OMP}config/registry`]: () => import("@oh-my-pi/pi-coding-agent/config/registry"),
 	[`${OMP}tools/approval-cache`]: () => import("@oh-my-pi/pi-coding-agent/tools/approval-cache"),
+	[`${OMP}tools/read`]: () => import("@oh-my-pi/pi-coding-agent/tools/read"),
+	[`${OMP}tools/grep`]: () => import("@oh-my-pi/pi-coding-agent/tools/grep"),
+	[`${OMP}tools/glob`]: () => import("@oh-my-pi/pi-coding-agent/tools/glob"),
 	[`${OMP}tools/approval-targets`]: () => import("@oh-my-pi/pi-coding-agent/tools/approval-targets"),
 };
 const size = text => Buffer.byteLength(text);
 const slashes = path => path.replace(/\\/g, "/");
 const rel = (root, path) => slashes(relative(root, resolve(root, path)));
-// A file is hidden when one of its directories is `node_modules` or `.git`.
-const hidden = (path, isDir) => path.split("/").slice(0, isDir ? undefined : -1).some(part => part === "node_modules" || part === ".git");
 // The file the engine works on: links resolved as far as the path exists.
 const real = path => {
 	try { return realpathSync.native(path); } catch {}
@@ -38,137 +39,248 @@ const settings = async (pi, load, keys) => {
 	} catch {}
 };
 
-// ---- files ----
+// ---- Cursor-style file tools ----
 
-/**
- * Every file under `root` that the mask selects. A matched directory gives all its files, as in grep.
- * `skipped`: hidden files the engine may still search when the mask names node_modules.
- */
-async function scan(natives, root, params, signal, left) {
-	const dirType = natives.FileType?.Dir ?? 2, files = new Set(), skipped = new Set(), mask = params.glob || "**/*";
-	const take = async (pattern, base, deep) => {
-		const result = await natives.glob({
-			pattern, path: base, hidden: params.hidden !== false, gitignore: params.gitignore !== false,
-			includeNodeModules: mask.includes("node_modules"), timeoutMs: left(), signal,
-		});
-		for (const match of result?.matches ?? []) {
-			const full = resolve(base, match.path), path = rel(root, full);
-			// A matched directory is walked by its path: its name is not a mask.
-			if (match.fileType === dirType) deep && await take("**/*", full, false);
-			else (hidden(path) ? skipped : files).add(path);
-		}
-	};
-	// Masks ending in `**` already cover every descendant.
-	await take(mask, root, !/(^|\/)\*\*(\/\*)?$/.test(mask));
-	return { files: [...files].sort((a, b) => a.localeCompare(b)), skipped: [...skipped] };
-}
-
-/** The map under `budget` bytes: deep directories fold first. A folded map still over budget goes out whole. */
-function renderMap(files, budget) {
-	const groups = new Map();
-	for (const file of files) {
-		const at = file.lastIndexOf("/"), dir = file.slice(0, Math.max(at, 0));
-		if (!groups.has(dir)) groups.set(dir, { dir, names: [] });
-		groups.get(dir).names.push(file.slice(at + 1));
-	}
-	const blocks = [...groups.values()].sort((a, b) => a.dir.localeCompare(b.dir));
-	for (const block of blocks) block.lines = block.dir ? [`${block.dir}/`, ...block.names.map(name => `  ${name}`)] : block.names;
-	const header = `total ${files.length} files`, depth = block => block.dir.split("/").length;
-	let folded = 0, listed = files.length, bytes = size(header) + 1 + blocks.reduce((sum, block) => sum + size(block.lines.join("\n")) + 1, 0);
-	const footer = () => folded ? `[${files.length} files: ${listed} listed, the rest folded into ${folded} directories]` : `[all ${files.length} files listed]`;
-	for (const block of blocks.filter(block => block.dir).sort((a, b) => depth(b) - depth(a) || b.dir.localeCompare(a.dir))) {
-		if (bytes + size(footer()) <= budget) break;
-		const label = `${block.dir}/ (${block.names.length} files)`;
-		bytes += size(label) - size(block.lines.join("\n"));
-		block.lines = [label];
-		folded++;
-		listed -= block.names.length;
-	}
-	return [header, ...blocks.flatMap(block => block.lines), footer()].join("\n");
-}
-
-/** Search results by match count. The tail folds by directory, then by top-level directory. */
-function renderSearch(entries, head, budget) {
-	const sorted = [...entries].sort((a, b) => b.count - a.count || a.path.localeCompare(b.path)), total = sorted.length;
-	if (!total) return [...head, "No files matched.", "[all 0 files listed]"].join("\n");
-	const lines = sorted.map(entry => `${entry.path} (${entry.count} ${entry.count === 1 ? "match" : "matches"})`);
-	const dirOf = (path, top) => top ? path.split("/")[0] : path.slice(0, path.lastIndexOf("/"));
-	const label = (dir, [files, matches]) => `${dir}/ (${files} files, ${matches} matches)`;
-	const footer = (listed, dirs) => dirs ? `[${total} files: ${listed} listed, the rest folded into ${dirs} directories]` : `[all ${total} files listed]`;
-	for (const top of [false, true]) {
-		// Files leave the list one by one, from the end. Root files stay listed. The size is a running sum.
-		const groups = new Map(), root = [];
-		let bytes = [...head, ...lines].reduce((sum, line) => sum + size(line) + 1, 0);
-		for (let listed = total; ; listed--) {
-			if (bytes + size(footer(listed + root.length, groups.size)) <= budget || (top && !listed)) {
-				const dirs = [...groups].sort((a, b) => b[1][1] - a[1][1] || a[0].localeCompare(b[0])).map(group => label(...group));
-				return [...head, ...lines.slice(0, listed), ...root, ...dirs, footer(listed + root.length, groups.size)].join("\n");
-			}
-			if (!listed) break;
-			const { path, count } = sorted[listed - 1], line = lines[listed - 1];
-			if (!path.includes("/")) {
-				root.unshift(line);
-				continue;
-			}
-			const dir = dirOf(path, top), group = groups.get(dir) ?? [0, 0], next = [group[0] + 1, group[1] + count];
-			bytes += size(label(dir, next)) - size(line) - (group[0] && size(label(dir, group)) + 1);
-			groups.set(dir, next);
-		}
-	}
-}
-
-async function runFiles(params, cwd, load, pi, signal) {
-	const { pattern } = params;
-	// A mask that ends with a separator is a directory with all inside it, for the map and for the search.
-	params = { ...params, glob: params.glob?.replace(/[\\/]+$/, "/**") };
-	if (pattern !== undefined && !pattern.trim()) return answer("files: pattern must not be empty", true);
-	// The real root: a link into `.git` or `node_modules` is hidden too.
-	const root = real(resolve(cwd, params.path ?? "")), deadline = Date.now() + TIMEOUT_MS;
-	const left = () => {
-		const ms = deadline - Date.now();
-		if (ms <= 0) throw new Error("timed out after 30s");
-		return ms;
-	};
+const SPECIAL = /\.(?:zip|jar|apk|whl|vsix|tar|tgz|gz|bz2|xz|zst|7z|rar|iso|cab|cpio|rpm|deb|ar|lzh|arj|asar|db|sqlite3?|pdf|docx?|xlsx?|pptx?|ipynb|png|jpe?g|gif|webp|bmp|tiff?|heic|heif|avif|ico|svgz?|mp4|m4v|mov|webm|mkv|avi)$/i;
+const nativeGlobPattern = (pattern, directory) => (!directory ? /^www\.|[;:]/i : /^(?:[a-z][a-z0-9+.-]*:\/\/|local:\/)|[\\/]local:\/\/(?=[^/]|$)/i).test(pattern);
+const absolute = (cwd, path) => resolve(cwd, (path || ".").replace(/^~(?=\/|$)/, homedir()));
+// An existing literal wins over selector, list and mask syntax.
+function localStat(path, cwd, bigint = false) {
+	if (path != null && (typeof path !== "string" || /^[a-z][a-z0-9+.-]*:\/\//i.test(path) || SPECIAL.test(path))) return;
 	try {
-		// A root inside node_modules stays hidden: an empty answer, no engine.
-		const natives = hidden(slashes(root), true) ? undefined : await load(NATIVES);
-		const { files, skipped } = natives ? await scan(natives, root, params, signal, left) : { files: [], skipped: [] };
-		const budget = (((await settings(pi, load, [SPILL]))?.[SPILL] ?? 50) - RESERVE_KB) * 1024;
-		// The deadline covers the whole call: a late answer is an error too.
-		const done = text => (left(), answer(text));
-		if (pattern === undefined) return done(renderMap(files, budget));
-		let scope = 0, lost = 0;
-		const big = [], stat = async path => {
-			const full = resolve(root, path), info = await lstat(full).catch(() => undefined);
-			return { info, readable: () => access(full, constants.R_OK).then(() => true, () => false) };
-		};
-		for (let i = 0; i < files.length; i += 64, left()) await Promise.all(files.slice(i, i + 64).map(async path => {
-			const { info, readable } = await stat(path);
-			// Symbolic links are not searched.
-			if (info && !info.isFile()) return;
-			scope++;
-			if (info?.size > MAX_FILE_BYTES && await readable()) big.push(path);
-		}));
-		// The engine counts the hidden files it read: only those leave `K`.
-		for (const path of skipped) {
-			const { info, readable } = await stat(path);
-			if (info?.isFile() && await readable()) lost++;
-		}
-		const grep = {
-			pattern, path: root, ignoreCase: params.case === false, hidden: params.hidden !== false, gitignore: params.gitignore !== false, signal,
-			...(params.glob && { glob: params.glob }), ...(/\n|\\n/.test(pattern) && { multiline: true }),
-		};
-		const counts = natives && await natives.grep({ ...grep, mode: "count", timeoutMs: left() });
-		const entries = (counts?.matches ?? [])
-			.map(match => ({ path: rel(root, match.path), count: Number(match.matchCount ?? 0) }))
-			.filter(entry => entry.count > 0 && !hidden(entry.path));
-		const total = Math.max(scope, entries.length), searched = Math.min(total, Math.max(Number(counts?.filesSearched ?? total) - lost, entries.length));
-		const head = [`${entries.length} files, ${entries.reduce((sum, entry) => sum + entry.count, 0)} matches, searched ${searched} of ${total} files`];
-		if (big.length) head.push(`searched in part (first 4 MiB): ${big.sort().join(", ")}`);
-		return done(renderSearch(entries, head, budget));
-	} catch (error) {
-		return answer(`files: ${error instanceof Error ? error.message : error}. Narrow path and try again.`, true);
+		const info = statSync(absolute(cwd, path), { bigint, throwIfNoEntry: false });
+		if (info?.isFile() || info?.isDirectory()) return info;
+	} catch {}
+}
+
+const stamp = path => statSync(path, { bigint: true, throwIfNoEntry: false });
+const unchanged = (a, b) => b && a.dev === b.dev && a.ino === b.ino && a.size === b.size && a.mtimeNs === b.mtimeNs && a.ctimeNs === b.ctimeNs;
+const nativeGrep = args => args?.case !== undefined || args?.skip !== undefined;
+// The captured native tool already adds its notice; the outer OMP wrapper adds it again.
+const delegated = async (ctx, params, signal, onUpdate, load) => {
+	const result = await ctx.invokeTool(params, { signal, onUpdate }), meta = result.details?.meta;
+	if (!meta) return result;
+	const { stripOutputNotice } = await load(TUI), content = [...result.content], at = content.findLastIndex(block => block.type === "text");
+	if (at >= 0) content[at] = { ...content[at], text: stripOutputNotice(content[at].text, meta) };
+	return { ...result, content };
+};
+const integer = (value, min = 0) => value === undefined || (Number.isSafeInteger(value) && value >= min);
+
+async function lineCount(path, bytes, length, signal) {
+	let lines = 0, last;
+	for await (const chunk of bytes ? [bytes] : createReadStream(path, { end: length - 1, signal })) {
+		for (let at = chunk.indexOf(10); at !== -1; at = chunk.indexOf(10, at + 1)) lines++;
+		last = chunk.at(-1);
 	}
+	return lines + Number(last !== 10);
+}
+
+// Native local read ignores cancellation inside its file window; stop waiting on abort.
+async function abortable(signal, run) {
+	if (!signal) return run();
+	signal.throwIfAborted();
+	let abort;
+	const cancelled = new Promise((_, reject) => {
+		abort = () => reject(signal.reason);
+		signal.addEventListener("abort", abort, { once: true });
+	});
+	try { return await Promise.race([run(), cancelled]); }
+	finally { signal.removeEventListener("abort", abort); }
+}
+
+async function runRead(params, ctx, signal, onUpdate, load) {
+	const { path, offset, limit } = params;
+	if (offset === undefined && limit === undefined) return delegated(ctx, params, signal, onUpdate, load);
+	if (!integer(offset, -Number.MAX_SAFE_INTEGER) || offset === 0 || !integer(limit, 1)) return answer("offset must be a non-zero integer; limit must be a positive integer", true);
+	signal?.throwIfAborted();
+	const full = absolute(ctx.cwd, path), info = localStat(path, ctx.cwd, true);
+	if (!info?.isFile()) return answer(texts.readRangeTarget, true);
+	if (info.size === 0n) return delegated(ctx, { path }, signal, onUpdate, load);
+	const length = Number(info.size), small = length <= MAX_FILE_BYTES;
+	const hash = small && (await load(NATIVES)).hashlineFileHash;
+	const bytes = Buffer.from(await Bun.file(full).slice(0, small ? length : 65536).arrayBuffer());
+	if (bytes.includes(0) || (small && !isUtf8(bytes))) return answer(texts.readRangeTarget, true);
+	const total = offset < 0 ? await lineCount(full, small ? bytes : undefined, length, signal) : undefined;
+	const start = offset < 0 ? Math.max(1, total + offset + 1) : offset ?? 1;
+	const end = limit === undefined ? "" : Math.min(Number.MAX_SAFE_INTEGER, start + limit - 1);
+	const selected = `${full}:raw:${start}-${end}`;
+	if (existsSync(selected)) return answer("Read selector conflicts with a literal file.", true);
+	const result = await abortable(signal, () => delegated(ctx, { path: selected }, signal, onUpdate, load));
+	if (!unchanged(info, stamp(full))) return answer("File changed during read; retry.", true);
+	const details = result.details, display = details?.displayContent, block = result.content?.[0];
+	const eof = !result.isError && details?.raw && block?.type === "text" && block.text === "" && /^Line \d+ is beyond end of file \((\d+) lines total\)\./.exec(details.notes?.[0]);
+	if (eof) return answer(texts.readPastEnd.replace("{line}", start).replace("{total}", eof[1]));
+	if (result.isError || !display?.lineNumbers?.length || block?.type !== "text" || details.truncation?.firstLineExceedsLimit || /^\n\n\[Showing line \d+ \(partial, [^\n]+\); file not scanned to EOF\]$/.test(block.text.slice(display.text.length))) return result;
+	if (!details.raw || details.fileSize !== length || details.meta?.source?.type !== "path" || real(details.meta.source.value) !== real(full)) return result;
+	// An open native raw range can count its terminal LF as an extra display row.
+	const shown = display.lineNumbers.filter(n => n > 0 && n <= (details.totalLines ?? Infinity));
+	if (!shown.length) return result;
+	const text = display.text.split("\n").slice(0, shown.length), source = small ? bytes.toString("utf8") : undefined, rows = source?.split("\n");
+	const tag = rows && !/\r(?!\n)/.test(source) && shown[0] === start && shown.every((n, i) => rows[n - 1] === text[i]) && hash(source);
+	const body = shown.map((line, i) => `${line}:${text[i].replace(/\r$/, "")}`).join("\n");
+	const next = shown.at(-1) + 1, remaining = (details.totalLines ?? total ?? Infinity) - next + 1;
+	const footer = remaining > 0 ? `\n[${Number.isFinite(remaining) ? `${remaining} more lines. ` : ""}Use offset=${next} to continue]` : "";
+	return { ...result, content: [{ type: "text", text: `${tag ? `[${path}#${tag}]\n` : ""}${body}${footer}` }], details: { ...details, displayContent: { ...display, lineNumbers: shown, text: text.join("\n") }, raw: false, rowPrefixes: true } };
+}
+
+const globMask = pattern => pattern.replace(/^(?:\.\/)*(\*\*\/)?/, "**/");
+const globArgs = args => {
+	const { path, target_directory: directory, glob_pattern: pattern } = args ?? {};
+	if (path !== undefined || !pattern) return { path: path ?? (directory || undefined) };
+	const mask = nativeGlobPattern(pattern) ? pattern : globMask(pattern);
+	return { path: directory ? `${directory.replace(/\/$/, "")}/${mask}` : mask };
+};
+const globRoot = ({ path, target_directory: directory, glob_pattern: pattern }, cwd) =>
+	path === undefined && pattern && !nativeGlobPattern(pattern, directory) && localStat(directory, cwd)?.isDirectory() ? absolute(cwd, directory || ".") : undefined;
+
+async function runGlob(params, ctx, signal, onUpdate, load) {
+	const { glob_pattern: pattern, target_directory, path, hidden, gitignore, limit } = params, directory = target_directory || undefined;
+	if (path !== undefined) {
+		if (pattern !== undefined || directory !== undefined) return answer("Use path for native glob, or glob_pattern and target_directory.", true);
+		return delegated(ctx, { path, hidden, gitignore, limit }, signal, onUpdate, load);
+	}
+	if (!pattern) return delegated(ctx, { path: directory, hidden, gitignore, limit }, signal, onUpdate, load);
+	const root = globRoot(params, ctx.cwd);
+	if (!root) {
+		if (directory && nativeGlobPattern(pattern)) return answer("Use path for a native address or path list.", true);
+		return delegated(ctx, { ...globArgs(params), hidden, gitignore, limit }, signal, onUpdate, load);
+	}
+	if (limit !== undefined && (!Number.isFinite(limit) || limit <= 0)) return answer("Limit must be a positive number", true);
+	const natives = await load(NATIVES);
+	const result = await natives.glob({
+		path: root, pattern: globMask(pattern), fileType: natives.FileType.File,
+		hidden: hidden !== false, gitignore: gitignore !== false, sortByMtime: true, timeoutMs: TIMEOUT_MS, signal,
+	});
+	const files = result.matches.map(match => match.path), output = [`Result of search in '${directory ?? "."}' (total ${files.length} files):`];
+	const cap = Math.min(100, Math.max(1, Math.floor(limit ?? 100)));
+	let used = output[0].length, count = 0;
+	for (const file of files) {
+		const line = `- ${file}`;
+		if (count >= cap || (count && used + line.length + 1 > 4800)) break;
+		output.push(line);
+		used += line.length + 1;
+		count++;
+	}
+	if (count < files.length) output.push(`... ${files.length - count} more files ... (Do a more specific search if needed)`);
+	return answer(output.join("\n"));
+}
+
+// A page holds whole matching entries; overlapping context rows appear only once.
+function grepPage(matches, cwd, root, offset, limit, before, after) {
+	const files = new Map(), entries = [];
+	for (const match of matches) {
+		const full = resolve(root, match.path), file = files.get(full) ?? { full, path: rel(cwd, full), rows: new Map() };
+		files.set(full, file);
+		const parts = match.line.split("\n");
+		for (const row of [...(match.contextBefore ?? []), ...(match.contextAfter ?? [])]) if (!file.rows.has(row.lineNumber)) file.rows.set(row.lineNumber, row.line);
+		parts.forEach((line, i) => file.rows.set(match.lineNumber + i, line));
+		entries.push({ file, start: match.lineNumber, end: match.lineNumber + parts.length - 1 });
+	}
+	const page = new Map();
+	let used = 0, taken = 0, index = offset, partial = false;
+	for (; index < entries.length && (limit === undefined || taken < limit); index++) {
+		const entry = entries[index], rows = page.get(entry.file) ?? new Map(), add = [];
+		const low = Math.max(1, entry.start - before), high = entry.end + after;
+		if (high - low < entry.file.rows.size) {
+			for (let n = low; n <= high; n++) if (entry.file.rows.has(n) && !rows.has(n)) add.push([n, entry.file.rows.get(n)]);
+		} else for (const [n, text] of entry.file.rows) if (n >= low && n <= high && !rows.has(n)) add.push([n, text]);
+		const cost = add.reduce((n, [number, text]) => n + String(number).length + text.length + 5, page.has(entry.file) ? 0 : entry.file.path.length + 10);
+		if (taken && used + cost > 14500) break;
+		if (!taken && cost > 14500) {
+			add.sort((a, b) => Number(b[0] >= entry.start && b[0] <= entry.end) - Number(a[0] >= entry.start && a[0] <= entry.end));
+			let room = 14000;
+			for (const [n, text] of add) {
+				if (room < 50) break;
+				const short = text.length + 25 > room, shown = short ? `${text.slice(0, room - 40)}... [line truncated; use read]` : text;
+				rows.set(n, { text: shown, match: n >= entry.start && n <= entry.end, partial: short });
+				room -= shown.length + String(n).length + 5;
+			}
+			page.set(entry.file, rows);
+			taken++;
+			partial = true;
+			break;
+		}
+		for (const [number, text] of add) rows.set(number, { text, match: false });
+		for (let number = entry.start; number <= entry.end; number++) if (rows.has(number)) rows.get(number).match = true;
+		page.set(entry.file, rows);
+		used += cost;
+		taken++;
+	}
+	return { page, taken, total: entries.length, partial };
+}
+
+// Native grep mints the session snapshot and marks only rows actually shown.
+async function grepHeader(file, rows, ctx, signal, load) {
+	const untagged = `[${file.path}]`, info = stamp(file.full);
+	if (!info?.isFile() || info.size > MAX_FILE_BYTES) return untagged;
+	const natives = await load(NATIVES), bytes = await Bun.file(file.full).slice(0, Number(info.size)).arrayBuffer().catch(() => undefined);
+	if (!bytes) return untagged;
+	const text = Buffer.from(bytes).toString("utf8");
+	if (/\r(?!\n)/.test(text)) return untagged;
+	const lines = text.replace(/\r\n/g, "\n").split("\n"), before = natives.hashlineFileHash(text);
+	if ([...rows].some(([n, row]) => row.partial || lines[n - 1]?.trimEnd() !== row.text)) return untagged;
+	const seen = [...rows].filter(([n]) => size(lines[n - 1]) <= 512).map(([n]) => n);
+	for (let i = 0; i < seen.length; i += 30) {
+		const path = `${file.full}:${seen.slice(i, i + 30).map(n => `${n}-${n}`).join(",")}`;
+		if (existsSync(path)) return untagged;
+		const result = await delegated(ctx, { pattern: "^", path }, signal, () => {}, load);
+		if (/^\[.*#([0-9A-F]{4})\]/m.exec(result.content?.[0]?.text ?? "")?.[1] !== before) return untagged;
+	}
+	return seen.length && unchanged(info, stamp(file.full)) ? `[${file.path}#${before}]` : untagged;
+}
+
+async function runGrep(params, ctx, signal, onUpdate, load) {
+	const { pattern, path, gitignore, output_mode: mode = "content" } = params;
+	const target = !nativeGrep(params) && localStat(path, ctx.cwd);
+	if (!target) {
+		const extra = Object.keys(params).filter(key => params[key] !== undefined && !["pattern", "path", "case", "gitignore", "skip"].includes(key));
+		if (extra.length) return answer(`Native grep does not support ${extra.join(", ")}.`, true);
+		return delegated(ctx, params, signal, onUpdate, load);
+	}
+	if (!pattern?.trim()) return answer("pattern must not be empty", true);
+	for (const key of ["-A", "-B", "-C", "head_limit", "offset"]) if (!integer(params[key])) return answer(`${key} must be a non-negative integer`, true);
+	const root = absolute(ctx.cwd, path), before = params["-B"] ?? params["-C"] ?? 0, after = params["-A"] ?? params["-C"] ?? 0;
+	const offset = params.offset ?? 0, limit = params.head_limit || undefined, natives = await load(NATIVES);
+	if (params.glob && target.isFile()) {
+		const exclude = params.glob.startsWith("!"), glob = new Bun.Glob(exclude ? params.glob.slice(1) : params.glob);
+		if (exclude === (glob.match(basename(root)) || glob.match(rel(ctx.cwd, root)))) return answer(`<workspace_result workspace_path="${ctx.cwd}">\nNo matches found\n</workspace_result>`);
+	}
+	const result = await natives.grep({
+		pattern: params.multiline ? `(?s)${pattern}` : pattern, path: root, glob: params.glob, type: params.type, ignoreCase: params["-i"] === true,
+		multiline: params.multiline === true || pattern.includes("\n") || pattern.includes("\\n"), hidden: true, gitignore: gitignore !== false,
+		mode: mode === "files_with_matches" ? "filesWithMatches" : mode,
+		contextBefore: mode === "content" ? before : 0, contextAfter: mode === "content" ? after : 0,
+		maxCount: mode === "content" ? Math.max(100000, offset + 1000) : undefined, timeoutMs: TIMEOUT_MS, signal,
+	});
+	const { matches } = result, head = `<workspace_result workspace_path="${ctx.cwd}">`, output = [head];
+	let total, taken;
+	if (mode === "content") {
+		const page = grepPage(matches, ctx.cwd, root, offset, limit, before, after);
+		total = page.total;
+		taken = page.taken;
+		for (const [file, rows] of page.page) {
+			if (output.length > 1) output.push("");
+			output.push(await grepHeader(file, rows, ctx, signal, load));
+			for (const [number, row] of [...rows].sort((a, b) => a[0] - b[0])) output.push(`  ${number}${row.match ? ":" : "-"}${row.text}`);
+		}
+		if (page.partial) output.push("[A line or context was truncated. Use read for the full lines.]");
+	} else {
+		total = matches.length;
+		const chosen = matches.slice(offset, limit === undefined ? undefined : offset + limit);
+		taken = 0;
+		for (const match of chosen) {
+			const file = rel(ctx.cwd, resolve(root, match.path)), line = mode === "count" ? `${file}:${match.matchCount}` : file;
+			if (taken && output.join("\n").length + line.length > 14500) break;
+			output.push(line);
+			taken++;
+		}
+	}
+	if (!taken) output.push("No matches found");
+	if (offset + taken < total || result.limitReached) output.push(`[Showing ${taken} of at least ${Math.max(total, offset + taken + 1)} matching ${mode === "content" ? "lines" : "files"}. Use offset=${offset + taken} to see more, or narrow the search.]`);
+	if (result.skippedOversized) output.push(`[Skipped ${result.skippedOversized} unreadable large files.]`);
+	if (result.binaryMatches?.length) output.push(`[Binary files also match: ${result.binaryMatches.join(", ")}]`);
+	output.push("</workspace_result>");
+	return answer(output.join("\n"));
 }
 
 // ---- texts and guard ----
@@ -198,6 +310,7 @@ function checkReference(tools, current, isChild) {
 		const schema = tool.parameters ?? tool.input_schema ?? tool.inputSchema?.json ?? tool.inputSchema ?? tool.parametersJsonSchema ?? tool.jsonSchemaString;
 		const fields = Object.keys((typeof schema === "string" ? JSON.parse(schema) : schema)?.properties ?? tool.format ?? {}).sort().join();
 		if (!forms.some(form => fields === form.fields?.join())) return `rqw-base-tools: native ${name} changed fields`;
+		if (tool.nativeSchema && want.schema && JSON.stringify(tool.nativeSchema) !== JSON.stringify(want.schema)) return `rqw-base-tools: native ${name} changed schema`;
 	}
 	for (const [key, want] of Object.entries(current ? reference.settings : {})) {
 		if (current[key] !== want) return `rqw-base-tools: setting ${key} changed`;
@@ -208,23 +321,23 @@ async function checkEngine(load) {
 	try {
 		const natives = await load(NATIVES);
 		for (const [name, kind] of Object.entries(reference.engine)) {
-			if (typeof natives[name] !== kind) return `rqw-base-tools: engine ${name} changed`;
+			if (typeof name.split(".").reduce((value, member) => value?.[member], natives) !== kind) return `rqw-base-tools: engine ${name} changed`;
 		}
+		const notice = await load(TUI);
+		for (const [name, kind] of Object.entries(reference.notice)) if (typeof notice[name] !== kind) return `rqw-base-tools: notice ${name} changed`;
 	} catch {
 		return "rqw-base-tools: engine import failed";
 	}
 }
 
 function rewrite(tools) {
-	// A text is a string or a list of parts. A pair is [with `files`, without it].
 	// A last part `{ native: marker }` is the live native text from the marker on: OMP's own lines stay OMP's.
-	const pick = tools.some(tool => canon(tool.name) === "files") ? 0 : 1;
 	for (const tool of tools) {
 		// OMP gives some models `edit` in the replace mode: it has its own text.
 		const text = tool.description, name = canon(tool.name) === "edit" && text.includes("old_string") ? "replace" : canon(tool.name);
 		if (!Object.hasOwn(texts.native, name)) continue;
 		const parts = [].concat(texts.native[name]), marker = parts.at(-1).native;
-		const own = parts.filter(part => !part.native).map(part => typeof part === "string" ? part : part[pick]).join("");
+		const own = parts.filter(part => typeof part === "string").join("");
 		// A description that already starts with our text is ours: a second pass changes nothing.
 		if (!marker) tool.description = own;
 		else if (!text.startsWith(own)) tool.description = own + text.slice(Math.max(text.indexOf(marker), 0));
@@ -341,25 +454,62 @@ function wholeFile(event) {
 
 /** `load` imports an OMP module; tests replace it. */
 export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
-	const z = pi.zod, text = z.string().optional(), flag = z.boolean().optional();
-	let session, keys, store;
+	const z = pi.zod, text = z.string().optional(), flag = z.boolean().optional(), number = z.number().optional();
+	const int = z.number().int(), nonnegative = int.min(0).optional();
+	let session, keys, store, builtins;
 	pi.on("session_start", async (_event, ctx) => {
 		session = ctx.sessionManager;
 		keys = { ...(await load(`${OMP}tools/approval-cache`)), ...(await load(`${OMP}tools/approval-targets`)) };
 		store = await load(NATIVES).then(natives => new natives.EditStore(), () => {});
+		const toolSession = { get cwd() { return session.getCwd(); }, settings: pi.pi.settings, hasEditTool: true, getSessionSpawns: () => "*" };
+		try {
+			const [read, grep, glob] = await Promise.all(["read", "grep", "glob"].map(name => load(`${OMP}tools/${name}`)));
+			builtins = { read: new read.ReadTool(toolSession), grep: new grep.GrepTool(toolSession), glob: new glob.GlobTool(toolSession) };
+		} catch {
+			ctx.ui?.notify?.("rqw-base-tools: native tool import failed", "warning");
+		}
+	});
+
+	const tier = (name, args) => builtins?.[name]?.approval(args) ?? "exec";
+	const targets = (name, args) => builtins?.[name]?.approvalCacheTargets(args);
+	const cwd = () => session?.getCwd();
+	const tree = root => keys.approvalTreeSearchKey(keys.approvalDirectoryKey(root));
+	const grepTarget = args => !nativeGrep(args) && cwd() && localStat(args?.path, cwd());
+	pi.registerTool({
+		name: "grep", label: "grep", loadMode: "discoverable", strict: false,
+		approval: args => grepTarget(args) ? "read" : tier("grep", args),
+		approvalCacheTargets: args => {
+			const target = grepTarget(args);
+			if (!target) return targets("grep", args);
+			const root = absolute(cwd(), args?.path);
+			return [target.isDirectory() ? tree(root) : keys.approvalCacheKeyForPath(root)];
+		},
+		description: texts.grep,
+		parameters: z.object({
+			pattern: z.string(), path: text, glob: text, type: text, output_mode: z.enum(["content", "files_with_matches", "count"]).optional(),
+			"-A": nonnegative, "-B": nonnegative, "-C": nonnegative, "-i": flag, head_limit: nonnegative, offset: nonnegative, multiline: flag,
+			case: flag, gitignore: flag, skip: z.number().nullable().optional(),
+		}),
+		execute: (_id, params, signal, onUpdate, ctx) => runGrep(params, ctx, signal, onUpdate, load),
 	});
 	pi.registerTool({
-		name: "files",
-		label: "files",
-		loadMode: "essential",
-		approval: "read",
-		// OMP checks the search root as a recursive tree, like the native grep and glob.
-		// Before the session start has finished there is no target: OMP then remembers nothing.
-		approvalCacheTargets: args => keys && [keys.approvalTreeSearchKey(keys.approvalDirectoryKey(real(resolve(session.getCwd(), args?.path ?? ""))))],
-		strict: false,
-		description: texts.files,
-		parameters: z.object({ path: text, glob: text, pattern: text, case: flag, hidden: flag, gitignore: flag }),
-		execute: (_id, params, signal, _onUpdate, ctx) => runFiles(params, ctx.cwd, load, pi, signal),
+		name: "glob", label: "glob", loadMode: "essential", strict: false,
+		approval: args => cwd() && globRoot(args ?? {}, cwd()) ? "read" : tier("glob", globArgs(args)),
+		approvalCacheTargets: args => {
+			const root = cwd() && globRoot(args ?? {}, cwd());
+			return root ? [tree(root)] : targets("glob", globArgs(args));
+		},
+		description: texts.glob,
+		parameters: z.object({ glob_pattern: text, target_directory: text, path: text, hidden: flag, gitignore: flag, limit: number }),
+		execute: (_id, params, signal, onUpdate, ctx) => runGlob(params, ctx, signal, onUpdate, load),
+	});
+	pi.registerTool({
+		name: "read", label: "read", loadMode: "essential", readsSkillUris: true, strict: false,
+		approval: args => tier("read", args), approvalCacheTargets: args => targets("read", args),
+		docTopics: () => builtins?.read?.docTopics?.() ?? {},
+		description: texts.read,
+		parameters: z.object({ path: z.string(), offset: int.optional(), limit: int.min(1).optional() }),
+		execute: (_id, params, signal, onUpdate, ctx) => runRead(params, ctx, signal, onUpdate, load),
 	});
 
 	// Only tool definitions change: messages stay as they are.
@@ -368,7 +518,13 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 		const tools = toolsOf(event.payload), id = ctx.sessionManager?.getSessionId();
 		if (tools.length && !checked.has(id)) {
 			checked.add(id);
-			const moved = checkReference(tools, await settings(pi, load, Object.keys(reference.settings)), ctx.agent?.kind === "sub") ?? await checkEngine(load);
+			const observed = tools.map(tool => {
+				const base = builtins?.[canon(tool.name)];
+				if (!base) return tool;
+				const schema = base.parameters.toJsonSchema();
+				return { name: tool.name, description: base.description, nativeSchema: schema, parameters: { ...schema, properties: { ...schema.properties, i: {} } } };
+			});
+			const moved = checkReference(observed, await settings(pi, load, Object.keys(reference.settings)), ctx.agent?.kind === "sub") ?? await checkEngine(load);
 			if (moved) ctx.ui?.notify?.(moved, "warning");
 		}
 		rewrite(tools);

@@ -1,29 +1,28 @@
 # rqw-base-tools
 
-тулинг агента для работы с файлами. родные тулы OMP остаются родными.
+тулинг агента для работы с файлами.
 
 **назначение:**
-1. тул `files`: карта проекта и широкий поиск одним вызовом.
-2. свои описания `grep`, `glob`, `read`, `bash`, `edit`, `write`. у `edit` два текста: режим `hashline` и режим `replace`.
-3. сторож: предупреждение владельцу, если OMP поменял тулы, настройки или движок.
-4. правка по файлам в режиме `hashline`: несошедшийся файл пропускается, остальные пишутся. снимки файлов из `read` и `edit` идут в сухой прогон: старая метка файла принимается, как в сессии. в режиме `replace` один вызов это одна замена, код не нужен.
-5. метка `[whole file: N lines]` в ответе `read`.
+1. Обычные локальные `grep` и `glob` и `read` непустого локального текста с `offset` или `limit` работают по образцу Cursor. `glob` даёт список по маске от новых файлов к старым, полный счёт и число скрытых из вывода путей. `grep` даёт совпавшие пути (`files_with_matches`) или счёт по файлам (`count`), с `head_limit` и `offset`. В режиме `content` по возможности показывает метку и строки для `edit`. Список каталога и `read` без диапазона идут родному тулу OMP. Пустой файл даже с диапазоном получает родной ответ с меткой. Для редких целей `read` принимает только `path`; `grep` и `glob` делегируют редкие цели и родные параметры через `ctx.invokeTool`.
+2. Свои описания `bash`, `edit`, `write`. Сторож проверяет родные схемы, описания, настройки и импорты движка.
+3. Правка по файлам в режиме `hashline`: если сухой прогон находит ошибки только в части файлов, несошедшиеся файлы пропускаются. Снимки из `read` и `edit` идут в сухой прогон.
+4. Метка `[whole file: N lines]` подтверждает полное чтение обычного текста без обрезки. При `?` в `path` метки нет, даже если это часть имени файла.
 
 **вход:** `index.js`, `rqw-base-tools.texts.json`, `rqw-base-tools.reference.json`, `rqw-base-tools.yml`.
 
-**хуки:** `session_start`, `before_provider_request`, `tool_call`, `tool_result`, `tool_execution_end`. тул: `files`.
+**хуки:** `session_start`, `before_provider_request`, `tool_call`, `tool_result`, `tool_execution_end`. Тулы: `grep`, `glob`, `read`.
 
 **установка:** три файла в `~/.omp/agent/extensions/rqw-base-tools/`. `rqw-base-tools.yml` вливается в `config.yml`. записи в `install.manifest.json`.
 
-**настройки:** `rqw-base-tools.yml`, 17 значений. восемь из них сверяет сторож. четыре ключа выноса ответа в файл: `tools.artifactHeadBytes`, `tools.artifactTailBytes`, `tools.artifactTailLines`, `tools.artifactMaxBytes`. `find.enabled: "off"`, `astGrep.enabled: false` и `disassembler.backend: none`. перехват bash: `bashInterceptor.enabled: true` и 9 правил.
+**настройки:** `rqw-base-tools.yml`, 17 значений. Восемь из них сверяет сторож. `grep.contextBefore/After: 3` действует только на родной маршрут; локальный `grep` по Cursor начинает с нуля. Четыре ключа выноса ответа в файл: `tools.artifactHeadBytes`, `tools.artifactTailBytes`, `tools.artifactTailLines`, `tools.artifactMaxBytes`. `find.enabled: "off"`, `astGrep.enabled: false` и `disassembler.backend: none`. Перехват bash: `bashInterceptor.enabled: true` и 9 правил.
 
-**перехват bash:** чтение, поиск и списки уходят родным тулам. правка на месте (`sed -i`, `perl -i`, `awk -i inplace`) проходит. свои `patterns` заменяют встроенный список OMP, не дополняют. это предпочтение, не изоляция: пайпы и код интерпретаторов проходят.
+**перехват bash:** вместо команд чтения, поиска и вывода списков OMP предлагает `read`, `grep` или `glob`. правка на месте (`sed -i`, `perl -i`, `awk -i inplace`) проходит. свои `patterns` заменяют встроенный список OMP, не дополняют. это предпочтение, не изоляция: перехват не разбирает код интерпретаторов и не блокирует все пайпы.
 
 **выключение:** `extension-module:rqw-base-tools` в `disabledExtensions`. настройки файла убрать из конфига руками.
 
 **тест:** `bun test dev/tests/harness/rqw-base-tools`.
 
-**костыль:** импорт движка OMP `@oh-my-pi/pi-natives` из расширения. штатного способа нет. сторож сверяет его экспорты.
+**костыль и границы:** OMP 18.22.1: `packages/coding-agent/src/sdk.ts:3933-4011` оставляет родной тул для `ctx.invokeTool`; `tools/read.ts:3226-3234` и `tools/grep.ts:1153-1174,1302-1315` записывают снимок и показанные строки для `edit`. Локальный поиск пользуется `@oh-my-pi/pi-natives`; `grep` регистрирует показанные строки не длиннее 512 байт через родной `grep`. При обрезанной строке в блоке или файле свыше 4 МиБ метки нет; без метки или для правки более длинной строки сначала вызови `read`. Порог размера файла совпадает с родным `grep` (`crates/pi-natives/src/edit.rs:283-293`, `tools/grep.ts:1165-1174`). Импорты внутренних классов тулов и `stripOutputNotice` — обход для доступа к метаданным и удаления повторного уведомления. Сторож проверяет схемы и экспорты.
 
 **после обновления OMP:** переснять эталон с живого запроса. проверить числа в текстах.
 

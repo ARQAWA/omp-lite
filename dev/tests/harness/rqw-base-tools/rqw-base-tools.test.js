@@ -23,165 +23,64 @@ class EditSession {
 		return this.input.match(/^\[/gm).length > 1 ? { isError: true, text: "no change" } : { isError: false, text: "no change", files: [{ diff: "" }] };
 	}
 }
-// counts: path -> match count
-const engine = (paths, counts = {}, searched = paths.length, calls = []) => ({
+const engine = (paths = [], calls = []) => ({
 	calls,
-	glob: async options => (calls.push(options), { matches: paths.map(path => ({ path, fileType: 1 })) }),
-	grep: async options => (calls.push(options), { filesSearched: searched, matches: Object.entries(counts).map(([path, matchCount]) => ({ path, matchCount })) }),
+	glob: async options => (calls.push(options), { matches: paths.map(path => ({ path })) }),
+	grep: async () => ({ matches: [] }),
 });
 // One fake of OMP: the engine, the settings registry, the approval keys.
-function setup(natives = engine([]), current = reference.settings, cwd = "/repo") {
-	const handlers = {}, tools = [], seen = [], field = () => ({ optional: field });
+function setup(natives = engine(), current = reference.settings, cwd = "/repo") {
+	const handlers = {}, tools = [], seen = [], field = () => ({ optional: field, nullable: field, int: field, min: field });
+	const Base = name => class {
+		description = natives.descriptions?.[name] ?? reference.tools[name].description;
+		parameters = { toJsonSchema: () => natives.schemas?.[name] ?? (natives.fields?.[name] ? { properties: Object.fromEntries(natives.fields[name].filter(key => key !== "i").map(key => [key, {}])) } : reference.tools[name].schema) };
+		approval = args => String(args?.path).includes("ssh://") ? "exec" : "read";
+		approvalCacheTargets = args => [`${name} ${args?.path ?? "."}`];
+	};
 	plugin(
-		{ zod: { string: field, boolean: field, object: shape => shape }, pi: { settings: current }, on: (name, fn) => (handlers[name] = fn), registerTool: tool => tools.push(tool) },
-		async name => name.endsWith("pi-natives") ? { FileType: { File: 1, Dir: 2 }, EditSession, EditStore: class { seen = []; recordSnapshotFile(path) { this.seen.push(path); } relocate(from, to) { this.seen.push(`${from}>${to}`); } }, ...natives }
+		{ zod: { string: field, boolean: field, number: field, enum: field, object: shape => shape }, pi: { settings: current }, on: (name, fn) => (handlers[name] = fn), registerTool: tool => tools.push(tool) },
+		async name => name.endsWith("pi-natives") ? { FileType: { File: 1 }, EditSession, EditStore: class { seen = []; recordSnapshotFile(path) { this.seen.push(path); return "ABCD"; } relocate(from, to) { this.seen.push(`${from}>${to}`); } }, hashlineFileHash: () => "ABCD", ...natives }
 			: name.endsWith("registry") ? { lookup: key => ({ get: all => all[key] }) }
-			: { approvalDirectoryKey: dir => `${dir}/`, approvalTreeSearchKey: key => `tree ${key}` },
+			: name.endsWith("tools/output-meta") ? { stripOutputNotice: (text, meta) => meta.notice && text.endsWith(meta.notice) ? text.slice(0, -meta.notice.length) : text }
+			: name.endsWith("tools/read") ? { ReadTool: Base("read") } : name.endsWith("tools/grep") ? { GrepTool: Base("grep") } : name.endsWith("tools/glob") ? { GlobTool: Base("glob") }
+			: { approvalDirectoryKey: dir => `${dir}/`, approvalTreeSearchKey: key => `tree ${key}`, approvalCacheKeyForPath: path => path },
 	);
 	const ctx = { cwd, agent: { kind: "main" }, ui: { notify: message => seen.push(message) }, sessionManager: { getSessionId: () => "one", getCwd: () => cwd } };
-	const files = async params => (await tools[0].execute("id", params, undefined, undefined, ctx)).content[0].text;
-	return { handlers, tool: tools[0], files, seen, ctx };
+	return { handlers, tools, seen, ctx };
 }
-const small = { ...reference.settings, "tools.artifactSpillThreshold": 6 }; // a 1 KB answer budget
 const tmp = async run => {
 	const dir = realpathSync(await mkdtemp(join(tmpdir(), "rqw-base-tools-")));
 	try { await run(dir); } finally { await rm(dir, { recursive: true }); }
 };
 
-// ---- files ----
-
-test("the tool is always visible, read-only, with six optional fields", () => {
-	const { tool } = setup();
-	expect(tool).toMatchObject({ name: "files", loadMode: "essential", approval: "read", description: texts.files });
-	expect(Object.keys(tool.parameters).sort()).toEqual(["case", "gitignore", "glob", "hidden", "path", "pattern"]);
-});
-
-test("the map names every file by directory and hides node_modules", async () => {
-	const natives = engine(["top.txt", "src/b.ts", "/repo/src/a.ts", "src/deep/c.ts", "node_modules/x.js", "node_modules_backup/y.js"]);
-	const { files } = setup(natives);
-	expect(await files({})).toBe("total 5 files\ntop.txt\nnode_modules_backup/\n  y.js\nsrc/\n  a.ts\n  b.ts\nsrc/deep/\n  c.ts\n[all 5 files listed]");
-	expect(natives.calls[0]).toMatchObject({ pattern: "**/*", path: "/repo", hidden: true, gitignore: true, includeNodeModules: false });
-	await files({ path: "src", glob: "*.ts", hidden: false, gitignore: false });
-	expect(natives.calls[1]).toMatchObject({ pattern: "*.ts", path: "/repo/src", hidden: false, gitignore: false });
-});
-
-test("a map over the budget folds deep directories; one that cannot fit goes out whole", async () => {
-	const deep = Array.from({ length: 150 }, (_, i) => `src/d${i % 30}/f${i}.ts`), flat = Array.from({ length: 300 }, (_, i) => `file${i}.ts`);
-	const text = await setup(engine(deep), small).files({});
-	const [, listed, folded] = /^\[150 files: (\d+) listed, the rest folded into (\d+) directories\]$/.exec(text.split("\n").at(-1));
-	expect(Buffer.byteLength(text)).toBeLessThanOrEqual(1024);
-	expect(+listed + 5 * folded).toBe(150);
-	expect(text).toContain("src/d29/ (5 files)");
-	const whole = await setup(engine(flat), small).files({});
-	expect(Buffer.byteLength(whole)).toBeGreaterThan(1024);
-	expect(whole.split("\n").at(-1)).toBe("[all 300 files listed]");
-});
-
-test("a search lists files by match count", async () => {
-	const natives = engine(["a.ts", "src/b.ts", "src/c.bin", "node_modules/n.js"], { "a.ts": 1, "src/b.ts": 3, "node_modules/n.js": 9 }, 2);
-	const lines = (await setup(natives).files({ pattern: "one\\ntwo|x", case: false, glob: "**/*" })).split("\n");
-	expect(lines[0]).toBe("2 files, 4 matches, searched 2 of 3 files");
-	expect(lines.slice(1)).toEqual(["src/b.ts (3 matches)", "a.ts (1 match)", "[all 2 files listed]"]);
-	expect(natives.calls[1]).toMatchObject({ mode: "count", pattern: "one\\ntwo|x", ignoreCase: true, multiline: true, glob: "**/*" });
-	expect(natives.calls).toHaveLength(2);
-	expect(await setup(engine(["a.ts"])).files({ pattern: "zzz" })).toBe("0 files, 0 matches, searched 1 of 1 files\nNo files matched.\n[all 0 files listed]");
-});
-
-test("a long search tail folds by directory and the counts add up", async () => {
-	const counts = Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`src/d${i % 10}/f${i}.ts`, 1]));
-	const text = await setup(engine(Object.keys(counts), counts), small).files({ pattern: "x" });
-	const [, listed] = /^\[100 files: (\d+) listed, the rest folded into \d+ directories\]$/.exec(text.split("\n").at(-1));
-	const folded = [...text.matchAll(/^src\/d\d\/ \((\d+) files, \d+ matches\)$/gm)].reduce((sum, hit) => sum + +hit[1], 0);
-	expect(Buffer.byteLength(text)).toBeLessThanOrEqual(1024);
-	expect(+listed + folded).toBe(100);
-});
-
-test("a list that fits whole is not folded", async () => {
-	const full = "1 files, 1 matches, searched 1 of 1 files\nd/a (1 match)\n[all 1 files listed]";
-	const exact = { ...reference.settings, "tools.artifactSpillThreshold": 5 + full.length / 1024 };
-	expect(await setup(engine(["d/a"], { "d/a": 1 }), exact).files({ pattern: "x" })).toBe(full);
-});
-
-test("a mask that matches a directory takes all its files", async () => {
-	// The directory name has mask characters: it is walked by path.
-	const natives = {
-		...engine([], { "src[1]/a.ts": 1 }, 1),
-		glob: async ({ pattern, path }) => ({ matches: path === "/repo" && pattern === "src*" ? [{ path: "src[1]", fileType: 2 }] : /^(\*\*\/\*|src\/\*\*)$/.test(pattern) && path === "/repo/src[1]" ? [{ path: "a.ts", fileType: 1 }] : [] }),
-	};
-	// A mask that ends with a separator is the directory with all inside it.
-	for (const [glob, path] of [["src*"], ["src/", "src[1]"], ["src\\", "src[1]"]]) expect((await setup(natives).files({ pattern: "x", glob, path })).split("\n")[0]).toBe("1 files, 1 matches, searched 1 of 1 files");
-	expect(natives.calls.at(-1).glob).toBe("src/**");
-});
-
-test("a real file over 4 MiB is named; links and hidden files the engine read are not counted", () => tmp(async dir => {
-	await mkdir(join(dir, "node_modules"));
-	await writeFile(join(dir, "big.ts"), Buffer.alloc(5 * 1024 * 1024, "a"));
-	for (const name of ["small.ts", "node_modules/n.js"]) await writeFile(join(dir, name), "a");
-	for (const name of ["link.ts", "node_modules/link.js"]) await symlink(join(dir, "small.ts"), join(dir, name));
-	// The engine read three files: big.ts, small.ts and the hidden n.js.
-	const natives = engine(["big.ts", "small.ts", "link.ts", "node_modules/n.js", "node_modules/link.js"], { "big.ts": 1 }, 3);
-	const text = await setup(natives, undefined, dir).files({ pattern: "a" });
-	expect(text.split("\n").slice(0, 2)).toEqual(["1 files, 1 matches, searched 2 of 2 files", "searched in part (first 4 MiB): big.ts"]);
-}));
-
-test("errors: a blank pattern, an engine failure, the 30-second deadline; a node_modules or .git root is empty", async () => {
-	const failing = { glob: async () => { throw new Error("boom"); } }, now = Date.now;
-	expect(await setup().files({ pattern: "  " })).toBe("files: pattern must not be empty");
-	expect(await setup(failing).files({})).toBe("files: boom. Narrow path and try again.");
-	for (const path of ["node_modules", ".git/hooks"]) expect(await setup(failing).files({ path })).toBe("total 0 files\n[all 0 files listed]");
-	expect(await setup(failing).files({ path: "node_modules", pattern: "x" })).toBe("0 files, 0 matches, searched 0 of 0 files\nNo files matched.\n[all 0 files listed]");
-	try {
-		const slow = { ...engine(["a.ts"]), glob: async () => (Date.now = () => now() + 31000, { matches: [] }) };
-		for (const pattern of ["x", undefined]) {
-			Date.now = now;
-			expect(await setup(slow).files({ pattern })).toBe("files: timed out after 30s. Narrow path and try again.");
-		}
-	} finally {
-		Date.now = now;
-	}
-});
-
-test("the approval target is the real search root as a tree; a link into .git is hidden", () => tmp(async dir => {
-	for (const [name, link] of [["src", "link"], [".git", "gitlink"]]) {
-		await mkdir(join(dir, name));
-		await symlink(join(dir, name), join(dir, link));
-	}
-	expect(await setup(engine(["x"]), undefined, dir).files({ path: "gitlink" })).toStartWith("total 0 files");
-	const { handlers, tool, ctx } = setup(undefined, undefined, dir);
-	expect(tool.approvalCacheTargets({})).toBeUndefined();
-	await handlers.session_start({}, ctx);
-	expect([{}, { path: "link" }, { path: "missing" }].map(tool.approvalCacheTargets)).toEqual([[`tree ${dir}/`], [`tree ${dir}/src/`], [`tree ${dir}/missing/`]]);
-}));
-
 // ---- texts and guard ----
 
 // A request with the native tools of the reference, in the flat (Claude) form.
 const payload = () => ({
-	messages: [{ role: "assistant", content: [{ type: "tool_use", name: "files", input: {} }] }],
+	messages: [{ role: "assistant", content: [{ type: "tool_use", name: "read", input: { path: "." } }] }],
 	tools: Object.entries(reference.tools).map(([name, { description, fields }]) => ({ name, description, input_schema: { properties: Object.fromEntries(fields.map(field => [field, {}])) } })),
 });
 const tool = (body, name) => body.tools.find(entry => entry.name === name);
-// Our six texts. pick: 0 with `files`, 1 without it. A native part comes from the native description.
-const ours = pick => Object.entries(reference.tools).map(([name, { description }]) => [].concat(texts.native[name])
-	.map(part => typeof part === "string" ? part : part.native ? description.slice(description.indexOf(part.native)) : part[pick]).join(""));
+// The remaining native texts. The three wrapped tools keep their own descriptions.
+const ours = Object.entries(reference.tools).map(([name, { description }]) => texts.native[name] === undefined ? description : [].concat(texts.native[name])
+	.map(part => typeof part === "string" ? part : description.slice(description.indexOf(part.native))).join(""));
 
-test("six native descriptions become ours; schemas and messages stay", async () => {
+test("the other native descriptions become ours; schemas and messages stay", async () => {
 	const { handlers, ctx, seen } = setup(), body = payload(), before = JSON.stringify([body.messages, body.tools.map(entry => entry.input_schema)]);
 	for (const entry of body.tools) entry.name = `_${entry.name}`;
 	expect(await handlers.before_provider_request({ payload: body }, ctx)).toBe(body);
-	expect(body.tools.map(entry => entry.description)).toEqual(ours(1));
+	expect(body.tools.map(entry => entry.description)).toEqual(ours);
 	expect(JSON.stringify([body.messages, body.tools.map(entry => entry.input_schema)])).toBe(before);
-	expect(JSON.stringify(body.tools)).not.toContain("`files`");
 	expect(seen).toEqual([]);
 });
 
-test("with files and another builtins list: the nested form is rewritten once", async () => {
+test("with another builtins list: the nested form is rewritten once", async () => {
 	const { handlers, ctx, seen } = setup(), flat = payload();
 	tool(flat, "bash").description = tool(flat, "bash").description.replace(/(ahead of PATH: ).*/, "$1awk");
-	const body = { tools: [...flat.tools, { name: "files", description: texts.files }].map(entry => ({ type: "function", function: entry })) };
+	const body = { tools: flat.tools.map(entry => ({ type: "function", function: entry })) };
 	await handlers.before_provider_request({ payload: body }, ctx);
 	const once = JSON.stringify(body);
-	expect(flat.tools.map(entry => entry.description)).toEqual(ours(0).map(text => text.replace(/(ahead of PATH: ).*/, "$1awk")));
+	expect(flat.tools.map(entry => entry.description)).toEqual(ours.map(text => text.replace(/(ahead of PATH: ).*/, "$1awk")));
 	await handlers.before_provider_request({ payload: body }, ctx);
 	expect(JSON.stringify(body)).toBe(once);
 	expect(seen).toEqual([]);
@@ -192,7 +91,7 @@ test("a native text without its marker is kept whole, and a second pass adds not
 	tool(body, "bash").description = "new native text";
 	await handlers.before_provider_request({ payload: body }, ctx);
 	await handlers.before_provider_request({ payload: body }, ctx);
-	expect(tool(body, "bash").description).toBe(ours(1)[Object.keys(reference.tools).indexOf("bash")].split("Persistent bash")[0] + "new native text");
+	expect(tool(body, "bash").description).toBe(ours[Object.keys(reference.tools).indexOf("bash")].split("Persistent bash")[0] + "new native text");
 });
 
 test("the Google, Bedrock and string-schema forms are rewritten; empty descriptions of the inline catalog are left alone", async () => {
@@ -206,7 +105,7 @@ test("the Google, Bedrock and string-schema forms are rewritten; empty descripti
 	for (const [shape, wrap] of forms) {
 		const list = payload().tools.map(({ input_schema, ...entry }) => ({ ...entry, ...shape(input_schema) }));
 		await send(wrap(list), wrap);
-		expect(list.map(entry => entry.description)).toEqual(ours(1));
+		expect(list.map(entry => entry.description)).toEqual(ours);
 	}
 	// Bedrock drops the empty description.
 	inline.tools.forEach((entry, at) => at ? (entry.description = "") : delete entry.description);
@@ -225,7 +124,7 @@ test("the guard names the first change, once per session, and our text is applie
 		[body => (tool(body, "bash").input_schema.properties.extra = {}), "native bash changed fields"],
 		[body => body.tools.splice(body.tools.indexOf(tool(body, "read")), 1), "native read is missing"],
 		[() => {}, "setting edit.mode changed", undefined, { ...reference.settings, "edit.mode": "apply_patch" }],
-		[() => {}, "engine grep changed", { ...engine([]), grep: undefined }],
+		[() => {}, "engine grep changed", { ...engine(), grep: undefined }],
 		[body => (tool(body, "edit").input_schema.properties = { definition: {}, syntax: {}, type: {} })],
 		[body => (tool(body, "edit").description = reference.tools.edit.alt[2].description)],
 		[body => (tool(body, "read").description = tool(body, "read").description.replace("- Directory", "- Selected file: `[a#1A2B]`\n- Directory"))],
@@ -240,7 +139,7 @@ test("the guard names the first change, once per session, and our text is applie
 		const body = await send("one");
 		await send("one");
 		expect(seen).toEqual(want ? [prefix + want] : []);
-		expect(tool(body, "grep").description).toBe(ours(1)[Object.keys(reference.tools).indexOf("grep")]);
+		expect(tool(body, "grep")?.description.startsWith(ours[Object.keys(reference.tools).indexOf("grep")])).toBe(true);
 		await send("two");
 		expect(seen).toHaveLength(want ? 2 : 0);
 	}
@@ -306,7 +205,7 @@ test("a native failure after the cut keeps its error and details behind the note
 }));
 
 test("the native edit gets the patch as it is in every other case", async () => {
-	const broken = { ...engine([]), EditSession: class { constructor() { throw new Error("engine changed"); } } };
+	const broken = { ...engine(), EditSession: class { constructor() { throw new Error("engine changed"); } } };
 	const same = [
 		[patch(a, c)], [patch(bad, alias)], [patch(bad, bad2)], [`x\n${patch(a, bad)}`], [undefined], [patch(a, bad), "write"], [patch(a, bad), "edit", broken],
 		// The engine may find a missing file elsewhere by its name.
@@ -375,4 +274,114 @@ test("a part, a summary and a non-file get no mark", () => {
 		read(whole(), { isError: true }), read(whole(), { content: [{ type: "image" }, { type: "text", text: "x" }] }), read(whole(), { toolName: "grep" }),
 	];
 	for (const event of events) expect(handlers.tool_result(event)).toBeUndefined();
+});
+
+// ---- Cursor-style wrappers ----
+
+test("grep pages without a per-file cap, records shown tags, and supports modes and context", () => tmp(async dir => {
+	const full = join(dir, "hot.txt"), calls = [], rows = Array.from({ length: 80 }, (_, i) => `hit ${i + 1}`);
+	await writeFile(full, rows.join("\n") + "\n");
+	const natives = { ...engine(), grep: async opts => {
+		calls.push(opts);
+		if (opts.mode === "count") return { matches: [{ path: full, matchCount: 80 }] };
+		if (opts.mode === "filesWithMatches") return { matches: [{ path: full }] };
+		return { matches: rows.map((line, i) => ({ path: full, lineNumber: i + 1, line })) };
+	} };
+	const { tools, ctx } = setup(natives, undefined, dir), grep = tools.find(t => t.name === "grep"), native = [];
+	ctx.invokeTool = async args => (native.push(args), { content: [{ type: "text", text: /:\d+-\d+(?:,\d+-\d+)*$/.test(args.path) ? `[${full}#ABCD]` : "" }] });
+	const run = async args => (await grep.execute("x", args, undefined, undefined, ctx)).content[0].text;
+	const first = await run({ path: "hot.txt", pattern: "hit", head_limit: 60, "-C": 1, "-i": true, type: "txt", glob: "*.txt", multiline: true });
+	expect(first).toContain("[hot.txt#ABCD]\n  1:hit 1");
+	expect(first).toContain("  60:hit 60");
+	expect(first).toContain("Use offset=60");
+	expect(native).toHaveLength(3);
+	expect(calls[0]).toMatchObject({ pattern: "(?s)hit", contextBefore: 1, contextAfter: 1, ignoreCase: true, type: "txt", glob: "*.txt", multiline: true });
+	expect(await run({ path: "hot.txt", pattern: "hit", offset: 60, head_limit: 10 })).toContain("[hot.txt#ABCD]\n  61:hit 61");
+	expect(await run({ path: "hot.txt", pattern: "hit", output_mode: "count" })).toContain("hot.txt:80");
+	expect(await run({ path: "hot.txt", pattern: "hit", output_mode: "files_with_matches" })).toContain("\nhot.txt\n");
+	ctx.invokeTool = async () => (await writeFile(full, "changed during registration\n"), { content: [{ type: "text", text: `[${full}#ABCD]` }] });
+	expect(await run({ path: "hot.txt", pattern: "hit", head_limit: 1 })).toContain("[hot.txt]\n  1:hit 1");
+	ctx.invokeTool = async args => ({ content: [{ type: "text", text: JSON.stringify(args) }] });
+	expect(await run({ path: "skill://test:1-2", pattern: "x", case: false })).toBe('{"path":"skill://test:1-2","pattern":"x","case":false}');
+	expect(await run({ path: "hot.txt;".repeat(32) + "hot.txt", pattern: "x" })).toBe(JSON.stringify({ path: "hot.txt;".repeat(32) + "hot.txt", pattern: "x" }));
+	expect(await run({ path: "skill://test", pattern: "x", head_limit: 2 })).toContain("does not support head_limit");
+}));
+
+test("glob returns a full count above 200 and delegates the native shape", () => tmp(async dir => {
+	const files = Array.from({ length: 250 }, (_, i) => `d/f${250 - i}.txt`), natives = engine(files);
+	const { tools, ctx, handlers } = setup(natives, undefined, dir), glob = tools.find(t => t.name === "glob"), target_directory = "src[1]";
+	await mkdir(join(dir, target_directory));
+	await handlers.session_start({}, ctx);
+	const run = async args => (await glob.execute("x", args, undefined, undefined, ctx)).content[0].text;
+	const result = await run({ glob_pattern: "./*.txt", target_directory, hidden: false, gitignore: false });
+	expect(result).toStartWith("Result of search in 'src[1]' (total 250 files):\n- d/f250.txt");
+	expect(glob.approvalCacheTargets({ glob_pattern: "README.md", target_directory })).toEqual([`tree ${join(dir, target_directory)}/`]);
+	expect(result).toContain("150 more files");
+	expect(natives.calls[0]).toMatchObject({ path: join(dir, target_directory), pattern: "**/*.txt", sortByMtime: true, hidden: false, gitignore: false });
+	ctx.invokeTool = async args => ({ content: [{ type: "text", text: JSON.stringify(args) }] });
+	expect(await run({ glob_pattern: "./*.txt", target_directory, limit: 2 })).toBe("Result of search in 'src[1]' (total 250 files):\n- d/f250.txt\n- d/f249.txt\n... 248 more files ... (Do a more specific search if needed)");
+	expect(await run({ glob_pattern: "./*.txt", target_directory: "tree", limit: 2 })).toBe('{"path":"tree/**/*.txt","limit":2}');
+	expect(await run({ path: "skill://*.md", limit: 10 })).toBe('{"path":"skill://*.md","limit":10}');
+	expect(await run({ path: "skill://*.md", target_directory: "", limit: 10 })).toBe('{"path":"skill://*.md","limit":10}');
+}));
+
+test("read honors positive and negative offsets and delegates native targets", () => tmp(async dir => {
+	const path = "a:b.txt", full = join(dir, path), notice = "[Showing line 8 (partial, 1 KB of 10 KB); file not scanned to EOF]", content = `one\ntwo\n\n${notice}\nfive\n`;
+	await writeFile(full, content);
+	const { tools, ctx, handlers } = setup(undefined, undefined, dir), reader = tools.find(t => t.name === "read");
+	let partial = false;
+	ctx.invokeTool = async args => {
+		const range = /:raw:(\d+)-(\d*)$/.exec(args.path);
+		if (!range) return { content: [{ type: "text", text: JSON.stringify(args) }] };
+		const start = +range[1], end = range[2] ? +range[2] : 6, numbers = Array.from({ length: end - start + 1 }, (_, i) => i + start);
+		const body = content.split("\n").slice(start - 1, end).join("\n");
+		return { content: [{ type: "text", text: body }], details: { truncation: partial ? { firstLineExceedsLimit: true } : undefined, raw: true, fileSize: content.length, totalLines: 5, displayContent: { text: body, lineNumbers: numbers }, meta: { source: { type: "path", value: full } } } };
+	};
+	const run = async args => (await reader.execute("x", args, undefined, undefined, ctx)).content[0].text;
+	expect(await run({ path, offset: 2, limit: 3 })).toStartWith(`[a:b.txt#ABCD]\n2:two\n3:\n4:${notice}`);
+	expect(await run({ path, offset: -2 })).toBe(`[a:b.txt#ABCD]\n4:${notice}\n5:five`);
+	partial = true;
+	expect(await run({ path, offset: 2, limit: 1 })).toBe("two");
+	expect(await run({ path: "skill://test" })).toBe('{"path":"skill://test"}');
+	expect(await run({ path: "a.txt:1-2" })).toBe('{"path":"a.txt:1-2"}');
+	await handlers.session_start({}, ctx);
+	expect(reader.readsSkillUris).toBe(true);
+	expect(reader.approval({ path: "ssh://host/file" })).toBe("exec");
+	expect(reader.approvalCacheTargets({ path: "a.txt" })).toEqual(["read a.txt"]);
+}));
+
+test("the guard compares the native implementations, not the replacement descriptions", async () => {
+	for (const [natives, warning] of [
+		[engine(), undefined],
+		[{ ...engine(), FileType: {} }, "rqw-base-tools: engine FileType.File changed"],
+		[{ ...engine(), descriptions: { grep: "changed" } }, "rqw-base-tools: native grep changed description"],
+		[{ ...engine(), fields: { read: ["i", "path", "new"] } }, "rqw-base-tools: native read changed fields"],
+		[{ ...engine(), schemas: { grep: { ...reference.tools.grep.schema, required: [] } } }, "rqw-base-tools: native grep changed schema"],
+	]) {
+		const { handlers, ctx, seen } = setup(natives), body = payload();
+		await handlers.session_start({}, ctx);
+		for (const name of ["grep", "glob", "read"]) Object.assign(tool(body, name), { description: texts[name], input_schema: { properties: {} } });
+		await handlers.before_provider_request({ payload: body }, ctx);
+		expect(seen).toEqual(warning ? [warning] : []);
+	}
+});
+
+test("truncated stale context gets no edit tag, even with a complete matching row", () => tmp(async dir => {
+	const full = join(dir, "huge.txt"), line = "x".repeat(20000);
+	await writeFile(full, `new ${line}\nhit\n`);
+	const natives = { ...engine(), grep: async () => ({ matches: [{ path: full, lineNumber: 2, line: "hit", contextBefore: [{ lineNumber: 1, line }] }] }) };
+	const { tools, ctx } = setup(natives, undefined, dir), grep = tools.find(t => t.name === "grep");
+	ctx.invokeTool = async () => ({ content: [{ type: "text", text: `[${full}#ABCD]` }] });
+	const result = (await grep.execute("x", { path: "huge.txt", pattern: "hit", "-B": 1 }, undefined, undefined, ctx)).content[0].text;
+	expect(result.length).toBeLessThan(15000);
+	expect(result).toContain("[line truncated; use read]");
+	expect(result).toContain("[huge.txt]\n  1-");
+}));
+
+test("a native notice is handed back once with metadata intact", async () => {
+	const { tools, ctx } = setup(), reader = tools.find(t => t.name === "read"), meta = { notice: "\n\n[native notice]" };
+	ctx.invokeTool = async () => ({ content: [{ type: "text", text: `native body${meta.notice}` }], details: { meta } });
+	const result = await reader.execute("x", { path: "skill://test" }, undefined, undefined, ctx);
+	expect(result.content[0].text).toBe("native body");
+	expect(result.details.meta).toBe(meta);
 });
