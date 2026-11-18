@@ -63,7 +63,6 @@
 	"tui": { "status": "cmp 0", "title": "Model / effort", "outside": "haiku-4", "noModels": "No models", "inside": "haiku-5", "summary": "read 1", "turnMark": "⏱" },
 	"probes": [
 		{ "slug": "luna", "model": "openai-codex/gpt-6-luna", "thinking": "high", "hashline": true, "codex": true },
-		{ "slug": "haiku", "model": "anthropic/claude-haiku-5-5", "thinking": "high", "hashline": true },
-		{ "slug": "ds", "model": "openrouter/deepseek/deepseek-v4.1-flash-1017", "thinking": "low" }
+		{ "slug": "haiku", "model": "anthropic/claude-haiku-5-5", "thinking": "high", "hashline": true }
 	]
 }
