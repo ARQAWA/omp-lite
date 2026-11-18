@@ -2,7 +2,7 @@
 
 Перед работой прочитай [dev/PROCESS.md](dev/PROCESS.md), затем README затронутых каталогов. Эти инструкции относятся к разработке репозитория, а не к работе установленного продукта.
 
-Обновление OMP («обнови версию», новая версия OMP, `omp update`, сторож `rqw-base-tools` пишет «native … changed description»): сначала прочитай [dev/agents/omp-upgrade/SKILL.md](dev/agents/omp-upgrade/SKILL.md) и следуй его разделу «Кратко»: блок из него выдай дословно, в ограждении, до своих слов. Блок это цитата файла: правила коротких фраз к нему не относятся, пересказ вместо блока это ошибка.
+Обновление OMP («обнови версию», новая версия OMP, `omp update`, сторож `rqw-base-tools` пишет «native … changed description»): сначала прочитай [dev/agents/omp-upgrade/SKILL.md](dev/agents/omp-upgrade/SKILL.md) и следуй ему.
 
 Личные принципы владельца: [dev/WORKFLOW-MANIFEST.md](dev/WORKFLOW-MANIFEST.md). Это отдельная запись, не процедура выполнения задач.
 

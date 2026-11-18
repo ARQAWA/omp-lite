@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "обнови версию OMP до последней. пока ничего не меняй и ничего не запускай, только читай файлы. скажи, какой файл ты прочитал первым, и перечисли этапы работы по порядку.",
-      "expected_output": "Агент читает dev/agents/omp-upgrade/SKILL.md (по указателю в AGENTS.md) и выдаёт блок «этапы» дословно: версии и worktree, разбор скриптом scan.js, план с классами R0, R1, R2 и ревью плана, сборка (bump.js, reference.js, verify.js, код-ревью правок R1), Mac (omp update, INSTALL.md, verify.js --runtime, probe.js), ревью согласованности, merge, VSIX сразу, всё вокруг; криты не останавливают работу и идут владельцу в конце. Ничего не меняет и не запускает.",
+      "expected_output": "Агент читает dev/agents/omp-upgrade/SKILL.md (по указателю в AGENTS.md) и перечисляет этапы по чек-листу: версии и worktree, разбор скриптом scan.js, план с классами R0, R1, R2 и ревью плана, сборка (bump.js, reference.js, verify.js, код-ревью правок R1), Mac (omp update, INSTALL.md, verify.js --runtime, probe.js), ревью согласованности, merge, VSIX сразу, всё вокруг; криты не останавливают работу и идут владельцу в конце. Ничего не меняет и не запускает.",
       "assertions": [
         "Ответ называет dev/agents/omp-upgrade/SKILL.md прочитанным файлом: первым или сразу после dev/PROCESS.md.",
         "Ответ называет разбор скриптом scan.js с двумя версиями и отчёт scan.md.",
@@ -19,7 +19,7 @@
     {
       "id": 2,
       "prompt": "после omp update в каждой сессии пишет: rqw-base-tools: native read changed description. что делать? пока ничего не меняй, только читай и скажи план.",
-      "expected_output": "Агент узнаёт смену версии OMP, читает dev/agents/omp-upgrade/SKILL.md и выдаёт блок «сигнал»: это апдейт целиком, не точечная правка; old из INSTALL.md, new из omp --version и omp update --check; scan.js old new сам берёт оба бинаря и снимки на копии агента, живой ~/.omp/agent не трогается; отчёт scan.md показывает всё сломанное разом; дальше этапы с плана. Ничего не меняет.",
+      "expected_output": "Агент узнаёт смену версии OMP, читает dev/agents/omp-upgrade/SKILL.md и говорит: это апдейт целиком, не точечная правка; old из INSTALL.md, new из omp --version и omp update --check; scan.js old new сам берёт оба бинаря и снимки на копии агента, живой ~/.omp/agent не трогается; отчёт scan.md показывает всё сломанное разом; дальше этапы с плана. Ничего не меняет.",
       "assertions": [
         "Ответ связывает сообщение сторожа со сменой версии OMP.",
         "Ответ называет dev/agents/omp-upgrade/SKILL.md.",
