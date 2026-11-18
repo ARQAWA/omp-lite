@@ -5,7 +5,7 @@
 **Состав:**
 
 - `SYSTEM.md` — системный промпт. Его получают все агенты: главный и сабагенты. Вход: `~/.omp/agent/SYSTEM.md`.
-- `rules/rqw-system-core-main.md` — правила общения главного агента: `alwaysApply: true`, `agents: main`. Вход: `~/.omp/agent/rules/`.
+- `rules/rqw-system-core-main.md` — правила главного агента: особые запросы, смешанное сообщение, новые сообщения и компакт. `alwaysApply: true`, `agents: main`. Вход: `~/.omp/agent/rules/`.
 - `rules/rqw-system-core-subagent.md` — заметка об отчёте для сабагентов: `alwaysApply: true`, `agents: "!main"`. Вход: `~/.omp/agent/rules/`.
 - `index.js` — памятка: код и текст. Вход: `~/.omp/agent/extensions/rqw-system-core.js`.
 
