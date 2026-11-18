@@ -2410,3 +2410,31 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** системный промт главного агента 17576 → 7248 знаков. Критерий плана «ответ короче» не выполнен: длина ответов прежняя, от −4% до +6%. Владелец видел эти цифры и принял версию: «Ну всё тогда, давай, а-а, упаковывай всё это дело». Правила оформления ответа, цитирования кода, апдейтов во время работы и «владелец не видит вывод команд» удалены без замены: общение держат памятка и правило смешанного сообщения. Сабагенты памятку не получают, их заметка не менялась. Модели `sol`, `terra`, `astra`, Gemini и Windows VDI не проверены. Длинные отчёты не мерились.
 
 **Носители правила:** `src/modules/rqw-system-core/SYSTEM.md`, `rules/rqw-system-core-main.md`, `index.js`, `README.md`; `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`.
+
+## D-142 — десять моделей, цепочка модели по умолчанию, короткие усилия в пикере
+
+**Решение:**
+
+1. `rqw-runtime-config/config.yml`: `enabledModels` и `modelRoles.perCall` держат одни и те же 10 имён. `anthropic`: `claude-opus-5-5`, `claude-haiku-5-5`, `claude-sonnet-5-5`, `claude-fable-5-2`. `openai-codex`: `gpt-6.2-astra`, `gpt-6.2-sol`, `gpt-6.1-terra`, `gpt-6-luna`. `openrouter/deepseek/deepseek-v4.1-flash-1017`. `antigravity-cli/gemini-4-hydrogen`. Было 13 и 82 имени.
+2. `modelRoles.default` стал цепочкой: `openai-codex/gpt-6.2-sol:low`, `anthropic/claude-opus-5-5:medium`, `antigravity-cli/gemini-4-hydrogen:medium`, `openrouter/deepseek/deepseek-v4.1-flash-1017:high`. OMP берёт первую доступную модель.
+3. Карта порогов сжатия: убраны `opencode-go/deepseek-v4.1-flash`, `antigravity-cli/gemini-4-argon`, `antigravity-cli/gemini-4-carbon`. 21 → 18 моделей.
+4. Пикер `rqw-harness-interface`: усилия подписаны `lo md hi xh mx`, как в MyP (`my-pi/extensions/RQW-statusbar/render.ts`). Gemini называется `Hydrogen`. Алиасы убранных моделей удалены.
+
+**Основание:** слова владельца от 2026-11-18: «сократить список моделей точно надо»; «И надо ещё из списка моделей убрать, короче,ээ Open roуtr, Open cod Go Prваiдеeра. Остаётся только Open роoутr, DipSC. Ну и эти модели Cloud Cod — четыре штуки. И модели чата GPT, э-э, что там? Новая Astra, новое Sol, новая Терра 6.1, которая, ну и Луна, и всё.»; «А и ещё нужно оставить, короче, Gemin-Гидроген модель. Во. Вот. Gеmini, этот, гидроген 4, который или просто гидроген, можешь его назвать.»; «А и дефолтная модель по умолчанию пусть будет, короче, э-э-э не Dipsic, а пусть будет, короче, э-м-э, я даже не знаю. Ну, пусть, короче, будет Sol6 2 Low. Дефолтная модель по умолчанию. Если её нету, то, короче, следующая дефолтная модель пусть будет э-э-э сонет Хай. Ой, не сонет хай, а Opus Medium. Если её нету, короче, то пусть будет, а-а, ну, если Cloudкоod не подключён, то пусть будет, короче, Гидроген, если нету Jemin, то пусть будет Diepsc.»; «гидроген, Medium Risning, Dpsic High-Risning по умолчанию.»; «Я хочу тогда сокращение внутри нашего модулпикера. Пусть вModl-пикере будут сокращения. А, короче, в tatus Line всё будет как обычно. Цвет по уровню жирный, тоже похуй, выбрасываем. Мы идём самым коротким путём.»
+
+**Заменяет:** в D-126 три модели Gemini в списках и имена `Hydrogen-4`, `Argon-4`, `Carbon-4`, `DeepSeek Flash Go`; в D-029 роль `default` на `opencode-go/deepseek-v4.1-flash:max`. Набор уровней усилия из D-106 прежний, изменились только подписи.
+
+**Механика OMP 18.22.1**, каталог `packages/coding-agent/src`: `config/model-resolver.ts` (`normalizeModelPatternList` режет значение роли по запятым, `resolveModelRoleValue` берёт первую доступную модель); `task/model-approval.ts` (список моделей в описании тула `task` строится из роли `perCall`).
+
+**Проверка:** `bun test dev/tests`: 98 pass, 0 fail. Цепочка проверена в четырёх изолированных копиях рантайма запуском `omp -p` без флага модели. Модель и уровень взяты из записей `model_change` и `thinking_level_change` сессии. Провайдер закрывался через `disabledProviders`.
+
+1. Все провайдеры открыты: `gpt-6.2-sol`, `low`.
+2. Закрыт `openai-codex`: `claude-opus-5-5`, `medium`.
+3. Закрыт ещё `anthropic`: `gemini-4-hydrogen`, `medium`. Ответа нет: провайдер вернул ошибку квоты 429.
+4. Закрыт ещё `antigravity-cli`: `deepseek-v4.1-flash-1017`, `high`.
+
+Значение `perCall`: 2297 → 298 знаков.
+
+**Границы:** статуслайн не менялся: сокращения, цвет и жирный для усилия владелец снял. Имя `Hydrogen` в статуслайне даёт только личный `~/.omp/agent/models.yml` машины, в поставку он не входит. Провайдер `opencode-go` остался открытым: статуслайн показывает остаток его подписки. Без доступа ко всем моделям цепочки OMP стартует без модели: «всегда DeepSeek» сделать нельзя. `INSTALL.md` по-прежнему возвращает прежний `modelRoles.default` машины: цепочка приходит на машину без прежнего значения, на Mac владельца она ставится руками. В карте порогов остались 11 моделей вне списка. Случай «провайдер открыт, входа нет» не проверен: его заменяет закрытие через `disabledProviders`. Windows VDI не проверен.
+
+**Носители правила:** `src/modules/rqw-runtime-config/config.yml`, `README.md`; `src/modules/rqw-harness-interface/model-picker.js`, `model-picker.json`, `README.md`; `dev/tests/harness/rqw-runtime-config/rqw-runtime-config.test.js`, `dev/tests/harness/rqw-harness-interface/model-picker.test.js`.

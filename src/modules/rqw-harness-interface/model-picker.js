@@ -5,6 +5,7 @@ import data from "./model-picker.json";
 const id = model => `${model.provider}/${model.id}`;
 const same = (a, b) => !!a && !!b && id(a) === id(b);
 const levels = model => data.effortOrder.filter(level => model?.thinking?.efforts?.includes(level));
+const tag = level => data.effortLabels[level];
 const nearest = (model, effort) => {
 	const list = levels(model), index = data.effortOrder.indexOf(effort);
 	return list.filter(level => data.effortOrder.indexOf(level) <= (index < 0 ? 2 : index)).at(-1) ?? list[0];
@@ -59,7 +60,7 @@ function picker(models, initial, effort, theme, done) {
 	};
 	const render = width => {
 		if (width <= 0) return [];
-		const list = levels(selected), needed = 3 + data.minName + size(list.join(" "));
+		const list = levels(selected).map(tag), needed = 3 + data.minName + size(list.join(" "));
 		if (selected && needed > width) {
 			const text = data.effortNeeds.replace("{n}", String(needed)), rows = [];
 			for (let i = 0; i < size(text); i += width) rows.push(color("error", cut([...text].slice(i).join(""), width)));
@@ -70,8 +71,8 @@ function picker(models, initial, effort, theme, done) {
 			const model = visible[index + offset];
 			if (!model) return "";
 			if (offset) return "  " + color("muted", short(label(model), width - 2));
-			const names = levels(model), name = short(label(model), width - 3 - size(names.join(" ")));
-			return color("accent", "› ") + theme.bold(name) + " " + names.map(level => level === effort ? color(level, theme.bold(level)) : color("dim", level)).join(" ");
+			const names = levels(model), name = short(label(model), width - 3 - size(names.map(tag).join(" ")));
+			return color("accent", "› ") + theme.bold(name) + " " + names.map(level => level === effort ? color(level, theme.bold(tag(level))) : color("dim", tag(level))).join(" ");
 		});
 		const actions = data.hintEnter + data.hintOk + data.hintEsc + data.hintCancel;
 		const hint = width >= size(data.hintWide + actions) ? data.hintWide : width >= size(data.hintMedium + actions) ? data.hintMedium : "";
