@@ -1,0 +1,69 @@
+{
+	"snapshotModel": "anthropic/claude-sonnet-5-5",
+	"guard": {
+		"reference": "src/modules/rqw-base-tools/rqw-base-tools.reference.json",
+		"texts": "src/modules/rqw-base-tools/rqw-base-tools.texts.json"
+	},
+	"providers": {
+		"config": "src/modules/rqw-runtime-config/config.yml",
+		"ids": "packages/catalog/src/compat/provider-ids.ts",
+		"open": ["anthropic", "openai-codex", "opencode-go", "openrouter", "antigravity-cli"]
+	},
+	"pin": "src/modules/rqw-windows-pack/vscode/runtime.json",
+	"exports": {
+		"@oh-my-pi/pi-coding-agent/config/registry": ["lookup"],
+		"@oh-my-pi/pi-coding-agent/tools/approval-cache": ["approvalDirectoryKey"],
+		"@oh-my-pi/pi-coding-agent/tools/approval-targets": ["approvalTreeSearchKey"]
+	},
+	"wire": {
+		"tools": ["files", "web_search"],
+		"messages": ["## Communication", "## Workflow"],
+		"task": {
+			"once": ["Omit `agent` by default: a general worker equal to you.", "Do not spawn sub-agents unless"],
+			"never": ["Read-only research MUST", "most specific"]
+		},
+		"eval": {
+			"once": ["Use JavaScript (Bun) by default", "my setup.js"],
+			"never": ["xd://eval/agents", "workpool()", "Subagents have separate kernels"]
+		},
+		"bash": { "starts": "Terminal only" },
+		"read": { "starts": "Reads a file" },
+		"grep": { "starts": "Exact lines by regex" },
+		"glob": { "starts": "Lists paths by mask" },
+		"edit": { "starts": ["Changes existing files", "Replaces `old_string`"] },
+		"write": { "starts": "Creates one file" }
+	},
+	"source": [
+		{ "use": "rqw-codex-adapter agentsmd.js: фильтр AGENTS.md по имени файла", "path": "packages/coding-agent/src/system-prompt.ts", "has": "\"agents\\.md\"" },
+		{ "use": "rqw-codex-adapter agentsmd.js: сабагент без AGENTS.md", "path": "packages/coding-agent/src/task/executor.ts", "has": "excludeAgentsMd" },
+		{ "use": "rqw-codex-adapter index.js TIP: совет после task", "path": "packages/coding-agent/src/prompts/tools/task-specialization-advisory.md", "has": "Tip: this call spawned" },
+		{ "use": "rqw-codex-adapter EDITS.task: строка про scout", "path": "packages/coding-agent/src/prompts/tools/task.md", "has": "scoutAvailable" },
+		{ "use": "rqw-codex-adapter: поля Codex", "path": "packages/ai/src/providers/openai-codex/request-transformer.ts", "has": "all_turns" },
+		{ "use": "rqw-system-core: threads выключены", "path": "packages/ai/src/providers/anthropic-threads.ts", "has": "PI_ANTHROPIC_MESSAGE_THREADS" },
+		{ "use": "rqw-system-core: памятка без пометки per-call", "path": "packages/coding-agent/src/extensibility/extensions/runner.ts", "has": "#isRepeatedProjection" },
+		{ "use": "rqw-harness-interface model-picker.js: список без enabledModels", "path": "packages/coding-agent/src/extensibility/extensions/model-api.ts", "has": "getAvailable" },
+		{ "use": "rqw-harness-interface subscriptions.js: omp usage --json", "path": "packages/coding-agent/src/cli/usage-cli.ts", "has": "json" },
+		{ "use": "rqw-harness-interface turn-duration.js: agent_end с willContinue", "path": "packages/coding-agent/src/extensibility/extensions/lifecycle-mirror.ts", "has": "willContinue" },
+		{ "use": "rqw-base-tools: метка [whole file], поля результата read", "path": "packages/coding-agent/src/tools/read.ts", "has": "lineNumbers" },
+		{ "use": "rqw-base-tools: режимы edit", "path": "packages/coding-agent/src/edit/settings.ts", "has": "hashline" },
+		{ "use": "rqw-windows-pack: слои конфига на VDI", "path": "packages/coding-agent/src/config/settings.ts", "has": "PI_CONFIG_FILES" }
+	],
+	"numbers": [
+		{ "path": "packages/coding-agent/src/tools/grep.ts", "match": "MULTI_FILE_PER_FILE_MATCHES = (\\d+)", "text": "{} matches per file when several files are searched" },
+		{ "path": "packages/coding-agent/src/tools/grep.ts", "match": "SINGLE_FILE_MATCHES = (\\d+)", "text": "{} when one file is searched alone" },
+		{ "path": "packages/coding-agent/src/tools/grep.ts", "match": "DEFAULT_FILE_LIMIT = (\\d+)", "text": "Limits: {} files per page" },
+		{ "path": "packages/coding-agent/src/tools/grep.ts", "match": "INTERNAL_TOTAL_CAP = (\\d+)", "text": "The search stops at {} matches" },
+		{ "path": "packages/coding-agent/src/tools/grep.ts", "match": "NATIVE_GREP_MAX_FILE_BYTES = (\\d+) \\* 1024 \\* 1024", "text": "the first {} MiB of large files" },
+		{ "path": "packages/coding-agent/src/tools/glob.ts", "match": "DEFAULT_LIMIT = (\\d+)", "text": "newest first, at most {}." },
+		{ "path": "packages/coding-agent/src/tools/glob.ts", "match": "DEFAULT_GLOB_TIMEOUT_MS = (\\d+)000", "text": "The scan stops after {} seconds" },
+		{ "path": "packages/coding-agent/src/tools/fetch.ts", "match": "FETCH_DEFAULT_MAX_LINES = (\\d+)", "text": "Web pages: at most {} lines" }
+	],
+	"stamps": ["src", "INSTALL.md", "AGENTS.md", "README.md", "dev/tests", "dev/agents", ":!dev/agents/omp-upgrade/evals"],
+	"extension": "src/modules/rqw-windows-pack/vscode/package.json",
+	"tui": { "status": "cmp 0", "title": "Model / effort", "outside": "haiku-4", "noModels": "No models", "inside": "haiku-5", "summary": "read 1", "turnMark": "⏱" },
+	"probes": [
+		{ "slug": "luna", "model": "openai-codex/gpt-6-luna", "thinking": "high", "hashline": true, "codex": true },
+		{ "slug": "haiku", "model": "anthropic/claude-haiku-5-5", "thinking": "high", "hashline": true },
+		{ "slug": "ds", "model": "openrouter/deepseek/deepseek-v4.1-flash-1017", "thinking": "low" }
+	]
+}
