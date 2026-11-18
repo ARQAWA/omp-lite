@@ -31,7 +31,7 @@ In a subagent the owner is reached through the parent: what this skill writes or
    Other new owner words after collection: append them to `<dir>/updates.md`, copied exactly, each with the `id` of its reply in the session file. The owner's answer about a critical part goes there too.
 
 ## 3. Review rounds
-1. Call `task` with `context: "acceptance review"` and one item: `agent: "acceptor"`, `solutionSpace: "fixed procedure"`, `task: "dir: <dir>"`, `model: "openai-codex/gpt-6.1-terra:xhigh"`. The model is the same at level blind and at level high. Every round is a new call: one fresh reviewer and a full check.
+1. Call `task` with `context: "acceptance review"` and one item: `agent: "acceptor"`, `solutionSpace: "fixed procedure"`, `task: "dir: <dir>"`, `model: "openai-codex/gpt-6.2-sol:low"`. The model is the same at level blind and at level high. Every round is a new call: one fresh reviewer and a full check.
 2. After every answer, check that it is complete: every row number of `facts.md` (`R1`, `R4.1`, `L1`, `W1`) and of `updates.md` (`J1`) starts a line of the answer. Check it by any means you have.
 3. A row number has no line: the answer is not a verdict. Repeat the round once. Incomplete again: stop and report to the owner.
 4. First line `BROKEN`: collect again from section 2, once. `BROKEN` again: stop and report to the owner.

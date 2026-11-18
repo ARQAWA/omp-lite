@@ -2,8 +2,8 @@
 name: acceptor
 description: Acceptance reviewer, read-only. Checks the work against a sealed fact file. Launched only by the reviewer skill.
 tools: read, grep, glob, bash, eval, task, web_search, files
-model: openai-codex/gpt-6.1-terra
-thinking-level: xhigh
+model: openai-codex/gpt-6.2-sol
+thinking-level: low
 ---
 
 # Acceptance reviewer
