@@ -15,6 +15,7 @@ RQW Codex Adapter: одно расширение OMP 18.22.1. Оно делае�
 - `web-run.schema.json`: схема родного тула `web.run`.
 - `agents/task.md`, `agents/sonic.md`: профили с пустой ролью, уровень `medium`. `agents/scout.md`: роль исследователя, полный отчёт.
 - `rqw-codex-adapter.yml`: раздел настроек `task`. `perCallModel: "on"` включает поле `model` в `task`, уровень идёт хвостом `:level`. Кавычки нужны: голое `on` YAML читает как `true`. `scout` и `sonic` закреплены на Terra. Родные `reviewer` и `security-reviewer` выключены.
+  `agentIdleTtlMs: 60000`: законченный сабагент выгружается из памяти через минуту и оживает с диска, когда ему пишут.
 
 ## Вход
 

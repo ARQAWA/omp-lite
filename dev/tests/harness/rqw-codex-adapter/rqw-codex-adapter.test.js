@@ -176,6 +176,7 @@ test("settings: any model per spawn, scout and sonic on Terra, the native review
 		maxConcurrency: 100,
 		perCallModel: "on",
 		enableEffort: false,
+		agentIdleTtlMs: 60000,
 		agentModelOverrides: { scout: "openai-codex/gpt-6.1-terra:xhigh", sonic: "openai-codex/gpt-6.1-terra:medium" },
 		disabledAgents: ["reviewer", "security-reviewer"],
 	});

@@ -4,7 +4,7 @@ import turnDuration from "../../../../src/modules/rqw-harness-interface/turn-dur
 function mount() {
 	const handlers = {}, sent = [], timers = []; let render;
 	turnDuration({ on: (name, fn) => handlers[name] = fn, registerMessageRenderer: (_type, fn) => render = fn, sendMessage: (...args) => sent.push(args) });
-	const ctx = { mode: "tui", agent: { kind: "main" }, idle: true, setTimeout: (fn, ms) => { expect(ms).toBe(0); timers.push(fn); }, isIdle: () => ctx.idle };
+	const ctx = { mode: "tui", agent: { kind: "main" }, setTimeout: (fn, ms) => { expect(ms).toBe(0); timers.push(fn); } };
 	return { handlers, sent, timers, ctx, render: message => render(message), end: (willContinue = false, reason = "stop", context = ctx) => handlers.agent_end({ messages: [{ role: "assistant", stopReason: reason }], willContinue }, context) };
 }
 
@@ -14,10 +14,10 @@ test("timing includes tools and continuations, not queued input; sends after a t
 		const m = mount(), h = m.handlers;
 		h.input(); h.agent_start(); time = 20000; h.input(); m.end(true); expect(m.timers).toHaveLength(0);
 		time = 94001; m.end(false, "error"); expect(m.sent).toEqual([]); m.timers.shift()();
-		expect(m.sent[0]).toEqual([{ customType: "omp-lite.turn-duration", content: [{ type: "text", text: "⏱ 1m 35s" }], display: true }, { triggerTurn: false }]);
+		expect(m.sent[0]).toEqual([{ customType: "omp-lite.turn-duration", content: [{ type: "text", text: "⏱ 1m 35s" }], display: true }, { deliverAs: "nextTurn" }]);
 		for (const [elapsed, expected] of [[0, "1s"], [60000, "1m 0s"], [3601000, "1h 1s"], [5400000, "1h 30m 0s"]]) {
-			time = 0; h.input(); h.agent_start(); time = elapsed; m.ctx.idle = false; m.end(false, "aborted"); m.timers.shift()();
-			expect(m.sent.at(-1)[0].content[0].text).toBe(`⏱ ${expected}`); expect(m.sent.at(-1)[1]).toEqual({ deliverAs: "nextTurn" });
+			time = 0; h.input(); h.agent_start(); time = elapsed; m.end(false, "aborted"); m.timers.shift()();
+			expect(m.sent.at(-1)[0].content[0].text).toBe(`⏱ ${expected}`);
 		}
 		m.end(); expect(m.timers).toHaveLength(0);
 		h.input(); m.end(false, "stop", { ...m.ctx, agent: { kind: "sub" } }); expect(m.timers).toHaveLength(0); m.end(); expect(m.timers).toHaveLength(1);

@@ -167,9 +167,10 @@ display:
   smoothStreaming: true
   showTurnTime: true
   shellVisualization: false
-  collapseCompacted: false
+  collapseCompacted: true
 tui:
   imeSafeCursor: true
+  completeScrollback: true
 recap:
   idleSeconds: 600
 tools:

@@ -2462,3 +2462,24 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** одна задача, один дефект вида «заказано и не сделано». Поиск лишнего в продукте и полный цикл с правками не мерились. Sol low медленнее и дороже Terra xhigh.
 
 **Носители правила:** `src/modules/rqw-reviewer/agents/acceptor.md`, `skills/reviewer/SKILL.md`, `README.md`; `dev/tests/harness/rqw-reviewer/rqw-reviewer.test.js`.
+
+## D-146 — вывод чата: метка времени без перестройки, свёртка, выгрузка сабагентов
+
+**Решение:**
+
+1. `turn-duration.js`: метка всегда уходит с `deliverAs: "nextTurn"`.
+2. `rqw-runtime-config/config.yml`: `display.collapseCompacted: true`, `tui.completeScrollback: true`.
+3. `rqw-codex-adapter.yml`: `task.agentIdleTtlMs: 60000`.
+
+**Основание:** слова владельца от 2026-11-18: «насчет починки простыни я понял. Делаем»; «истории третий пункт согласен»; «Второй пункт давай попробуем»; «Complete scrollback, давай попробуем».
+
+**Причина:** OMP 18.22.1, `packages/coding-agent/src`.
+
+1. В простое `sendMessage` с `{ triggerTurn: false }` приводил к `rebuildChatFromMessages` (`modes/controllers/extension-ui-controller.ts:1802`): весь чат строился заново после каждого хода. С `deliverAs: "nextTurn"` OMP дописывает один блок (`:1785-1800`, issue #12183) и пишет запись в файл сессии (`session/agent-session.ts:11196-11203`).
+2. Со свёрткой при компакшене перерисовывается сводка и хвост, не весь чат (`modes/settings.ts:878-889`). Замер `omp render` на сессии с 15 компакшенами, 180x50: 639 строк против 18717.
+3. `tui.completeScrollback` (`modes/settings.ts:396`): проба против потери строк при стриминге, вживую не проверено.
+4. Законченный сабагент жил в памяти 7 минут (`task/settings.ts:561-572`), теперь минуту; оживает с диска сам (`registry/agent-lifecycle.ts:377-454`).
+
+**Границы:** стирание истории терминала при компакшене и отсутствие потолка строк остаются в ядре OMP. Законченный сабагент, открытый в TUI, через минуту возвращает экран в главный чат. Время оживления сабагента не замерено.
+
+**Носители правила:** `src/modules/rqw-harness-interface/turn-duration.js`, `README.md`; `src/modules/rqw-runtime-config/config.yml`, `README.md`; `src/modules/rqw-codex-adapter/rqw-codex-adapter.yml`, `README.md`; `dev/tests/harness/rqw-harness-interface/turn-duration.test.js`, `dev/tests/harness/rqw-codex-adapter/rqw-codex-adapter.test.js`.

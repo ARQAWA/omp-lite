@@ -8,6 +8,8 @@
 
 **Хуки:** пикер слушает `session_start`, `session_switch`, `session_branch`, `session_shutdown` и ввод терминала. Подписки обновляются на `session_start` и каждые пять минут из `omp usage --json`; выводится остаток общего окна активного аккаунта. Компакшены пересчитываются на `session_start`, `session_switch`, `session_compact`, `session_branch`. Строка тулов обновляется на `tool_execution_start` и `tool_execution_end`, сбрасывается на `agent_start` и `before_agent_start`: `files` считается поиском, `ast_edit` правкой. Время хода измеряется от `input` до `agent_end`, показывается отдельным сообщением и убирается из запросов хуком `context`. Формат времени и округление взяты из `pi-response-duration` 1.0.1.
 
+**Метка времени:** уходит с `deliverAs: "nextTurn"`: OMP дописывает один блок и не перестраивает чат. Запись остаётся в файле сессии.
+
 **Установка:** девять файлов идут в `extensions/rqw-harness-interface/`, `status-line.yml` сливается в `config.yml`. Нужна новая сессия.
 
 **Выключить:** добавить `extension-module:rqw-harness-interface` в `disabledExtensions`. Одну часть можно убрать из списка в `index.js`; настройки статуслайна удалить из `config.yml` отдельно.
