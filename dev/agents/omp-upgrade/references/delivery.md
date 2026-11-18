@@ -7,7 +7,7 @@
 ## 1. Mac (этап 5)
 
 1. коммит в worktree: `git status --short` показывает только изменённые файлы; сообщение `omp-<new>: харнес на OMP <new> (D-<номер>)`.
-2. `omp --version`, `omp update`, `omp --version`: ровно `omp/<new>`. Иначе стоп. `omp` на Mac это один бинарь, `omp update` заменяет его сам.
+2. `omp --version`, `omp update`, `omp --version`: ровно `omp/<new>`. Иначе не ставь: это блокер. `omp` на Mac это один бинарь, `omp update` заменяет его сам.
 3. `INSTALL.md` из worktree, шаги 1-5, корень репозитория это worktree. В шаге 4 сохрани `config.bak` и верни прежний `modelRoles.default`; старый `config.yml` разбирай `Bun.YAML.parse`.
 4. `bun $S/verify.js --runtime`: файлы рантайма равны worktree, удалённых путей нет, настройки равны фрагментам, версия стоит.
 5. `bun $S/probe.js`. Пробу одной модели повторяет `bun $S/probe.js <slug>`, интерфейс `bun $S/probe.js tui`.
@@ -22,7 +22,7 @@
 
 ## 3. VSIX (сразу после merge, без вопроса)
 
-Процедуру ведёт навык `release-ompcli-vsix`: сюда её не копируй. Отдай сабагенту с Contract: менять только `dev/DECISIONS.md` в конце; токен Marketplace не печатать, пустой токен это стоп; соседний репозиторий `~/ai-project/my-pi` не трогать.
+Процедуру ведёт навык `release-ompcli-vsix`: сюда её не копируй. Отдай сабагенту с Contract: менять только `dev/DECISIONS.md` в конце; токен Marketplace не печатать, пустой токен это блокер выпуска; соседний репозиторий `~/ai-project/my-pi` не трогать.
 
 Проверка главным после выпуска (версию подставь):
 
