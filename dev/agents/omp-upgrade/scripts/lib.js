@@ -80,12 +80,14 @@ export function snap(bin, agent, name, { native = false, extensions = [], env = 
 }
 
 export const bare = name => String(name).replace(/^_/, "");
-/** Tools of a request in any provider shape: name -> { description, fields }. */
+/** Tools of a request in any provider shape: name -> { description, fields, schema }. `schema` is the native one: without the intent field OMP adds. */
 export function toolsOf(payload) {
 	const list = [payload?.tools, payload?.config?.tools, payload?.request?.tools].filter(Array.isArray).flat().flatMap(tool => tool?.functionDeclarations ?? [tool?.function ?? tool?.toolSpec ?? tool]);
 	return Object.fromEntries(list.filter(tool => typeof tool?.name === "string").map(tool => {
 		const schema = tool.parameters ?? tool.input_schema ?? tool.inputSchema?.json ?? tool.inputSchema ?? {};
-		return [bare(tool.name), { description: String(tool.description ?? ""), fields: Object.keys(schema.properties ?? {}).sort().join() }];
+		const { i, ...properties } = schema.properties ?? {}, required = (schema.required ?? []).filter(name => name !== "i");
+		const plain = { type: schema.type, properties, ...(required.length ? { required } : {}) };
+		return [bare(tool.name), { description: String(tool.description ?? ""), fields: Object.keys(schema.properties ?? {}).sort().join(), schema: JSON.stringify(plain) }];
 	}));
 }
 const count = (text, part) => text.split(part).length - 1;
@@ -104,16 +106,20 @@ export function wire(payload, row) {
 	}
 }
 
+// The request carries `anyOf` of plain types as a type list: the reference schema is brought to the same shape.
+const flat = value => Array.isArray(value) ? value.map(flat) : value && typeof value === "object"
+	? value.anyOf?.every(item => Object.keys(item).join() === "type") ? { type: value.anyOf.map(item => item.type) } : Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, flat(inner)]))
+	: value;
 // As the guard of rqw-base-tools compares: the platform list of builtins and the hashline line are not a change.
 export const native = text => String(text).replace(/^In-process builtins, ahead of PATH: .*$|^- Selected file: .*\n/m, "").trim();
 
 /** Imports of OMP packages in the shipped .js files: specifier -> names. */
-function imports(repo, manifest, engine) {
+function imports(repo, manifest, reference) {
 	const found = {}, add = (spec, names) => (found[spec] = [...new Set([...(found[spec] ?? []), ...names])]);
 	for (const { from } of manifest.files.filter(file => file.from.endsWith(".js"))) {
 		const text = read(`${repo}/${from}`);
 		for (const [, names, spec] of text.matchAll(/import\s*\{([^}]+)\}\s*from\s*"(@oh-my-pi\/[^"]+)"/g)) add(spec, names.split(",").map(name => name.trim().split(/\s+as\s+/)[0]).filter(Boolean));
-		for (const [, spec] of text.matchAll(/import\("(@oh-my-pi\/[^"]+)"\)/g)) add(spec, spec.endsWith("pi-natives") ? Object.keys(engine) : contract.exports[spec] ?? []);
+		for (const [, spec] of text.matchAll(/import\("(@oh-my-pi\/[^"]+)"\)/g)) add(spec, spec.endsWith("pi-natives") ? Object.keys(reference.engine) : spec.endsWith("output-meta") ? Object.keys(reference.notice ?? {}) : contract.exports[spec] ?? []);
 	}
 	return found;
 }
@@ -138,7 +144,6 @@ export function registration(version, id) {
 	return text.slice(text.lastIndexOf("register(", at), text.indexOf("});", at));
 }
 export const providerIds = version => [...show(version, contract.providers.ids).matchAll(/\|\s*"([^"]+)"/g)].map(found => found[1]);
-export const numberOf = (version, entry) => show(version, entry.path).match(new RegExp(entry.match))?.[1];
 /** Every model id the config names: enabled, thresholds, roles. */
 export const modelsOf = config => [...new Set([...config.enabledModels, ...Object.keys(config.compaction?.modelThresholds ?? {}), ...Object.values(config.modelRoles ?? {}).flatMap(role => role.split(",").map(id => id.trim().replace(/:\w+$/, "")))])];
 
@@ -153,14 +158,14 @@ export function check(version, repo) {
 	row(`бинарь отвечает omp/${version}`, run([bin, "--version"]).out.trim() === `omp/${version}`);
 
 	// imports: one extension that loads every OMP module the harness loads
-	const reference = json(`${repo}/${contract.guard.reference}`), wanted = imports(repo, manifest, reference.engine);
+	const reference = json(`${repo}/${contract.guard.reference}`), wanted = imports(repo, manifest, reference), kinds = { ...reference.engine, ...reference.notice };
 	const probe = `${TMP}/imp-${version}.js`, impOut = `${TMP}/imp-${version}.json`;
 	writeFileSync(probe, `import { writeFileSync } from "node:fs";\nconst out = {};\n${Object.entries(wanted).map(([spec, names]) =>
-		`try { const m = await import(${JSON.stringify(spec)}); out[${JSON.stringify(spec)}] = Object.fromEntries(${JSON.stringify(names)}.map(n => [n, typeof m[n]])); } catch (error) { out[${JSON.stringify(spec)}] = String(error.message); }`).join("\n")}\nwriteFileSync(process.env.IMP_OUT, JSON.stringify(out));\nexport default function () {}\n`);
+		`try { const m = await import(${JSON.stringify(spec)}); out[${JSON.stringify(spec)}] = Object.fromEntries(${JSON.stringify(names)}.map(n => [n, typeof n.split(".").reduce((v, k) => v?.[k], m)])); } catch (error) { out[${JSON.stringify(spec)}] = String(error.message); }`).join("\n")}\nwriteFileSync(process.env.IMP_OUT, JSON.stringify(out));\nexport default function () {}\n`);
 	const plain = snap(bin, agent, `${version}-native`, { native: true, extensions: [probe], env: { IMP_OUT: impOut } }), full = snap(bin, agent, `${version}-full`);
 	for (const [spec, names] of Object.entries(json(impOut))) {
 		if (typeof names === "string") row(`импорт ${spec}`, false, names);
-		else for (const [name, kind] of Object.entries(names)) row(`импорт ${spec}: ${name}`, kind !== "undefined" && (!(name in reference.engine) || kind === reference.engine[name]), kind);
+		else for (const [name, kind] of Object.entries(names)) row(`импорт ${spec}: ${name}`, kind !== "undefined" && (!(name in kinds) || kind === kinds[name]), kind);
 	}
 	for (const name of events(repo, manifest)) row(`событие расширений ${name}`, show(version, "packages/coding-agent/src/extensibility/extensions/types.ts").includes(`"${name}"`));
 
@@ -170,6 +175,7 @@ export function check(version, repo) {
 		const tool = nativeTools[name], forms = [want, ...(want.alt ?? [])];
 		row(`эталон сторожа: ${name} описание`, tool && forms.some(form => form.description && native(form.description) === native(tool.description)), tool ? "родной текст другой" : "тула нет");
 		row(`эталон сторожа: ${name} поля`, tool && forms.some(form => form.fields?.join() === tool.fields), tool?.fields);
+		if (want.schema) row(`эталон сторожа: ${name} схема`, tool && JSON.stringify(flat(want.schema)) === tool.schema, tool?.schema);
 	}
 	for (const [name, parts] of Object.entries(texts.native)) {
 		const marker = [].concat(parts).at(-1)?.native;
@@ -190,13 +196,8 @@ export function check(version, repo) {
 	const catalog = new Set(full.models ?? []);
 	const models = modelsOf(config).filter(id => catalog.has(id));
 
-	// source anchors and numbers
+	// source anchors
 	for (const entry of contract.source) row(`опора: ${entry.use}`, new RegExp(entry.has).test(show(version, entry.path)), `в ${entry.path} нет /${entry.has}/`);
-	const ours = read(`${repo}/${contract.guard.texts}`);
-	for (const entry of contract.numbers) {
-		const value = numberOf(version, entry), text = entry.text.replace("{}", value);
-		row(`число: ${text}`, value !== undefined && ours.includes(text), value === undefined ? `в ${entry.path} нет /${entry.match}/` : `в OMP ${value}, в наших текстах такой фразы нет`);
-	}
 	return { rows, bin, agent, config, manifest, plain, full, list, models };
 }
 

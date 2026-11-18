@@ -10,7 +10,7 @@ const PATCH = `Read a.txt with the read tool. Then call the edit tool exactly on
 // `has`: a text that only the tool result carries; it must reach the next request.
 const probes = [
 	{ id: "запрос", prompt: () => "Reply with one word: ok" },
-	{ id: "files", prompt: () => `Call the files tool once with path "." and pattern "Probe token". Then reply done.`, has: "1 files, 1 matches" },
+	{ id: "grep", prompt: () => `Call the grep tool once with pattern "Probe token" and path ".". Then reply done.`, has: "[AGENTS.md#" },
 	{ id: "read", prompt: () => "Read a.txt with the read tool. Then reply done.", has: "[whole file: 3 lines]" },
 	{ id: "частичный патч", hashline: true, prompt: () => PATCH, has: "the files below did not match", after: dir => read(`${dir}/a.txt`).includes("BETA") && read(`${dir}/b.txt`) === "one\ntwo\nthree\n" },
 	{ id: "сторож eval", prompt: () => `Run the eval tool once, language js, code: await agent("x"). Then reply done.`, has: "are blocked in eval" },
@@ -59,7 +59,7 @@ async function model(item) {
 		if (probe.hashline && !item.hashline) continue;
 		let fails;
 		// A model that did not do the step gets one more try.
-		// The log lies outside the probe folder: the `files` probe counts matches in it.
+		// The log lies outside the probe folder: the `grep` probe searches it.
 		for (let attempt = 0; attempt < 2 && (attempt === 0 || fails.length); attempt++) fails = judge(probe, item, dir, await ask(dir, item, probe.prompt(item), `${TMP}/probe-${item.slug}-${index}.jsonl`));
 		out.push({ probe: probe.id, slug: item.slug, fails });
 	}

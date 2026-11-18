@@ -2,7 +2,7 @@
 // The harness is taken as it is in the checkout and run against both versions. The report goes to $OMP_UP/scan.md.
 import { existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { arg, changed, check, contract, numberOf, providerIds, registration, release, run, settingOf, SRC, TMP, toolsOf } from "./lib.js";
+import { arg, changed, check, contract, providerIds, registration, release, run, settingOf, SRC, TMP, toolsOf } from "./lib.js";
 
 const [old, neu] = process.argv.slice(2), repo = resolve(arg("--repo", process.cwd()));
 const before = check(old, repo), after = check(neu, repo);
@@ -49,16 +49,12 @@ for (const id of new Set([...Object.keys(before.list), ...Object.keys(after.list
 	else if (JSON.stringify(before.list[id].value) !== JSON.stringify(after.list[id].value)) out.changed.push(`настройка ${id}: по умолчанию ${JSON.stringify(before.list[id].value)} -> ${JSON.stringify(after.list[id].value)}`);
 }
 
-// Providers, models, source anchors, numbers.
+// Providers, models, source anchors.
 const was = new Set(providerIds(old)), disabled = new Set(after.config.disabledProviders);
 for (const id of before.models.filter(id => !after.models.includes(id))) out.broken.push(`модель ${id} пропала из каталога`);
 for (const id of providerIds(neu).filter(id => !was.has(id))) out.fresh.push(`провайдер ${id}${disabled.has(id) ? " (закрыт)" : " (открыт)"}`);
 const files = [...new Set(contract.source.map(entry => entry.path))].filter(path => changed(old, neu, [path]));
 for (const entry of contract.source.filter(entry => files.includes(entry.path))) out.changed.push(`опора «${entry.use}»: ${entry.path} менялся`);
-for (const entry of contract.numbers) {
-	const [a, b] = [numberOf(old, entry), numberOf(neu, entry)];
-	if (a !== b) out.changed.push(`число «${entry.text}»: ${a} -> ${b}`);
-}
 const prompts = changed(old, neu, ["packages/coding-agent/src/prompts", "packages/coding-agent/src/extensibility/extensions/types.ts", "packages/coding-agent/src/extensibility/shared-events.ts"]);
 
 // The new sources as files, for reading; the shared clone stays on its tag.

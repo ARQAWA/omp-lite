@@ -12,11 +12,14 @@
 	"pin": "src/modules/rqw-windows-pack/vscode/runtime.json",
 	"exports": {
 		"@oh-my-pi/pi-coding-agent/config/registry": ["lookup"],
-		"@oh-my-pi/pi-coding-agent/tools/approval-cache": ["approvalDirectoryKey"],
+		"@oh-my-pi/pi-coding-agent/tools/approval-cache": ["approvalDirectoryKey", "approvalCacheKeyForPath"],
+		"@oh-my-pi/pi-coding-agent/tools/read": ["ReadTool"],
+		"@oh-my-pi/pi-coding-agent/tools/grep": ["GrepTool"],
+		"@oh-my-pi/pi-coding-agent/tools/glob": ["GlobTool"],
 		"@oh-my-pi/pi-coding-agent/tools/approval-targets": ["approvalTreeSearchKey"]
 	},
 	"wire": {
-		"tools": ["files", "web_search"],
+		"tools": ["web_search"],
 		"messages": ["## Communication", "## Workflow"],
 		"task": {
 			"once": ["Omit `agent` by default: a general worker equal to you.", "Do not spawn sub-agents unless"],
@@ -27,9 +30,9 @@
 			"never": ["xd://eval/agents", "workpool()", "Subagents have separate kernels"]
 		},
 		"bash": { "starts": "Terminal only" },
-		"read": { "starts": "Reads a file" },
-		"grep": { "starts": "Exact lines by regex" },
-		"glob": { "starts": "Lists paths by mask" },
+		"read": { "starts": "Pass a bare path" },
+		"grep": { "starts": "Search file contents by regex" },
+		"glob": { "starts": "Find files recursively" },
 		"edit": { "starts": ["Changes existing files", "Replaces `old_string`"] },
 		"write": { "starts": "Creates one file" }
 	},
@@ -47,16 +50,6 @@
 		{ "use": "rqw-base-tools: метка [whole file], поля результата read", "path": "packages/coding-agent/src/tools/read.ts", "has": "lineNumbers" },
 		{ "use": "rqw-base-tools: режимы edit", "path": "packages/coding-agent/src/edit/settings.ts", "has": "hashline" },
 		{ "use": "rqw-windows-pack: слои конфига на VDI", "path": "packages/coding-agent/src/config/settings.ts", "has": "PI_CONFIG_FILES" }
-	],
-	"numbers": [
-		{ "path": "packages/coding-agent/src/tools/grep.ts", "match": "MULTI_FILE_PER_FILE_MATCHES = (\\d+)", "text": "{} matches per file when several files are searched" },
-		{ "path": "packages/coding-agent/src/tools/grep.ts", "match": "SINGLE_FILE_MATCHES = (\\d+)", "text": "{} when one file is searched alone" },
-		{ "path": "packages/coding-agent/src/tools/grep.ts", "match": "DEFAULT_FILE_LIMIT = (\\d+)", "text": "Limits: {} files per page" },
-		{ "path": "packages/coding-agent/src/tools/grep.ts", "match": "INTERNAL_TOTAL_CAP = (\\d+)", "text": "The search stops at {} matches" },
-		{ "path": "packages/coding-agent/src/tools/grep.ts", "match": "NATIVE_GREP_MAX_FILE_BYTES = (\\d+) \\* 1024 \\* 1024", "text": "the first {} MiB of large files" },
-		{ "path": "packages/coding-agent/src/tools/glob.ts", "match": "DEFAULT_LIMIT = (\\d+)", "text": "newest first, at most {}." },
-		{ "path": "packages/coding-agent/src/tools/glob.ts", "match": "DEFAULT_GLOB_TIMEOUT_MS = (\\d+)000", "text": "The scan stops after {} seconds" },
-		{ "path": "packages/coding-agent/src/tools/fetch.ts", "match": "FETCH_DEFAULT_MAX_LINES = (\\d+)", "text": "Web pages: at most {} lines" }
 	],
 	"stamps": ["src", "INSTALL.md", "AGENTS.md", "README.md", "dev/tests", "dev/agents", ":!dev/agents/omp-upgrade/evals"],
 	"extension": "src/modules/rqw-windows-pack/vscode/package.json",
