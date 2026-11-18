@@ -1,7 +1,7 @@
 {
   "skill_name": "omp-upgrade",
   "models": [
-    "openai-codex/gpt-6-luna:max",
+    "openai-codex/gpt-6-luna:xhigh",
     "anthropic/claude-haiku-5-5:xhigh"
   ],
   "evals": [
