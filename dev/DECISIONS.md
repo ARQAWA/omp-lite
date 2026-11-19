@@ -2600,6 +2600,20 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители:** `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.reference.json`, `README.md`; `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`; `dev/agents/omp-upgrade/scripts/lib.js`, `tui.py`.
 
+## D-152 — первый ход сбора контекста: подсказка в `glob` и граница краткости в памятке
+
+**Решение:** две строки текста. В начало описания `glob`: «First research response: send it together with the three `grep` calls of `<file_work>` step 1.» В памятку `REMINDER` после «Be as brief as the task allows.»: «Brevity is for the answer only: read as much code as `<file_work>` orders.» `SYSTEM.md` не менялся.
+
+**Основание:** слова владельца от 2026-11-19: «чтобы агент максимально делал всё параллельно»; «оптимизировать сбор контекста»; «Да, давай вноси R3 в отдельной ветке».
+
+**Причина:** Sonnet High в первом ходе слал 2 вызова вместо 4 из шага 1 `<file_work>` и не искал по файлам сборки. Правки одного `SYSTEM.md`, памятки или описания по отдельности эффекта не дали; работает только пара.
+
+**Проверка:** замер 2026-11-19, OMP 19.0.0, харнес `676c206d48`, проект Superbot `a8d1875`, задачи «продажи» и «иены», Sonnet High, прежние тексты → новые. Первый ход из 4 вызовов: 0 из 40 → 20 из 20. `grep` по файлам сборки в первом ходе: 0 из 40 → 20 из 20. Прочитан Rust-вход сервиса: 29 из 40 → 20 из 20. Ходов, медиана: 5 → 4 и 9 → 7. Время и баллы ответа по эталону из 10 связей без изменений. Terra Extra High, 9 прогонов, три задачи: без ухудшений. Стенд и логи: `/tmp/omp-sysprobe.oF7Lgn`, пакеты C и D.
+
+**Границы:** один проект, две задачи на чтение; судья один, проход один; Haiku и DeepSeek не мерялись. Качество ответа не выросло. Подсказка в `glob` описывает порядок работы, не поведение тула.
+
+**Носители:** `src/modules/rqw-base-tools/rqw-base-tools.texts.json`, `src/modules/rqw-system-core/index.js`, `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`.
+
 ## D-151 — выпуск RQW Windows Pack 0.0.19
 
 **Решение:** `arqawa.ompcli` 0.0.19 опубликован для `win32-x64`. В пакете `omp.exe` 19.0.0 и харнес с исправлением `glob` D-150.
