@@ -40,7 +40,6 @@ def send(text, pause=0.0):
 out = {}
 out["статуслайн"] = wait(want["status"], 40)
 pump(3)
-out["сторож молчит"] = "rqw-base-tools:" not in plain(seen)
 send("\x1b[1;2A")
 out["пикер открылся"] = wait(want["title"], 10)
 mark = len(seen)
@@ -71,5 +70,7 @@ out["выход"] = gone
 if not gone:
     os.kill(pid, 9)
     os.waitpid(pid, 0)
+pump(0.3)
+out["сторож молчит"] = out["время хода"] and "\u2714 Read a.txt" in plain(seen[mark:]) and "rqw-base-tools:" not in plain(seen)
 open(os.path.join(folder, "tty.raw"), "w").write(seen)
 print(json.dumps(out, ensure_ascii=False))

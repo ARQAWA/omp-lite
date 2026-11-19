@@ -136,17 +136,30 @@ const globArgs = args => {
 const globRoot = ({ path, target_directory: directory, glob_pattern: pattern }, cwd) =>
 	path === undefined && pattern && !nativeGlobPattern(pattern, directory) && localStat(directory, cwd)?.isDirectory() ? absolute(cwd, directory || ".") : undefined;
 
+async function delegateGlob(args, ctx, signal, onUpdate, load) {
+	const { limit } = args;
+	if (limit !== undefined && (!Number.isFinite(limit) || limit <= 0)) return answer("Limit must be a positive number", true);
+	const native = Object.fromEntries(Object.entries(args).filter(([, value]) => value !== undefined));
+	if (limit !== undefined) native.limit = Math.min(200, Math.max(1, Math.floor(limit)));
+	const result = await delegated(ctx, native, signal, onUpdate, load);
+	if (!(limit > 200) || result.isError || !result.details?.fileCount) return result;
+	const content = [...result.content], at = content.findLastIndex(block => block.type === "text");
+	if (at < 0) return result;
+	content[at] = { ...content[at], text: `${content[at].text}\n\nRequested limit ${limit} clamped to the max of 200` };
+	return { ...result, content };
+}
+
 async function runGlob(params, ctx, signal, onUpdate, load) {
 	const { glob_pattern: pattern, target_directory, path, hidden, gitignore, limit } = params, directory = target_directory || undefined;
 	if (path !== undefined) {
 		if (pattern !== undefined || directory !== undefined) return answer("Use path for native glob, or glob_pattern and target_directory.", true);
-		return delegated(ctx, { path, hidden, gitignore, limit }, signal, onUpdate, load);
+		return delegateGlob({ path, hidden, gitignore, limit }, ctx, signal, onUpdate, load);
 	}
-	if (!pattern) return delegated(ctx, { path: directory, hidden, gitignore, limit }, signal, onUpdate, load);
+	if (!pattern) return delegateGlob({ path: directory, hidden, gitignore, limit }, ctx, signal, onUpdate, load);
 	const root = globRoot(params, ctx.cwd);
 	if (!root) {
 		if (directory && nativeGlobPattern(pattern)) return answer("Use path for a native address or path list.", true);
-		return delegated(ctx, { ...globArgs(params), hidden, gitignore, limit }, signal, onUpdate, load);
+		return delegateGlob({ ...globArgs(params), hidden, gitignore, limit }, ctx, signal, onUpdate, load);
 	}
 	if (root === dirname(root)) return answer("Searching from root directory '/' is not allowed", true);
 	if (limit !== undefined && (!Number.isFinite(limit) || limit <= 0)) return answer("Limit must be a positive number", true);

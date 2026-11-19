@@ -444,11 +444,31 @@ test("glob returns a full count above 200 and delegates the native shape", () =>
 	expect(glob.approvalCacheTargets({ glob_pattern: "README.md", target_directory })).toEqual([`tree ${join(dir, target_directory)}/`]);
 	expect(result).toContain("150 more files");
 	expect(natives.calls[0]).toMatchObject({ path: join(dir, target_directory), pattern: "**/*.txt", sortByMtime: true, hidden: false, gitignore: false });
-	ctx.invokeTool = async args => ({ content: [{ type: "text", text: JSON.stringify(args) }] });
+	ctx.invokeTool = async args => {
+		expect(Object.values(args).every(value => value !== undefined)).toBe(true);
+		if (args.limit !== undefined) expect(Number.isInteger(args.limit) && args.limit >= 1 && args.limit <= 200).toBe(true);
+		return { content: [{ type: "text", text: JSON.stringify(args) }], details: { fileCount: 1 } };
+	};
 	expect(await run({ glob_pattern: "./*.txt", target_directory, limit: 2 })).toBe("Result of search in 'src[1]' (total 250 files):\n- d/f250.txt\n- d/f249.txt\n... 248 more files ... (Do a more specific search if needed)");
-	expect(await run({ glob_pattern: "./*.txt", target_directory: "tree", limit: 2 })).toBe('{"path":"tree/**/*.txt","limit":2}');
-	expect(await run({ path: "skill://*.md", limit: 10 })).toBe('{"path":"skill://*.md","limit":10}');
-	expect(await run({ path: "skill://*.md", target_directory: "", limit: 10 })).toBe('{"path":"skill://*.md","limit":10}');
+	for (const [args, native] of [
+		[{}, {}],
+		[{ path: undefined, hidden: undefined, gitignore: undefined, limit: undefined }, {}],
+		[{ path: "skill://*.md" }, { path: "skill://*.md" }],
+		[{ target_directory: "tree", limit: 2 }, { path: "tree", limit: 2 }],
+		[{ path: "skill://*.md", hidden: false, gitignore: false, limit: 2 }, { path: "skill://*.md", hidden: false, gitignore: false, limit: 2 }],
+		[{ path: "skill://*.md", target_directory: "", limit: 10 }, { path: "skill://*.md", limit: 10 }],
+		[{ path: "skill://*.md", limit: 250 }, { path: "skill://*.md", limit: 200 }],
+		[{ path: "skill://*.md", limit: 1.5 }, { path: "skill://*.md", limit: 1 }],
+		[{ path: "skill://*.md", limit: 0.5 }, { path: "skill://*.md", limit: 1 }],
+		[{ glob_pattern: "./*.txt", target_directory: "tree", limit: 2 }, { path: "tree/**/*.txt", limit: 2 }],
+		[{ glob_pattern: "skill://*.md", limit: 250, hidden: false }, { path: "skill://*.md", hidden: false, limit: 200 }],
+	]) {
+		const notice = args.limit > 200 ? `\n\nRequested limit ${args.limit} clamped to the max of 200` : "";
+		expect(await run(args)).toBe(JSON.stringify(native) + notice);
+	}
+	ctx.invokeTool = async () => ({ content: [{ type: "text", text: "No files found matching pattern" }], details: { fileCount: 0 } });
+	expect(await run({ path: "skill://*.md", limit: 250 })).toBe("No files found matching pattern");
+	expect((await glob.execute("x", { path: "skill://*.md", limit: 0 }, undefined, undefined, ctx)).isError).toBe(true);
 	const zero = await glob.execute("x", { glob_pattern: "*.txt", target_directory, limit: 0 }, undefined, undefined, ctx);
 	expect(zero.isError).toBe(true);
 	const root = await glob.execute("x", { glob_pattern: "*.txt", target_directory: "/" }, undefined, undefined, ctx);
@@ -529,8 +549,11 @@ test("ranged read waits for earlier same-message bash before examining any file"
 }));
 
 test("the guard compares the native implementations, not the replacement descriptions", async () => {
+	const globSchema = { type: "object", properties: { path: { type: "string" }, hidden: { type: "boolean" }, gitignore: { type: "boolean" }, limit: { type: "integer", minimum: 1, maximum: 200 } } };
 	for (const [natives, warning] of [
-		[{ ...engine(), schemas: { glob: { ...reference.tools.glob.schema, properties: { ...reference.tools.glob.schema.properties, limit: { type: "integer", description: "{minimum: 1, maximum: 200}" } } } } }, undefined],
+		[{ ...engine(), schemas: { glob: globSchema } }, undefined],
+		[{ ...engine(), schemas: { glob: { ...globSchema, properties: { ...globSchema.properties, limit: { type: "integer", minimum: 1, maximum: 199 } } } } }, "rqw-base-tools: native glob changed schema"],
+		[{ ...engine(), schemas: { glob: { ...globSchema, properties: { ...globSchema.properties, limit: { type: "integer", description: "{minimum: 1, maximum: 200}" } } } } }, "rqw-base-tools: native glob changed schema"],
 		[{ ...engine(), FileType: {} }, "rqw-base-tools: engine FileType.File changed"],
 		[{ ...engine(), descriptions: { grep: "changed" } }, "rqw-base-tools: native grep changed description"],
 		[{ ...engine(), fields: { read: ["i", "path", "new"] } }, "rqw-base-tools: native read changed fields"],
