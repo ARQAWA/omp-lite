@@ -2599,3 +2599,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `scan` — 208 из 208, `verify` — 212 из 212. На OMP 19.0.0 семь сценариев `glob` с локальной моделью: 2 из 7 до правки, 7 из 7 после. Живая Haiku High: прежний харнес показывает предупреждение после запроса, новый проходит все восемь проверок TUI.
 
 **Носители:** `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.reference.json`, `README.md`; `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`; `dev/agents/omp-upgrade/scripts/lib.js`, `tui.py`.
+
+## D-151 — выпуск RQW Windows Pack 0.0.19
+
+**Решение:** `arqawa.ompcli` 0.0.19 опубликован для `win32-x64`. В пакете `omp.exe` 19.0.0 и харнес с исправлением `glob` D-150.
+
+**Основание:** согласованный апгрейд OMP и штатный выпуск по D-139. Вариант без D-150 не загружался.
+
+**Проверка:** ревизия payload `676c206d480fe833f65d822084389d5856a3bd57`. `ompcli-0.0.19-win32-x64.vsix`: 213471369 байт, SHA-256 `075cde5a3b44f94fcec888d35f0643c919b100d6e6021da1168f798b88632035`. Оба файла D-150 и закреплённые программы сверены. Ответ Marketplace: `{"version":"0.0.19","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-19T05:53:31.193Z"}`. Полный `bun test dev/tests` прошёл, `verify --runtime` 216 из 216, живая проверка на Haiku High и Luna High 15 из 15.
+
+**Границы:** запуск на Windows VDI не проверен.
+
+**Носители:** `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`; `dist/ompcli-0.0.19-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
