@@ -2,11 +2,11 @@
 // bun verify.js [--repo <checkout>] [--runtime] [--no-tests]. `--runtime`: the installed harness and OMP too. Exit 1 on any FAIL.
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { arg, check, contract, json, read, release, report, run, settingsOf, stage, TMP } from "./lib.js";
+import { arg, check, composer, contract, json, read, release, report, run, settingsOf, stage, TMP } from "./lib.js";
 
 const repo = resolve(arg("--repo", process.cwd())), flag = name => process.argv.includes(name);
 const version = read(`${repo}/INSTALL.md`).match(/omp\/(\d+\.\d+\.\d+)/)[1];
-const { rows, config, manifest } = check(version, repo), row = (id, ok, detail = "") => rows.push({ id, ok: Boolean(ok), detail: ok ? "" : String(detail) });
+const { rows, bin, config, manifest } = check(version, repo), row = (id, ok, detail = "") => rows.push({ id, ok: Boolean(ok), detail: ok ? "" : String(detail) });
 
 // One version everywhere. A version of another product has another major number.
 const major = text => Number(text.split(".")[0]);
@@ -17,6 +17,9 @@ row(`версия ${version} одна во всех местах`, !stamps.lengt
 
 const pin = json(`${repo}/${contract.pin}`), exe = release(version)["omp-windows-x64.exe"];
 row("пин omp.exe равен релизу", pin.version === version && pin.assets.omp.url === exe.url && pin.assets.omp.sha256 === exe.sha256 && pin.assets.omp.size === exe.size, JSON.stringify(exe));
+
+const composerRow = await composer(bin, repo);
+rows.push(composerRow);
 
 if (!flag("--no-tests")) {
 	const tests = run(["bun", "test", "dev/tests"], { cwd: repo, timeout: 600_000 });
@@ -37,4 +40,5 @@ if (flag("--runtime")) {
 }
 
 console.log(report(`ворота, OMP ${version}, ${repo}`, rows));
+if (composerRow.ok) console.log(`- PASS ${composerRow.id}`);
 process.exit(rows.some(item => !item.ok) ? 1 : 0);

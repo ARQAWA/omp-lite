@@ -14,7 +14,7 @@ test("timing includes tools and continuations, not queued input; sends after a t
 		const m = mount(), h = m.handlers;
 		h.input(); h.agent_start(); time = 20000; h.input(); m.end(true); expect(m.timers).toHaveLength(0);
 		time = 94001; m.end(false, "error"); expect(m.sent).toEqual([]); m.timers.shift()();
-		expect(m.sent[0]).toEqual([{ customType: "omp-lite.turn-duration", content: [{ type: "text", text: "⏱ 1m 35s" }], display: true }, { deliverAs: "nextTurn" }]);
+		expect(m.sent[0]).toEqual([{ customType: "omp-lite.turn-duration", content: [{ type: "text", text: "⏱ 1m 35s" }], display: true, excludeFromContext: true }, { deliverAs: "nextTurn" }]);
 		for (const [elapsed, expected] of [[0, "1s"], [60000, "1m 0s"], [3601000, "1h 1s"], [5400000, "1h 30m 0s"]]) {
 			time = 0; h.input(); h.agent_start(); time = elapsed; m.end(false, "aborted"); m.timers.shift()();
 			expect(m.sent.at(-1)[0].content[0].text).toBe(`⏱ ${expected}`);

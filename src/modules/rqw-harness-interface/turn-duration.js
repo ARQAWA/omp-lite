@@ -26,7 +26,7 @@ export default function turnDuration(pi) {
 		const start = started;
 		started = undefined;
 		if (start === undefined || ctx.mode !== "tui" || !event.messages?.some(message => message?.role === "assistant")) return;
-		const mark = { customType: TYPE, content: [{ type: "text", text: `⏱ ${label(performance.now() - start)}` }], display: true };
+		const mark = { customType: TYPE, content: [{ type: "text", text: `⏱ ${label(performance.now() - start)}` }], display: true, excludeFromContext: true };
 		ctx.setTimeout(() => pi.sendMessage(mark, { deliverAs: "nextTurn" }), 0);
 	});
 }

@@ -53,6 +53,7 @@
 		{ "use": "rqw-harness-interface subscriptions.js: объединение отчётов", "path": "packages/ai/src/auth/usage-report.ts", "has": "credentialIds" },
 		{ "use": "rqw-harness-interface subscriptions.js: сопоставление аккаунта", "path": "packages/coding-agent/src/slash-commands/helpers/active-oauth-account.ts", "has": "reportMatchesActiveAccount" },
 		{ "use": "rqw-harness-interface turn-duration.js: agent_end с willContinue", "path": "packages/coding-agent/src/extensibility/extensions/lifecycle-mirror.ts", "has": "willContinue" },
+		{ "use": "rqw-harness-interface turn-duration.js: composer пропускает строки вне контекста", "path": "packages/coding-agent/src/modes/controllers/composer-prediction-controller.ts", "has": "isAdvisorCard\\(message\\) \\|\\| isExcludedFromContext\\(message\\)" },
 		{ "use": "rqw-base-tools: метка [whole file], поля результата read", "path": "packages/coding-agent/src/tools/read.ts", "has": "lineNumbers" },
 		{ "use": "rqw-base-tools: порядок подготовки вызовов", "path": "packages/agent/src/agent-loop.ts", "has": "prepareToolCallDispatch" },
 		{ "use": "rqw-base-tools: режим меток по модели и доступности edit", "path": "packages/coding-agent/src/utils/file-display-mode.ts", "has": "resolveFileDisplayMode" },

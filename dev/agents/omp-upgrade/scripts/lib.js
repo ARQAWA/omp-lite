@@ -1,6 +1,7 @@
 // Shared steps of scan, verify and probe. Run with bun. Nothing here imports product code: product files are read as data.
-import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 
 export const TMP = process.env.OMP_UP ?? "/tmp/omp-up";
 export const SRC = process.env.OMP_SRC ?? `${process.env.HOME}/ai-project/omp-src`;
@@ -66,6 +67,106 @@ export function stage(repo, dir) {
 	// JSON is YAML.
 	writeFileSync(`${dir}/config.yml`, JSON.stringify(config, null, 1));
 	return { dir, config, manifest };
+}
+
+/** A real candidate and the staged harness: the prediction must survive the visible, saved timer row. */
+export async function composer(bin, repo) {
+	const id = "composer: метка сохранена, подсказка видна", requests = [];
+	const input = "Explain the tiny composer fixture.", followup = "Check the saved timer.", answer = "The fixture worked.", followupAnswer = "The second turn worked.", prediction = "Please show the next step.";
+	const model = "claude-sonnet-5-5", decoder = new TextDecoder();
+	let dir, child, server, release, output = "", returned = false, mark, failure = "";
+	const barrier = new Promise(resolve => { release = resolve; });
+	const assert = (ok, message) => { if (!ok) throw new Error(message); };
+	const screen = () => output.replace(/\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[=>]/g, "");
+	const until = async (condition, timeout, message) => {
+		const end = Date.now() + timeout;
+		while (Date.now() < end) {
+			if (condition()) return;
+			if (child?.exitCode != null) throw new Error(`OMP завершился: ${child.exitCode}`);
+			await Bun.sleep(20);
+		}
+		throw new Error(`${message}: ${screen().slice(-250)}`);
+	};
+	try {
+		dir = mkdtempSync(join(tmpdir(), "omp-composer-"));
+		const home = join(dir, "home"), agent = join(dir, "agent"), work = join(dir, "work");
+		mkdirSync(home); mkdirSync(work);
+		const { config } = stage(repo, agent);
+		assert(config.composer?.predictions === true && config.composer?.predictionAlternatives === false, "нужен composer с одной подсказкой");
+		config.models = { ...config.models, offline: true };
+		config.providers = { ...config.providers, cacheWarming: "off" };
+		writeFileSync(join(agent, "config.yml"), JSON.stringify(config));
+		server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
+			const wire = JSON.stringify(await request.json()), side = wire.includes("<composer-prediction>");
+			const serial = requests.push({ wire, side });
+			if (side) {
+				const timer = setTimeout(() => release(false), 12_000), ready = await barrier;
+				clearTimeout(timer);
+				if (!ready) return new Response("timer row not ready", { status: 504 });
+				returned = true;
+			}
+			const usage = { input_tokens: 10, output_tokens: 7 };
+			const events = [
+				{ type: "message_start", message: { id: `msg_${serial}`, type: "message", role: "assistant", content: [], model, stop_reason: null, usage } },
+				{ type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+				{ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: side ? prediction : wire.includes(followup) ? followupAnswer : answer } },
+				{ type: "content_block_stop", index: 0 },
+				{ type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage },
+				{ type: "message_stop" },
+			];
+			return new Response(events.map(event => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join(""), { headers: { "content-type": "text/event-stream" } });
+		} });
+		child = Bun.spawn([resolve(bin), "--model", `anthropic/${model}`], {
+			cwd: work,
+			env: { PATH: "/usr/bin:/bin:/usr/sbin:/sbin", HOME: home, TMPDIR: dir, PI_CODING_AGENT_DIR: agent, TERM: "xterm-256color", LANG: "en_US.UTF-8", ANTHROPIC_BASE_URL: `http://127.0.0.1:${server.port}`, ANTHROPIC_API_KEY: "sk-ant-fake", NO_PROXY: "127.0.0.1,localhost" },
+			terminal: { cols: 140, rows: 40, data(_terminal, bytes) { output += decoder.decode(bytes, { stream: true }); } },
+		});
+		await until(() => screen().includes(contract.tui.status), 8_000, "TUI не открылся");
+		child.terminal.write(input);
+		await until(() => screen().includes(input), 4_000, "ввод не появился в TUI");
+		child.terminal.write("\r");
+		await until(() => {
+			const visible = screen();
+			if (!visible.includes(answer)) return false;
+			for (const file of new Bun.Glob("sessions/**/*.jsonl").scanSync({ cwd: agent })) {
+				const lines = read(join(agent, file)).split("\n"); lines.pop();
+				let entries;
+				try { entries = lines.filter(Boolean).map(line => JSON.parse(line)); } catch { continue; }
+				const reply = entries.findIndex(entry => entry.type === "message" && entry.message?.role === "assistant" && JSON.stringify(entry.message.content).includes(answer));
+				if (reply < 0) continue;
+				mark = entries.slice(reply + 1).find(entry => entry.type === "custom_message" && entry.customType === "omp-lite.turn-duration" && entry.display === true && typeof entry.content?.[0]?.text === "string" && entry.content[0].text.startsWith(`${contract.tui.turnMark} `) && visible.includes(entry.content[0].text));
+				if (mark) return true;
+			}
+			return false;
+		}, 10_000, "ответ или сохранённая метка не видны");
+		assert(requests.some(request => !request.side && request.wire.includes(input)), "нет обычного запроса");
+		await until(() => requests.some(request => request.side && request.wire.includes(answer)), 3_000, "нет побочного запроса с ответом");
+		release(true);
+		await until(() => returned && screen().includes(prediction), 4_000, "подсказка не показана");
+		assert(mark.excludeFromContext === true, "у сохранённой метки нет флага");
+		child.terminal.write(followup);
+		await until(() => screen().includes(followup), 4_000, "повторный ввод не появился в TUI");
+		child.terminal.write("\r");
+		await until(() => requests.some(request => !request.side && request.wire.includes(followup) && request.wire.includes(answer)), 8_000, "нет следующего обычного запроса");
+		await until(() => requests.some(request => request.side && request.wire.includes(followup) && request.wire.includes(followupAnswer)), 8_000, "нет следующего побочного запроса с ответом");
+	} catch (error) {
+		failure = String(error.message ?? error);
+	} finally {
+		release(false);
+		if (child) {
+			let timer;
+			try {
+				if (child.exitCode === null) child.kill("SIGKILL");
+				await Promise.race([child.exited, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("OMP не завершился")), 2_000); })]);
+			} catch (error) { failure ||= String(error.message ?? error); }
+			clearTimeout(timer);
+			try { child.terminal?.close(); } catch (error) { failure ||= String(error.message ?? error); }
+		}
+		try { await server?.stop(true); } catch (error) { failure ||= String(error.message ?? error); }
+		try { if (dir) rmSync(dir, { recursive: true, force: true }); } catch (error) { failure ||= String(error.message ?? error); }
+	}
+	if (!failure && requests.some(request => request.wire.includes(mark.content[0].text) || request.wire.includes(`${contract.tui.turnMark} `))) failure = "метка попала в запрос";
+	return { id, ok: !failure, detail: failure };
 }
 
 /** One request, caught before it is sent: a fake key and a scratch agent directory. */

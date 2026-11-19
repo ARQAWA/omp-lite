@@ -2561,3 +2561,17 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** R2 не менялись: новые нативные подсказки `wait` и возможности `bash`, авто-компакшен при подогреве, подогрев сабагентов, LSP сабагентов, MCP-трансформация и старые ссылки артефактов ждут решения. Установка, живые пробы, VDI и сборка или публикация VSIX не выполнялись.
 
 **Носители:** `INSTALL.md`; `src/modules/rqw-base-tools/` (конфиг, эталон, тексты, README); `src/modules/rqw-runtime-config/config.yml`, `README.md`; `src/modules/rqw-codex-adapter/index.js`, `agentsmd.js`, `README.md`; `src/modules/rqw-harness-interface/model-picker.js`; `src/modules/rqw-system-core/README.md`; `src/modules/rqw-windows-pack/README.md`, `voice/index.js`, `vscode/runtime.json`, `vscode/package.json`; `dev/tests/harness/rqw-base-tools/`, `rqw-codex-adapter/`, `rqw-runtime-config/`, `rqw-system-core/`; `dev/tests/repository/rqw-windows-pack.test.js`; `dev/DECISIONS.md`.
+
+## D-148 — метка времени не сбивает composer
+
+**Решение:** `turn-duration.js` помечает видимую метку `excludeFromContext: true`. `display: true`, `deliverAs: "nextTurn"`, время и рендерер не меняются. Хук `context` остаётся для старых записей без флага; файлы старых сессий не переписываются.
+
+**Основание:** согласованное исправление до установки OMP, `/tmp/omp-up-19-0-0/COMPOSER-PLAN.md`.
+
+**Причина:** в OMP 18.22.1 composer привязывает подсказку к последнему сообщению, и добавленная после ответа метка делает её устаревшей. OMP 19.0.0 штатно исключает такие строки из привязки: `packages/coding-agent/src/modes/controllers/composer-prediction-controller.ts`. Поле принимает `packages/tui/src/chat/messages.ts`; показ и запись обеспечивают `packages/coding-agent/src/modes/controllers/extension-ui-controller.ts`, `session/agent-session.ts`, `session/session-manager.ts`, восстановление — `session/session-context.ts`, запросы — `session/messages.ts` и `session/session-provider-boundary.ts`.
+
+**Границы:** при занятости OMP откладывает строку до границы хода или перехода сессии, не начиная от неё новый ход. В 18.22.1 флаг не исправляет composer. Подсказка по-прежнему зависит от пустого ввода, ответа модели и отсутствия отмены или смены разговора; старые сводки не меняются.
+
+**Проверка:** 17 тестов модуля прошли, `verify.js` — 211 из 211. На том же OMP 19.0.0 без флага ворота падают: метка есть, подсказки нет. С флагом видны оба элемента, сохранённая метка не попадает в следующий обычный и побочный запросы. Старая сессия 18.22.1 открылась с меткой; Tab вставил подсказку без отправки. Модель во всех пробах заменена локальной заглушкой.
+
+**Носители:** `src/modules/rqw-harness-interface/turn-duration.js`, `README.md`; `dev/tests/harness/rqw-harness-interface/turn-duration.test.js`; `dev/agents/omp-upgrade/contract.json`, `scripts/lib.js`, `scripts/verify.js`.
