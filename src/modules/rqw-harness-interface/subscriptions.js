@@ -15,9 +15,10 @@ export default function subscriptions(pi, read = readUsage) {
 				const reports = JSON.parse(await read()).reports ?? [];
 				const selected = new Map(reports.map(report => [report.provider, report]));
 				for (const provider of selected.keys()) {
-					const active = ctx.modelRegistry?.authStorage.oauth.accounts(provider, ctx.sessionManager.getSessionId()).find(account => account.active);
-					const matches = active && reports.filter(report => report.provider === provider && reportMatchesActiveAccount(report, active));
-					if (matches?.length === 1) selected.set(provider, matches[0]);
+					const auth = ctx.modelRegistry?.authStorage, id = ctx.sessionManager?.getSessionId();
+					const identity = auth?.oauth?.identity(provider, id), sticky = identity ? undefined : auth?.sessions?.sticky?.(provider, id);
+					const active = identity ?? (sticky?.credentialId !== undefined ? { credentialId: sticky.credentialId } : undefined);
+					if (active) selected.set(provider, reports.filter(report => report.provider === provider && reportMatchesActiveAccount(report, active)).at(-1));
 				}
 				const marks = groups.map(([provider, key, label, windows]) => {
 					const values = windows.map(id => selected.get(provider)?.limits?.find(limit => limit.scope?.shared && !limit.scope.tier && limit.window?.id === id)?.amount?.remainingFraction).filter(value => typeof value === "number").map(value => `${Math.round(value * 100)}%`);

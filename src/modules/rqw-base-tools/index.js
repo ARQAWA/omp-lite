@@ -16,6 +16,8 @@ const MODULES = {
 	[NATIVES]: () => import("@oh-my-pi/pi-natives"),
 	[TUI]: () => import("@oh-my-pi/pi-tui/tools/output-meta"),
 	[`${OMP}config/registry`]: () => import("@oh-my-pi/pi-coding-agent/config/registry"),
+	[`${OMP}config/model-resolver`]: () => import("@oh-my-pi/pi-coding-agent/config/model-resolver"),
+	[`${OMP}utils/file-display-mode`]: () => import("@oh-my-pi/pi-coding-agent/utils/file-display-mode"),
 	[`${OMP}tools/approval-cache`]: () => import("@oh-my-pi/pi-coding-agent/tools/approval-cache"),
 	[`${OMP}tools/read`]: () => import("@oh-my-pi/pi-coding-agent/tools/read"),
 	[`${OMP}tools/grep`]: () => import("@oh-my-pi/pi-coding-agent/tools/grep"),
@@ -88,11 +90,12 @@ async function abortable(signal, run) {
 	finally { signal.removeEventListener("abort", abort); }
 }
 
-async function runRead(params, ctx, signal, onUpdate, load) {
+async function runRead(params, ctx, signal, onUpdate, load, editable) {
 	const { path, offset, limit } = params;
 	if (offset === undefined && limit === undefined) return delegated(ctx, params, signal, onUpdate, load);
 	if (!integer(offset, -Number.MAX_SAFE_INTEGER) || offset === 0 || !integer(limit, 1)) return answer("offset must be a non-zero integer; limit must be a positive integer", true);
 	signal?.throwIfAborted();
+	if (typeof ctx.invokeTool !== "function") throw new Error("Native read is unavailable.");
 	const full = absolute(ctx.cwd, path), info = localStat(path, ctx.cwd, true);
 	if (!info?.isFile()) return answer(texts.readRangeTarget, true);
 	if (info.size === 0n) return delegated(ctx, { path }, signal, onUpdate, load);
@@ -115,8 +118,8 @@ async function runRead(params, ctx, signal, onUpdate, load) {
 	// An open native raw range can count its terminal LF as an extra display row.
 	const shown = display.lineNumbers.filter(n => n > 0 && n <= (details.totalLines ?? Infinity));
 	if (!shown.length) return result;
-	const text = display.text.split("\n").slice(0, shown.length), source = small ? bytes.toString("utf8") : undefined, rows = source?.split("\n");
-	const tag = rows && !/\r(?!\n)/.test(source) && shown[0] === start && shown.every((n, i) => rows[n - 1] === text[i]) && hash(source);
+	const text = display.text.split("\n").slice(0, shown.length), source = small ? bytes.toString("utf8") : undefined, rows = source?.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").split("\n");
+	const tag = editable && rows && !/\r(?!\n)/.test(source) && shown[0] === start && shown.every((n, i) => rows[n - 1] === text[i].replace(/\r$/, "")) && hash(source);
 	const body = shown.map((line, i) => `${line}:${text[i].replace(/\r$/, "")}`).join("\n");
 	const next = shown.at(-1) + 1, remaining = (details.totalLines ?? total ?? Infinity) - next + 1;
 	const footer = remaining > 0 ? `\n[${Number.isFinite(remaining) ? `${remaining} more lines. ` : ""}Use offset=${next} to continue]` : "";
@@ -145,6 +148,7 @@ async function runGlob(params, ctx, signal, onUpdate, load) {
 		if (directory && nativeGlobPattern(pattern)) return answer("Use path for a native address or path list.", true);
 		return delegated(ctx, { ...globArgs(params), hidden, gitignore, limit }, signal, onUpdate, load);
 	}
+	if (root === dirname(root)) return answer("Searching from root directory '/' is not allowed", true);
 	if (limit !== undefined && (!Number.isFinite(limit) || limit <= 0)) return answer("Limit must be a positive number", true);
 	const natives = await load(NATIVES);
 	const result = await natives.glob({
@@ -171,7 +175,7 @@ function grepPage(matches, cwd, root, offset, limit, before, after) {
 	for (const match of matches) {
 		const full = resolve(root, match.path), file = files.get(full) ?? { full, path: rel(cwd, full), rows: new Map() };
 		files.set(full, file);
-		const parts = match.line.split("\n");
+		const parts = match.line.split(/\r?\n/);
 		for (const row of [...(match.contextBefore ?? []), ...(match.contextAfter ?? [])]) if (!file.rows.has(row.lineNumber)) file.rows.set(row.lineNumber, row.line);
 		parts.forEach((line, i) => file.rows.set(match.lineNumber + i, line));
 		entries.push({ file, start: match.lineNumber, end: match.lineNumber + parts.length - 1 });
@@ -210,9 +214,9 @@ function grepPage(matches, cwd, root, offset, limit, before, after) {
 }
 
 // Native grep mints the session snapshot and marks only rows actually shown.
-async function grepHeader(file, rows, ctx, signal, load) {
+async function grepHeader(file, rows, ctx, signal, load, store, editable) {
 	const untagged = `[${file.path}]`, info = stamp(file.full);
-	if (!info?.isFile() || info.size > MAX_FILE_BYTES) return untagged;
+	if (!editable || !info?.isFile() || info.size > MAX_FILE_BYTES) return untagged;
 	const natives = await load(NATIVES), bytes = await Bun.file(file.full).slice(0, Number(info.size)).arrayBuffer().catch(() => undefined);
 	if (!bytes) return untagged;
 	const text = Buffer.from(bytes).toString("utf8");
@@ -226,10 +230,12 @@ async function grepHeader(file, rows, ctx, signal, load) {
 		const result = await delegated(ctx, { pattern: "^", path }, signal, () => {}, load);
 		if (/^\[.*#([0-9A-F]{4})\]/m.exec(result.content?.[0]?.text ?? "")?.[1] !== before) return untagged;
 	}
-	return seen.length && unchanged(info, stamp(file.full)) ? `[${file.path}#${before}]` : untagged;
+	if (!seen.length || !unchanged(info, stamp(file.full))) return untagged;
+	try { store?.recordSnapshot(file.full, text, seen); } catch {}
+	return `[${file.path}#${before}]`;
 }
 
-async function runGrep(params, ctx, signal, onUpdate, load) {
+async function runGrep(params, ctx, signal, onUpdate, load, store, editable) {
 	const { pattern, path, gitignore, output_mode: mode = "content" } = params;
 	const target = !nativeGrep(params) && localStat(path, ctx.cwd);
 	if (!target) {
@@ -241,13 +247,14 @@ async function runGrep(params, ctx, signal, onUpdate, load) {
 	for (const key of ["-A", "-B", "-C", "head_limit", "offset"]) if (!integer(params[key])) return answer(`${key} must be a non-negative integer`, true);
 	const root = absolute(ctx.cwd, path), before = params["-B"] ?? params["-C"] ?? 0, after = params["-A"] ?? params["-C"] ?? 0;
 	const offset = params.offset ?? 0, limit = params.head_limit || undefined, natives = await load(NATIVES);
+	const multiline = params.multiline === true || pattern.includes("\n") || pattern.includes("\\n");
 	if (params.glob && target.isFile()) {
 		const exclude = params.glob.startsWith("!"), glob = new Bun.Glob(exclude ? params.glob.slice(1) : params.glob);
-		if (exclude === (glob.match(basename(root)) || glob.match(rel(ctx.cwd, root)))) return answer(`<workspace_result workspace_path="${ctx.cwd}">\nNo matches found\n</workspace_result>`);
+		if (exclude === (glob.match(basename(root)) || glob.match(rel(ctx.cwd, root)))) return answer(`<workspace_result workspace_path="${ctx.cwd}">\nNo matching files${multiline ? "\nMultiline search checks at most the first 4 MiB of each file." : ""}\n</workspace_result>`);
 	}
 	const result = await natives.grep({
 		pattern: params.multiline ? `(?s)${pattern}` : pattern, path: root, glob: params.glob, type: params.type, ignoreCase: params["-i"] === true,
-		multiline: params.multiline === true || pattern.includes("\n") || pattern.includes("\\n"), hidden: true, gitignore: gitignore !== false,
+		multiline, hidden: true, gitignore: gitignore !== false,
 		mode: mode === "files_with_matches" ? "filesWithMatches" : mode,
 		contextBefore: mode === "content" ? before : 0, contextAfter: mode === "content" ? after : 0,
 		maxCount: mode === "content" ? Math.max(100000, offset + 1000) : undefined, timeoutMs: TIMEOUT_MS, signal,
@@ -260,7 +267,7 @@ async function runGrep(params, ctx, signal, onUpdate, load) {
 		taken = page.taken;
 		for (const [file, rows] of page.page) {
 			if (output.length > 1) output.push("");
-			output.push(await grepHeader(file, rows, ctx, signal, load));
+			output.push(await grepHeader(file, rows, ctx, signal, load, store, editable));
 			for (const [number, row] of [...rows].sort((a, b) => a[0] - b[0])) output.push(`  ${number}${row.match ? ":" : "-"}${row.text}`);
 		}
 		if (page.partial) output.push("[A line or context was truncated. Use read for the full lines.]");
@@ -275,8 +282,9 @@ async function runGrep(params, ctx, signal, onUpdate, load) {
 			taken++;
 		}
 	}
-	if (!taken) output.push("No matches found");
+	if (!taken) output.push(multiline ? total ? "No more results in searched content" : "No matches in searched content" : "No matches found");
 	if (offset + taken < total || result.limitReached) output.push(`[Showing ${taken} of at least ${Math.max(total, offset + taken + 1)} matching ${mode === "content" ? "lines" : "files"}. Use offset=${offset + taken} to see more, or narrow the search.]`);
+	if (multiline) output.push("Multiline search checks at most the first 4 MiB of each file; matches beyond that window are not shown.");
 	if (result.skippedOversized) output.push(`[Skipped ${result.skippedOversized} unreadable large files.]`);
 	if (result.binaryMatches?.length) output.push(`[Binary files also match: ${result.binaryMatches.join(", ")}]`);
 	output.push("</workspace_result>");
@@ -373,28 +381,41 @@ async function partialPatch(input, cwd, dry) {
 	// the dry run of a removal drops the snapshots of the file; a notebook is edited as cells, not as its file text:
 	// such a patch is not split.
 	if (paths.length < 2 || /^\s*(?:(?:MV|REM)\b|PUT\b.*[^:\s]\s*$)/m.test(input) || sections.some(section => section.full.endsWith(".ipynb") || !existsSync(section.full))) return;
-	if (!(await dry(input)).isError) return;
+	const whole = await dry(input);
+	if (!whole.isError || whole.errorKind === "parse") return;
 	const skipped = [];
 	for (const full of paths) {
 		const own = sections.filter(section => key(section) === full), patch = wrap(own), outcome = await dry(patch);
 		// A section that changes nothing passes alone, but the native edit rejects the whole patch for it.
-		if (outcome.isError || outcome.files?.some(file => !file.diff)) skipped.push({ path: own[0].path, full, reason: outcome.text, patch });
+		if (outcome.isError || outcome.files?.some(file => !file.diff)) {
+			const reason = outcome.errorKind === "unseen_lines" ? "The section anchors lines not shown in full. Re-read those lines before resending."
+				: /^(?:stale|unknown|other_file|missing)_tag$/.test(outcome.errorKind ?? "") ? "The tag or anchor did not match. Re-read the file before resending."
+				: !outcome.isError || outcome.errorKind === "no_change" ? "The section makes no changes." : outcome.text.replace(/\nNo files were modified[\s\S]*/, "");
+			skipped.push({ path: own[0].path, full, reason, patch });
+		}
 	}
 	if (!skipped.length || skipped.length === paths.length) return;
 	return { input: wrap(sections.filter(section => !skipped.some(entry => entry.full === key(section)))), skipped };
 }
 
 // One staging pass of the native edit engine; the writer keeps the disk untouched. `store`: the snapshots of the
-// files that a read showed or an edit wrote; with them the engine accepts an older tag, as the session does.
+// files that a read or grep showed or an edit wrote; with them the engine accepts an older tag, as the session does.
 async function dryRunner(pi, load, cwd, store) {
-	const natives = await load(NATIVES), edit = await settings(pi, load, ["edit.fuzzyMatch", "edit.fuzzyThreshold", "edit.blockAutoGenerated"]);
+	const natives = await load(NATIVES), edit = await settings(pi, load, ["edit.fuzzyMatch", "edit.fuzzyThreshold", "edit.blockAutoGenerated", "edit.enforceSeenLines", "tools.outputMaxColumns"]);
 	const policy = {
 		cwd, mode: "hashline", allowFuzzy: edit["edit.fuzzyMatch"], fuzzyThreshold: edit["edit.fuzzyThreshold"],
-		blockAutoGenerated: edit["edit.blockAutoGenerated"], enforceSeenLines: false, maxColumns: 0, planActive: false,
+		blockAutoGenerated: edit["edit.blockAutoGenerated"], enforceSeenLines: edit["edit.enforceSeenLines"] !== false,
+		maxColumns: edit["tools.outputMaxColumns"] > 0 ? Math.min(512, edit["tools.outputMaxColumns"]) : 512, planActive: false,
 		urlSchemes: [], urlAliasSchemes: [], planWritableRoots: [], homeDir: homedir(), rawInput: false,
 	};
 	return async input => {
-		const session = new natives.EditSession(store ?? new natives.EditStore(), policy);
+		const trial = new natives.EditStore();
+		for (const section of splitPatch(input)) {
+			const tag = /#([0-9A-F]{4})\]$/i.exec(section.lines[0])?.[1], path = real(resolve(cwd, section.path));
+			const text = tag && store?.byHashText(path, tag);
+			if (text != null) trial.recordSnapshot(path, text, store.seenLines(path, tag));
+		}
+		const session = new natives.EditSession(trial, policy);
 		try {
 			session.setArgsJson(JSON.stringify({ input }));
 			session.finish();
@@ -422,6 +443,27 @@ function skippedResult(event, skipped) {
 		isError: true,
 		details: { diff: details?.diff ?? "", firstChangedLine: details?.firstChangedLine, perFileResults: [...(details?.perFileResults ?? (details ? [details] : [])), ...failed] },
 	};
+}
+
+function recordShown(store, natives, cwd, path, content) {
+	if (!store || !natives || !path) return;
+	const info = stamp(path);
+	if (!info?.isFile() || info.size > MAX_FILE_BYTES) return;
+	const source = readFileSync(path, "utf8"), rows = source.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").split("\n");
+	const output = content.filter(block => block.type === "text").map(block => block.text).join("\n").split("\n");
+	let tag, seen = [];
+	for (const line of output) {
+		const header = /^\[([^\]#]+)#([0-9A-F]{4})\]$/.exec(line);
+		if (header) {
+			if (tag) break;
+			if (real(resolve(cwd, header[1])) === real(path)) tag = header[2];
+			continue;
+		}
+		if (!tag) continue;
+		const row = /^\s*\*?(\d+):(.*)$/.exec(line), number = Number(row?.[1]);
+		if (row && rows[number - 1] === row[2]) seen.push(number);
+	}
+	if (tag && tag === natives.hashlineFileHash(source) && unchanged(info, stamp(path))) store.recordSnapshot(path, source, [0, ...seen]);
 }
 
 // ---- whole-file mark ----
@@ -454,13 +496,21 @@ function wholeFile(event) {
 
 /** `load` imports an OMP module; tests replace it. */
 export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
-	const z = pi.zod, text = z.string().optional(), flag = z.boolean().optional(), number = z.number().optional();
-	const int = z.number().int(), nonnegative = int.min(0).optional();
-	let session, keys, store, builtins;
+	const z = pi.zod, text = z.string().optional(), flag = z.boolean().optional();
+	const int = z.number().int(), nonnegative = int.min(0).max(Number.MAX_SAFE_INTEGER).optional();
+	let session, keys, store, builtins, natives;
+	const pending = new Map(), readWaits = new Map();
+	const editable = async ctx => {
+		try {
+			const [{ resolveFileDisplayMode }, { formatModelStringWithRouting }] = await Promise.all([load(`${OMP}utils/file-display-mode`), load(`${OMP}config/model-resolver`)]);
+			return resolveFileDisplayMode({ settings: pi.pi.settings, hasEditTool: pi.getActiveTools().some(name => canon(name) === "edit"), getActiveModelString: () => ctx.model && formatModelStringWithRouting(ctx.model) }).hashLines;
+		} catch { return false; }
+	};
 	pi.on("session_start", async (_event, ctx) => {
 		session = ctx.sessionManager;
 		keys = { ...(await load(`${OMP}tools/approval-cache`)), ...(await load(`${OMP}tools/approval-targets`)) };
-		store = await load(NATIVES).then(natives => new natives.EditStore(), () => {});
+		natives = await load(NATIVES).catch(() => undefined);
+		store = natives && new natives.EditStore();
 		const toolSession = { get cwd() { return session.getCwd(); }, settings: pi.pi.settings, hasEditTool: true, getSessionSpawns: () => "*" };
 		try {
 			const [read, grep, glob] = await Promise.all(["read", "grep", "glob"].map(name => load(`${OMP}tools/${name}`)));
@@ -490,7 +540,7 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 			"-A": nonnegative, "-B": nonnegative, "-C": nonnegative, "-i": flag, head_limit: nonnegative, offset: nonnegative, multiline: flag,
 			case: flag, gitignore: flag, skip: z.number().nullable().optional(),
 		}),
-		execute: (_id, params, signal, onUpdate, ctx) => runGrep(params, ctx, signal, onUpdate, load),
+		execute: async (_id, params, signal, onUpdate, ctx) => runGrep(params, ctx, signal, onUpdate, load, store, await editable(ctx)),
 	});
 	pi.registerTool({
 		name: "glob", label: "glob", loadMode: "essential", strict: false,
@@ -500,7 +550,7 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 			return root ? [tree(root)] : targets("glob", globArgs(args));
 		},
 		description: texts.glob,
-		parameters: z.object({ glob_pattern: text, target_directory: text, path: text, hidden: flag, gitignore: flag, limit: number }),
+		parameters: z.object({ glob_pattern: text, target_directory: text, path: text, hidden: flag, gitignore: flag, limit: z.number().positive().optional() }),
 		execute: (_id, params, signal, onUpdate, ctx) => runGlob(params, ctx, signal, onUpdate, load),
 	});
 	pi.registerTool({
@@ -508,8 +558,13 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 		approval: args => tier("read", args), approvalCacheTargets: args => targets("read", args),
 		docTopics: () => builtins?.read?.docTopics?.() ?? {},
 		description: texts.read,
-		parameters: z.object({ path: z.string(), offset: int.optional(), limit: int.min(1).optional() }),
-		execute: (_id, params, signal, onUpdate, ctx) => runRead(params, ctx, signal, onUpdate, load),
+		parameters: z.object({ path: z.string(), offset: z.union([int.min(-Number.MAX_SAFE_INTEGER).max(-1), int.min(1).max(Number.MAX_SAFE_INTEGER)]).optional(), limit: int.min(1).max(Number.MAX_SAFE_INTEGER).optional() }),
+		execute: async (id, params, signal, onUpdate, ctx) => {
+			const wait = readWaits.get(id);
+			readWaits.delete(id);
+			if (wait) await abortable(signal, () => wait);
+			return runRead(params, ctx, signal, onUpdate, load, await editable(ctx));
+		},
 	});
 
 	// Only tool definitions change: messages stay as they are.
@@ -533,10 +588,16 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 
 	const skips = new Map();
 	// A call that was denied or cancelled gets no result: its entry goes when the call ends.
-	pi.on("tool_execution_end", event => void skips.delete(event.toolCallId));
+	pi.on("tool_execution_end", event => {
+		skips.delete(event.toolCallId);
+		pending.get(event.toolCallId)?.resolve();
+		pending.delete(event.toolCallId);
+		readWaits.delete(event.toolCallId);
+	});
 	pi.on("tool_call", async (event, ctx) => {
-		const input = event.input?.input;
-		// A call that was blocked got no result: its old entry must not reach a new call.
+		const name = canon(event.toolName), input = event.input?.input;
+		if (name === "bash") pending.set(event.toolCallId, Promise.withResolvers());
+		if (name === "read") readWaits.set(event.toolCallId, Promise.all([...pending.values()].map(item => item.promise)));
 		skips.delete(event.toolCallId);
 		if (canon(event.toolName) !== "edit" || typeof input !== "string") return;
 		// Fail open: an error or a slow dry run leaves the patch to the native edit.
@@ -548,15 +609,15 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 		skips.set(event.toolCallId, partial.skipped);
 		return { input: { input: partial.input } };
 	});
-	pi.on("tool_result", event => {
+	pi.on("tool_result", (event, ctx) => {
 		const content = wholeFile(event), skipped = skips.get(event.toolCallId), details = event.details, name = canon(event.toolName);
-		const seen = name === "read" ? [details?.meta?.source] : name === "edit" ? details?.perFileResults ?? [details] : [];
-		try {
-			for (const entry of seen) {
-				const path = entry?.path ?? entry?.value;
-				// A renamed file keeps its snapshots under the new name, as in the session.
+		if (!event.isError) try {
+			const entries = name === "read" ? [details?.meta?.source] : name === "edit" ? details?.perFileResults ?? [details] : [];
+			for (const entry of entries) {
+				const path = entry?.path ?? (entry?.type === "path" ? entry.value : undefined);
 				entry?.sourcePath && store?.relocate(entry.sourcePath, path);
-				path && store?.recordSnapshotFile(path);
+				if (name === "edit" && path) store?.recordSnapshotFile(path, [0]);
+				recordShown(store, natives, ctx?.cwd ?? session?.getCwd(), path, event.content);
 			}
 		} catch {}
 		if (content) return { content };

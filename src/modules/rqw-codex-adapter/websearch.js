@@ -1,4 +1,5 @@
 // Live web search through the ChatGPT Codex backend: a gpt-6-luna planner calls web.run, /alpha/search fetches the text.
+import { getCodexClientVersion } from "@oh-my-pi/pi-catalog/wire/codex-version";
 import tools from "./web-run.schema.json";
 
 const BASE = "https://chatgpt.com/backend-api/codex";
@@ -26,7 +27,7 @@ async function post(path, body, access, signal) {
 			"content-type": "application/json",
 			accept: stream ? "text/event-stream" : "application/json",
 			originator: "omp",
-			version: "0.159.0",
+			version: getCodexClientVersion(),
 			Authorization: `Bearer ${access.accessToken}`,
 			...(accountId && { "chatgpt-account-id": accountId }),
 		},

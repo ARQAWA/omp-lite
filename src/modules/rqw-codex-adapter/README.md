@@ -33,6 +33,7 @@ RQW Codex Adapter: одно расширение OMP 18.22.1. Оно делае�
 - `system-prompt.ts`, `withoutAgentsMd` и `task/executor.ts`, `excludeAgentsMd: true`: OMP вырезает `AGENTS.md` у сабагента фильтром по имени, выключателя нет. Поэтому `agentsmd.js` это костыль: патч `Array.prototype.filter` и `preload` в рабочие потоки.
 - `task/discovery.ts`: профиль пользователя главнее встроенного.
 - `packages/ai/src/auth-retry.ts`, `withOAuthAccess`: поиск берёт аккаунт сессии. Ответ 401: OMP обновляет токен, потом идёт по остальным аккаунтам. Ошибка выходит, когда аккаунты кончились.
+- `packages/catalog/src/wire/codex-version.ts`, `getCodexClientVersion`: заголовок версии клиента в обоих запросах поиска.
 - `tools/settings.ts`, `web_search.enabled`: при `false` наш тул не регистрируется.
 
 ## Поиск

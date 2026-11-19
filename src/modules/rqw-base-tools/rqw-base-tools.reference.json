@@ -10,7 +10,10 @@
 		"EditSession.prototype.apply": "function",
 		"EditSession.prototype.close": "function",
 		"EditStore": "function",
+		"EditStore.prototype.recordSnapshot": "function",
 		"EditStore.prototype.recordSnapshotFile": "function",
+		"EditStore.prototype.byHashText": "function",
+		"EditStore.prototype.seenLines": "function",
 		"EditStore.prototype.relocate": "function",
 		"hashlineFileHash": "function"
 	},

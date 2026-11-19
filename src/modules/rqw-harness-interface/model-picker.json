@@ -28,7 +28,6 @@
     "max": "#ff4757"
   },
   "aliases": {
-    "openrouter/deepseek/deepseek-v4.1-flash-1017": "DeepSeek Flash OpenRouter",
-    "antigravity-cli/gemini-4-hydrogen": "Hydrogen"
+    "openrouter/deepseek/deepseek-v4.1-flash-1017": "DeepSeek Flash OpenRouter"
   }
 }

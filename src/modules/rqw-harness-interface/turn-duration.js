@@ -18,6 +18,7 @@ export default function turnDuration(pi) {
 	});
 	pi.on("input", () => { if (!running) started = performance.now(); });
 	pi.on("agent_start", () => { running = true; });
+	for (const event of ["session_clear", "session_switch", "session_branch"]) pi.on(event, () => { started = undefined; running = false; });
 	pi.on("agent_end", (event, ctx) => {
 		if (ctx.agent?.kind !== "main") return;
 		if (event.willContinue) return;

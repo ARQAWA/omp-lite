@@ -24,6 +24,20 @@ test("timing includes tools and continuations, not queued input; sends after a t
 	} finally { performance.now = now; }
 });
 
+test("session boundaries discard a paused turn's clock", () => {
+	const now = performance.now; let time = 0; performance.now = () => time;
+	try {
+		for (const boundary of ["session_clear", "session_switch", "session_branch"]) {
+			const m = mount(), h = m.handlers;
+			time = 0; h.input(); h.agent_start(); time = 1000; m.end(true);
+			h[boundary]({}, m.ctx); time = 60000; h.input(); h.agent_start(); time = 62000; m.end(); m.timers.shift()();
+			expect(m.sent[0][0].content[0].text).toBe("⏱ 2s");
+			time = 63000; h.input(); h.agent_start(); m.end(true); h[boundary]({}, m.ctx);
+			h.agent_start(); m.end(); expect(m.timers).toHaveLength(0);
+		}
+	} finally { performance.now = now; }
+});
+
 test("renderer and context keep the mark visible but out of model input", () => {
 	const m = mount(), user = { role: "user" }, mark = { customType: "omp-lite.turn-duration", content: [{ type: "text", text: "⏱ 2m 4s" }] };
 	expect(m.handlers.context({ messages: [user, mark] })).toEqual({ messages: [user] });

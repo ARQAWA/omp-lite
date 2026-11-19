@@ -45,6 +45,7 @@ function patch(tool) {
 	const edit = EDITS[bare(tool.name)];
 	if (!edit || typeof tool.description !== "string") return;
 	let text = edit.cut.reduce((kept, cut) => kept.replaceAll(cut, ""), tool.description);
+	if (edit === EDITS.task) text = text.replace(/^(- `agent`:) most specific\./m, "$1");
 	if (!text.includes(edit.add)) text = text.replace(/\n|$/, `\n${edit.add}$&`);
 	tool.description = text.replaceAll(...edit.swap);
 }

@@ -17,6 +17,7 @@ mock.module("@oh-my-pi/pi-ai", () => ({
 	},
 }));
 mock.module("@oh-my-pi/pi-coding-agent/config/registry", () => ({ lookup: id => ({ get: settings => settings[id] }) }));
+mock.module("@oh-my-pi/pi-catalog/wire/codex-version", () => ({ getCodexClientVersion: () => "99.88.77" }));
 const { default: adapter } = await import("../../../../src/modules/rqw-codex-adapter/index.js");
 
 const originalFetch = globalThis.fetch;
@@ -52,6 +53,10 @@ test("task: the rule goes under the first line once, scout pushes go, both names
 		expect(text).toBe(`Spawn \`tasks[]\` concurrently.\n${RULE}\n\n# Inputs\n- \`agent\`: inside each \`tasks[]\` item.\n  - Omit \`agent\` by default: a general worker equal to you. \`scout\` only for read-only search over unknown files; \`sonic\` only for mechanical edits with exact instructions. The user names an agent type: pass it in \`agent\`. The user names a model or effort: set \`model\` to \`provider/id:level\` (your own model if none named), no \`agent\`. Levels: \`low\`, \`medium\`, \`high\`, \`xhigh\` (extra high), \`max\`; pass exactly the level the user says. In every task say how thorough to be and exactly what to return.\n  - Prefer one agent.\n- \`scout\`: Read-only scout.`);
 	}
 	expect(other.description).toBe("Read-only research MUST use `scout` only when files unknown.");
+	const single = { name: "task", description: "Spawn one.\n- `agent`: most specific.\n  - Read-only research MUST use `scout` only when files unknown.\n- `scout`: Pick the most specific.\nNote: Pick the most specific." };
+	request([single]); request([single]);
+	expect(single.description).toContain("- `scout`: Pick the most specific.\nNote: Pick the most specific.");
+	expect(single.description).toContain("- `agent`:\n  - Omit `agent` by default");
 });
 
 test("eval: Bun by default, no agent and workpool hints, direct calls blocked", () => {
@@ -112,10 +117,11 @@ const search = (fetch, accounts = [{ accessToken: "a" }]) => {
 test("web search: a 401 moves to the next account; only text commands are sent on", async () => {
 	const kept = { search_query: [{ q: "a" }], open: [{ ref_id: "r" }], click: [{ ref_id: "r", id: 1 }], find: [{ ref_id: "r", pattern: "p" }], response_length: "long" };
 	let planned = false;
-	let sent;
+	let sent; const versions = [];
 	const result = await search(
 		(url, options) => {
 			if (options.headers.Authorization === "Bearer a") return new Response("no", { status: 401 });
+			versions.push([url.endsWith("/alpha/search") ? "search" : "planner", options.headers.version]);
 			if (url.endsWith("/alpha/search")) {
 				sent = JSON.parse(options.body).commands;
 				return Response.json({ output: "source" });
@@ -128,6 +134,7 @@ test("web search: a 401 moves to the next account; only text commands are sent o
 	);
 	expect(result.content[0].text).toBe("[fetch 1]\nsource");
 	expect(sent).toEqual(kept);
+	expect(versions).toEqual([["planner", "99.88.77"], ["search", "99.88.77"], ["planner", "99.88.77"]]);
 	await expect(search(() => new Response("no", { status: 401 }), [{ accessToken: "a" }, { accessToken: "b" }])).rejects.toThrow("Codex /responses failed: 401 no");
 	await expect(search(() => new Response("no", { status: 500 }), [{ accessToken: "a" }, { accessToken: "b" }])).rejects.toThrow("500");
 });

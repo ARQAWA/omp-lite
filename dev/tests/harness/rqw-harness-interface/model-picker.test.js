@@ -7,14 +7,14 @@ import data from "../../../../src/modules/rqw-harness-interface/model-picker.jso
 
 const model = (provider, id, name, efforts) => ({ provider, id, name, thinking: { efforts } });
 const opus = model("anthropic", "opus", "Claude Opus", ["low", "medium", "high"]);
-const hydro = model("antigravity-cli", "gemini-4-hydrogen", "Gemini 4 Hydrogen", ["low", "high", "max"]);
+const sol = model("openai-codex", "gpt-6.2-sol", "Sol", ["low", "high", "max"]);
 const router = model("openrouter", "deepseek/deepseek-v4.1-flash-1017", "DeepSeek Flash", ["xhigh", "max"]);
 const plain = model("plain-provider", "plain", "A rather long plain model name", []);
 const up = "\x1b[1;2A", down = "\x1b[1;2B", left = "\x1b[D", right = "\x1b[C";
 const strip = text => text.replace(/\x1b\[[\d;]*m/g, "").replaceAll("**", "");
 const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 
-function session({ models = [opus, hydro, router, plain], level = "high", setModel } = {}) {
+function session({ models = [opus, sol, router, plain], level = "high", setModel } = {}) {
 	const events = {}, inputs = [], dialogs = [], calls = [], notes = [];
 	const pi = {
 		on: (event, fn) => events[event] = fn,
@@ -42,15 +42,15 @@ test("opening makes the first move, confirms in order and warns on failure", asy
 	const s = session(); s.start();
 	expect(s.open(down)).toEqual({ consume: true });
 	expect(s.rows()).toHaveLength(9);
-	expect(s.rows()[5]).toContain("› Hydrogen lo hi mx");
+	expect(s.rows()[5]).toContain("› Sol lo hi mx");
 	expect(s.open(down)).toBeUndefined();
 	s.dialogs[0].handleInput(right); s.dialogs[0].handleInput("\x1b[13;2~"); await flush();
-	expect(s.calls).toEqual([["model", hydro], ["effort", "max"]]);
+	expect(s.calls).toEqual([["model", sol], ["effort", "max"]]);
 	for (const [result, warning] of [[false, "No authentication for "], [new Error("oops"), "Could not switch to "]]) {
 		const x = session({ setModel: () => result instanceof Error ? Promise.reject(result) : Promise.resolve(result) });
 		x.start(); x.open(down); x.dialogs[0].handleInput("\r"); await flush();
-		expect(x.calls).toEqual([["model", hydro]]);
-		expect(x.notes[0][0]).toStartWith(warning + "antigravity-cli/gemini-4-hydrogen");
+		expect(x.calls).toEqual([["model", sol]]);
+		expect(x.notes[0][0]).toStartWith(warning + "openai-codex/gpt-6.2-sol");
 		expect(x.notes[0][1]).toBe("warning");
 	}
 });
@@ -80,13 +80,13 @@ test("case-insensitive filter includes alias and backspace restores choices", as
 });
 
 test("edges do not wrap and efforts choose the nearest lower or minimum", async () => {
-	const s = session({ models: [opus, hydro, router], level: "max" }); s.start(); s.open(up);
+	const s = session({ models: [opus, sol, router], level: "max" }); s.start(); s.open(up);
 	expect(s.rows()[5]).toContain("Opus"); s.dialogs[0].handleInput(left);
 	s.dialogs[0].handleInput(down); s.dialogs[0].handleInput(down); s.dialogs[0].handleInput(down);
 	expect(s.rows()[5]).toContain("OpenRouter"); s.dialogs[0].handleInput(right);
 	s.dialogs[0].handleInput("\x1b[13;2u"); await flush();
 	expect(s.calls).toEqual([["model", router], ["effort", "max"]]);
-	const x = session({ models: [opus, hydro], level: "max" }); x.start(); x.open(down);
+	const x = session({ models: [opus, sol], level: "max" }); x.start(); x.open(down);
 	x.dialogs[0].handleInput(up); x.dialogs[0].handleInput("\n"); await flush();
 	expect(x.calls).toEqual([["effort", "high"]]);
 	const y = session({ models: [opus, plain], level: "off" }); y.start(); y.open(down);
@@ -96,7 +96,7 @@ test("edges do not wrap and efforts choose the nearest lower or minimum", async 
 });
 
 test("enabledModels restricts the list; empty config shows all", () => {
-	for (const [value, expected] of [[["antigravity-cli/*"], "› Hydrogen "], [[], "Opus"]]) {
+	for (const [value, expected] of [[["openai-codex/*"], "› Sol "], [[], "Opus"]]) {
 		config = value; const s = session(); s.start();
 		s.open(up); expect(s.rows()[5]).toContain(expected);
 	}
@@ -127,7 +127,7 @@ test("truecolor is fixed by JSON; provider labels are absent", () => {
 		const c = data.colors[name]; return `\x1b[38;2;${parseInt(c.slice(1, 3), 16)};${parseInt(c.slice(3, 5), 16)};${parseInt(c.slice(5), 16)}m`;
 	};
 	for (const name of ["accent", "muted", "dim", "high"]) expect(all).toContain(hex(name));
-	expect(all).not.toContain("anthropic"); expect(all).not.toContain("antigravity-cli"); expect(all).not.toContain("openrouter/");
+	expect(all).not.toContain("anthropic"); expect(all).not.toContain("openai-codex"); expect(all).not.toContain("openrouter/");
 	expect(rows[5]).toContain(hex("high") + "**hi**\x1b[39m");
 	expect(s.dialogs[0].render(10).join("")).toContain(hex("error"));
 	const x = session({ models: [model("x", "y", "all", data.effortOrder)], level: "low" }); x.start(); x.open(up);

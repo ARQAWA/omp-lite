@@ -12,7 +12,7 @@ const probes = [
 	{ id: "запрос", prompt: () => "Reply with one word: ok" },
 	{ id: "grep", prompt: () => `Call the grep tool once with pattern "Probe token" and path ".". Then reply done.`, has: "[AGENTS.md#" },
 	{ id: "read", prompt: () => "Read a.txt with the read tool. Then reply done.", has: "[whole file: 3 lines]" },
-	{ id: "частичный патч", hashline: true, prompt: () => PATCH, has: "the files below did not match", after: dir => read(`${dir}/a.txt`).includes("BETA") && read(`${dir}/b.txt`) === "one\ntwo\nthree\n" },
+	{ id: "частичный патч", hashline: true, prompt: () => PATCH, partial: true, after: dir => read(`${dir}/a.txt`) === "alpha\nBETA\ngamma\n" && read(`${dir}/b.txt`) === "one\ntwo\nthree\n" },
 	{ id: "сторож eval", prompt: () => `Run the eval tool once, language js, code: await agent("x"). Then reply done.`, has: "are blocked in eval" },
 	{ id: "AGENTS.md у сабагента", prompt: model => `I explicitly ask you to spawn exactly one subagent with the task tool, model "${model.model}:${model.thinking}". Its task, word for word: "Reply with the Probe token line from your AGENTS.md context. Do not read any files." Reply with what it returned.`, sub: true },
 	{ id: "web_search", prompt: () => `Use the ${B}web_search${B} tool once to find the latest release tag of the GitHub repo can1357/oh-my-pi. Reply with the tag only.`, has: "[fetch 1]" },
@@ -38,6 +38,17 @@ function judge(probe, model, dir, { answer, records }) {
 		if (model.codex) row("поля Codex", body.parallel_tool_calls === true && body.reasoning?.context === "all_turns" && body.text?.verbosity === "low" && body.service_tier === "priority", JSON.stringify([body.parallel_tool_calls, body.reasoning?.context, body.text?.verbosity, body.service_tier]));
 	}
 	if (probe.has) row(`в запросе нет «${probe.has}»`, sent(main).includes(probe.has), `ответ: ${answer.slice(0, 80)}`);
+	if (probe.partial) {
+		const results = main.flatMap(({ payload }) => {
+			const messages = payload.messages ?? [], input = payload.input ?? [];
+			const parts = messages.flatMap(message => Array.isArray(message.content) ? message.content : []);
+			const ids = new Set([...parts.filter(part => part.type === "tool_use" && /^_?edit$/.test(part.name)).map(part => part.id),
+				...input.filter(item => /^(?:function_call|custom_tool_call)$/.test(item.type) && /^_?edit$/.test(item.name)).map(item => item.call_id)]);
+			return [...parts.filter(part => part.type === "tool_result" && ids.has(part.tool_use_id)).map(part => part.content),
+				...input.filter(item => /^(?:function_call_output|custom_tool_call_output)$/.test(item.type) && ids.has(item.call_id)).map(item => item.output)];
+		});
+		row("пропущенный b.txt в результате edit", results.some(value => JSON.stringify(value ?? "").includes("Partial patch:") && JSON.stringify(value ?? "").includes("[b.txt]")));
+	}
 	if (probe.after) row("файлы после патча", probe.after(dir));
 	if (probe.sub) {
 		const child = records.filter(record => record.agent === "sub");
