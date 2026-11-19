@@ -4,6 +4,7 @@ const config = Bun.YAML.parse(await Bun.file(new URL("../../../../src/modules/rq
 
 test("compaction starts at 400k for 17 models", () => {
 	expect(Object.values(config.compaction.modelThresholds)).toEqual(Array(17).fill("f400000"));
+	expect(config.providers.cacheWarmingStrategy).toBe("keepalive");
 });
 
 test("streamed text and tool arguments appear without artificial pacing", () => {

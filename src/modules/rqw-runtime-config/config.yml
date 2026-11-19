@@ -18,6 +18,7 @@ enabledModels:
 # The :floor variant is what reaches the OpenRouter flex tier.
 providers:
   openrouterVariant: floor
+  cacheWarmingStrategy: keepalive
 # Only anthropic, openai-codex, opencode-go and openrouter stay open: every other model provider of OMP 19.0.0.
 disabledProviders:
   - google

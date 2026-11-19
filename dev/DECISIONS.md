@@ -2575,3 +2575,13 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** 17 тестов модуля прошли, `verify.js` — 211 из 211. На том же OMP 19.0.0 без флага ворота падают: метка есть, подсказки нет. С флагом видны оба элемента, сохранённая метка не попадает в следующий обычный и побочный запросы. Старая сессия 18.22.1 открылась с меткой; Tab вставил подсказку без отправки. Модель во всех пробах заменена локальной заглушкой.
 
 **Носители:** `src/modules/rqw-harness-interface/turn-duration.js`, `README.md`; `dev/tests/harness/rqw-harness-interface/turn-duration.test.js`; `dev/agents/omp-upgrade/contract.json`, `scripts/lib.js`, `scripts/verify.js`.
+
+## D-149 — подогрев без сжатия ради кэша
+
+**Решение:** `providers.cacheWarmingStrategy: keepalive`. Пороги `f400000` не меняются; `providers.cacheWarming` не задан и остаётся штатным `idle`.
+
+**Основание:** владелец оставил порог 400k и подогрев, согласовав установку OMP 19.0.0.
+
+**Механика OMP 19.0.0:** `packages/coding-agent/src/session/settings.ts:1330-1384`, `packages/coding-agent/src/session/cache-warmer.ts:1125-1134`. `keepalive` исключает сжатие ради подогрева; если подогрев не окупается, кэш может истечь. Обычное сжатие не выключено.
+
+**Носители:** `src/modules/rqw-runtime-config/config.yml`, `README.md`; `dev/tests/harness/rqw-runtime-config/rqw-runtime-config.test.js`.
