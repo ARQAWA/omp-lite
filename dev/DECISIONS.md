@@ -2584,4 +2584,6 @@ Blind и high больше не различаются ни моделью, ни
 
 **Механика OMP 19.0.0:** `packages/coding-agent/src/session/settings.ts:1330-1384`, `packages/coding-agent/src/session/cache-warmer.ts:1125-1134`. `keepalive` исключает сжатие ради подогрева; если подогрев не окупается, кэш может истечь. Обычное сжатие не выключено.
 
+**Проверка:** до установки `verify.js` — 212 из 212. На Mac с OMP 19.0.0 и харнесом `6952afac80` — `verify --runtime` 216 из 216 и `probe` 15 из 15. Настройки действуют: `keepalive`, `idle`, 17 модельных порогов `f400000`.
+
 **Носители:** `src/modules/rqw-runtime-config/config.yml`, `README.md`; `dev/tests/harness/rqw-runtime-config/rqw-runtime-config.test.js`.
