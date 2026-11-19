@@ -80,14 +80,19 @@ test("eval: Bun by default, no agent and workpool hints, direct calls blocked", 
 });
 
 test("task result: only the last stock tip becomes ours", () => {
-	const tip = "\n\nTip: this call spawned 2 generic `task` workers. Check the agent list for a closer specialist type.";
-	const content = [{ type: "text", text: `Quoted:${tip}` }, { type: "text", text: `The child reported:${tip}\n\nEnd.${tip}\n\nTail.` }, { type: "image", data: "x" }];
+	const tip = "\n\nTip: this call spawned 2 generic workers (`task`). Check the agent list for a closer specialist type.";
+	const mixed = "\n\nTip: this call spawned 3 generic workers (`task`, `sonic`). Check the agent list for a closer specialist type \u2014 e.g. read-only research belongs on `agent: \"scout\"`, which runs on a faster model.";
+	const replacement = "\n\nTip: omit `agent` by default; `scout` only for read-only search over unknown files; `sonic` only for mechanical edits with exact instructions.";
+	const content = [{ type: "text", text: `Quoted:${tip}` }, { type: "text", text: `The child reported:${tip}\n\nEnd.${mixed}\n\nTail.` }, { type: "image", data: "x" }];
 	const { hooks } = load();
 	expect(hooks.tool_result({ toolName: "_task", content }).content).toEqual([
 		content[0],
-		{ type: "text", text: `The child reported:${tip}\n\nEnd.\n\nTip: omit \`agent\` by default; \`scout\` only for read-only search over unknown files; \`sonic\` only for mechanical edits with exact instructions.\n\nTail.` },
+		{ type: "text", text: `The child reported:${tip}\n\nEnd.${replacement}\n\nTail.` },
 		content[2],
 	]);
+	expect(hooks.tool_result({ toolName: "task", content: [{ type: "text", text: `Only.${tip}` }] }).content[0].text).toBe(`Only.${replacement}`);
+	const other = [{ type: "text", text: "\n\nTip: this call spawned 2 generic workers (`task`). Another tip." }];
+	expect(hooks.tool_result({ toolName: "task", content: other }).content).toEqual(other);
 	expect(hooks.tool_result({ toolName: "read", content })).toBeUndefined();
 });
 

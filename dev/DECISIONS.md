@@ -2542,3 +2542,22 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** стирание истории терминала при компакшене и отсутствие потолка строк остаются в ядре OMP. Законченный сабагент, открытый в TUI, через минуту возвращает экран в главный чат. Время оживления сабагента не замерено.
 
 **Носители правила:** `src/modules/rqw-harness-interface/turn-duration.js`, `README.md`; `src/modules/rqw-runtime-config/config.yml`, `README.md`; `src/modules/rqw-codex-adapter/rqw-codex-adapter.yml`, `README.md`; `dev/tests/harness/rqw-harness-interface/turn-duration.test.js`, `dev/tests/harness/rqw-codex-adapter/rqw-codex-adapter.test.js`.
+
+## D-147 — харнес на OMP 19.0.0: подготовка апдейта
+
+**Решение:** харнес подготовлен с OMP 18.22.1 на 19.0.0 для ревью, без установки и доставки.
+
+1. `bump.js` обновил версии, пин `omp.exe` (sha256 `36ac685c7b932f4bb81ccc5a7116abee90575d32110e74dd2a066e082690d941`, 257196032 байт) и версию расширения 0.0.18 → 0.0.19.
+2. `rqw-base-tools`: эталон `read` и `bash` снят из родного запроса, в полях `bash` учтён штатный `notify`, в схеме `glob` — целое число 1..200. `tools.intentTracing: true` возвращает поле `i`; две подсказки указывают на `:N-` и `local://0.log`. Показ `notify` не менялся.
+3. `rqw-runtime-config`: новый провайдер `kiro` закрыт. `rqw-codex-adapter`: якорь замены последнего совета `task` перенесён на новый штатный текст, свой совет сохранён.
+4. Обновлены ссылки на механику в README и соседние тесты.
+
+**Основание:** заказ владельца обновить OMP до последней версии по скиллу; принятый план `/tmp/omp-up-19-0-0/PLAN.md`.
+
+**Причина:** [исходники OMP 18.22.1](https://github.com/can1357/oh-my-pi/tree/v18.22.1) и [OMP 19.0.0](https://github.com/can1357/oh-my-pi/tree/v19.0.0): `packages/coding-agent/src/sdk.ts`, `tools/settings.ts`, `tools/read.ts`, `tools/glob.ts`, `prompts/tools/task-specialization-advisory.md`, `task/index.ts`; `packages/tui/src/tools/output-meta.ts`, `packages/utils/src/spill-url.ts`, `packages/catalog/src/compat/provider-ids.ts`. Снимки `cap-intent-native` и `cap-intent-full` до сборки вернули прежние поля, кроме нового `notify`.
+
+**Проверка:** `verify.js` — 209 из 209, включая полный `bun test dev/tests`. Снимок ветки отличается от прежнего полями только у `bash` (`notify`), описаниями — у `read`, `bash` и `wait`. Изолированные пробы бинаря 19.0.0 с локальной моделью-заглушкой: теги и частичная правка, `read` после `bash`, чтение `local://0.log` — 3 из 3.
+
+**Границы:** R2 не менялись: новые нативные подсказки `wait` и возможности `bash`, авто-компакшен при подогреве, подогрев сабагентов, LSP сабагентов, MCP-трансформация и старые ссылки артефактов ждут решения. Установка, живые пробы, VDI и сборка или публикация VSIX не выполнялись.
+
+**Носители:** `INSTALL.md`; `src/modules/rqw-base-tools/` (конфиг, эталон, тексты, README); `src/modules/rqw-runtime-config/config.yml`, `README.md`; `src/modules/rqw-codex-adapter/index.js`, `agentsmd.js`, `README.md`; `src/modules/rqw-harness-interface/model-picker.js`; `src/modules/rqw-system-core/README.md`; `src/modules/rqw-windows-pack/README.md`, `voice/index.js`, `vscode/runtime.json`, `vscode/package.json`; `dev/tests/harness/rqw-base-tools/`, `rqw-codex-adapter/`, `rqw-runtime-config/`, `rqw-system-core/`; `dev/tests/repository/rqw-windows-pack.test.js`; `dev/DECISIONS.md`.

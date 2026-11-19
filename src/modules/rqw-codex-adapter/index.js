@@ -1,4 +1,4 @@
-// RQW Codex Adapter, OMP 18.22.1: opt-in delegation, AGENTS.md for subagents, live Codex web search, Codex transport.
+// RQW Codex Adapter, OMP 19.0.0: opt-in delegation, AGENTS.md for subagents, live Codex web search, Codex transport.
 import { existsSync } from "node:fs";
 import { withOAuthAccess } from "@oh-my-pi/pi-ai";
 import { lookup } from "@oh-my-pi/pi-coding-agent/config/registry";
@@ -11,7 +11,7 @@ const PLANNER =
 	"You gather web evidence. Call web.run to search or to open pages, read what it returns, and refine the queries until the evidence answers the question. Never answer from memory and never use another tool. When the evidence is sufficient, reply with one short line and no tool call.";
 const NO_LOGIN = "No openai-codex ChatGPT login. Run /login openai-codex (a ChatGPT subscription is required).";
 // Greedy head: only the last stock tip is replaced, a tip quoted inside a report stays.
-const TIP = /([\s\S]*)\n\nTip: this call spawned \d+ generic `\w+` workers\.[^\n]*/;
+const TIP = /([\s\S]*)\n\nTip: this call spawned \d+ generic workers \([^\n]+\)\. Check the agent list for a closer specialist type[^\n]*/;
 // Per tool: fragments to cut, lines to put under the first line, one replacement.
 const EDITS = {
 	__proto__: null,

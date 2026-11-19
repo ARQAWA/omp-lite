@@ -1,6 +1,6 @@
 # rqw-runtime-config
 
-RQW Runtime Config: общие настройки OMP 18.22.1 одним файлом. Кода нет.
+RQW Runtime Config: общие настройки OMP 19.0.0 одним файлом. Кода нет.
 
 **Назначение:**
 1. общие настройки харнеса: провайдеры, модели, роли, тулы, интерфейс, служебное.
@@ -12,7 +12,7 @@ RQW Runtime Config: общие настройки OMP 18.22.1 одним фай�
 
 **Экран:** `display.smoothStreaming: false` показывает текст и аргументы тулов по мере получения, без искусственной печати. Сам стриминг и остальные анимации не выключены. `display.collapseCompacted: true` прячет чат до компакшена за сводкой. `tui.completeScrollback: true` пишет в историю терминала верх растущего блока.
 
-**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`. Остальные 96 провайдеров стоят в `disabledProviders`: белого списка в OMP нет. `enabledModels` и роль `perCall` держат одни и те же 9 точных имён: четыре Claude, четыре GPT, DeepSeek через `openrouter`. `perCall` это модели, которые можно назвать сабагенту. Моделей `opencode-go` в списках нет; сам провайдер открыт: статуслайн показывает остаток его подписки. `modelRoles.default`: DeepSeek через `openrouter`. Он есть во встроенном каталоге OMP: старт не зависит от кэша моделей. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter сюда не входит: его кладут руками в `~/.omp/agent/models.yml`.
+**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`. В `disabledProviders` перечислены 97 закрытых id: белого списка в OMP нет. `enabledModels` и роль `perCall` держат одни и те же 9 точных имён: четыре Claude, четыре GPT, DeepSeek через `openrouter`. `perCall` это модели, которые можно назвать сабагенту. Моделей `opencode-go` в списках нет; сам провайдер открыт: статуслайн показывает остаток его подписки. `modelRoles.default`: DeepSeek через `openrouter`. Он есть во встроенном каталоге OMP: старт не зависит от кэша моделей. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter сюда не входит: его кладут руками в `~/.omp/agent/models.yml`.
 
 **Хуки:** нет.
 
@@ -28,4 +28,4 @@ RQW Runtime Config: общие настройки OMP 18.22.1 одним фай�
 - Новую модель надо дописать в три места: `enabledModels`, `perCall`, карта порогов.
 - Модель вне карты порогов сжимается по правилам OMP.
 
-**Механика OMP 18.22.1**, каталог `packages/coding-agent/src`: `config/compaction-threshold.ts` (формы порога, точное имя главнее шаблона), `config/model-settings.ts` (`modelRoles`, `enabledModels`, `disabledProviders`), `config/model-resolver.ts` (`normalizeModelPatternList`, `resolveModelRoleValue`: роль это список через запятую, берётся первая доступная модель), `task/model-approval.ts` (список моделей в описании тула `task` строится из `perCall`), `session/settings.ts` (`providers.openrouterVariant`, `retry.fallbackChains`), `tools/settings.ts` (`tools.approvalMode`, `dev.autoqaConsent`), `modes/controllers/event-controller.ts` (плавное появление текста и аргументов).
+**Механика OMP 19.0.0**, каталог `packages/coding-agent/src`: `config/compaction-threshold.ts` (формы порога, точное имя главнее шаблона), `config/model-settings.ts` (`modelRoles`, `enabledModels`, `disabledProviders`), `config/model-resolver.ts` (`normalizeModelPatternList`, `resolveModelRoleValue`: роль это список через запятую, берётся первая доступная модель), `task/model-approval.ts` (список моделей в описании тула `task` строится из `perCall`), `session/settings.ts` (`providers.openrouterVariant`, `retry.fallbackChains`), `tools/settings.ts` (`tools.approvalMode`, `dev.autoqaConsent`), `modes/controllers/event-controller.ts` (плавное появление текста и аргументов).

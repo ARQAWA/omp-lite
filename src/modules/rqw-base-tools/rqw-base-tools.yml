@@ -8,6 +8,7 @@ read:
   summarize:
     enabled: false
 tools:
+  intentTracing: true
   artifactSpillThreshold: 100
   outputMaxColumns: 0
   artifactHeadBytes: 50

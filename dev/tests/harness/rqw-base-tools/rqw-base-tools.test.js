@@ -80,11 +80,14 @@ const ours = Object.entries(reference.tools).map(([name, { description }]) => te
 	.map(part => typeof part === "string" ? part : description.slice(description.indexOf(part.native))).join(""));
 
 test("the other native descriptions become ours; schemas and messages stay", async () => {
-	const { handlers, ctx, seen } = setup(), body = payload(), before = JSON.stringify([body.messages, body.tools.map(entry => entry.input_schema)]);
+	const { handlers, ctx, seen, tools } = setup(), body = payload(), before = JSON.stringify([body.messages, body.tools.map(entry => entry.input_schema)]);
 	for (const entry of body.tools) entry.name = `_${entry.name}`;
 	expect(await handlers.before_provider_request({ payload: body }, ctx)).toBe(body);
 	expect(body.tools.map(entry => entry.description)).toEqual(ours);
 	expect(JSON.stringify([body.messages, body.tools.map(entry => entry.input_schema)])).toBe(before);
+	expect(tool(body, "_bash").input_schema.properties.notify).toEqual({});
+	expect(tool(body, "_bash").description).toContain("Read local://0.log for full output");
+	expect(tools.find(entry => entry.name === "read").description).toContain("For Use :N- to continue, put :N- after the bare path.");
 	expect(seen).toEqual([]);
 	expect(tool(body, "_edit").description).toContain("The result names skipped files and their reasons");
 	expect(tool(body, "_edit").description).not.toMatch(/dry run|native edit|staging/i);
@@ -138,12 +141,13 @@ test("the guard names the first change, once per session, and our text is applie
 	const cases = [
 		[body => (tool(body, "grep").description += " new"), "native grep changed description"],
 		[body => (tool(body, "bash").input_schema.properties.extra = {}), "native bash changed fields"],
+		[body => delete tool(body, "bash").input_schema.properties.notify, "native bash changed fields"],
 		[body => body.tools.splice(body.tools.indexOf(tool(body, "read")), 1), "native read is missing"],
 		[() => {}, "setting edit.mode changed", undefined, { ...reference.settings, "edit.mode": "apply_patch" }],
 		[() => {}, "engine grep changed", { ...engine(), grep: undefined }],
 		[body => (tool(body, "edit").input_schema.properties = { definition: {}, syntax: {}, type: {} })],
 		[body => (tool(body, "edit").description = reference.tools.edit.alt[2].description)],
-		[body => (tool(body, "read").description = tool(body, "read").description.replace("- Directory", "- Selected file: `[a#1A2B]`\n- Directory"))],
+		[body => (tool(body, "read").description = tool(body, "read").description.replace(/^- Selected file: .*/m, "- Selected file: `[a#1A2B]`"))],
 	];
 	for (const [change, want, natives, current] of cases) {
 		const { handlers, ctx, seen } = setup(natives, current), send = async session => {
@@ -178,6 +182,7 @@ test("a subagent without a tool is not a change", async () => {
 test("the settings file sets every guarded setting", () => {
 	const flat = (node, prefix = "") => Object.entries(node).flatMap(([key, value]) => typeof value === "object" ? flat(value, `${prefix}${key}.`) : [[prefix + key, value]]);
 	expect(Object.fromEntries(flat(yml))).toMatchObject(reference.settings);
+	expect(yml.tools.intentTracing).toBe(true);
 });
 
 // ---- per-file patches ----
@@ -525,7 +530,7 @@ test("ranged read waits for earlier same-message bash before examining any file"
 
 test("the guard compares the native implementations, not the replacement descriptions", async () => {
 	for (const [natives, warning] of [
-		[engine(), undefined],
+		[{ ...engine(), schemas: { glob: { ...reference.tools.glob.schema, properties: { ...reference.tools.glob.schema.properties, limit: { type: "integer", description: "{minimum: 1, maximum: 200}" } } } } }, undefined],
 		[{ ...engine(), FileType: {} }, "rqw-base-tools: engine FileType.File changed"],
 		[{ ...engine(), descriptions: { grep: "changed" } }, "rqw-base-tools: native grep changed description"],
 		[{ ...engine(), fields: { read: ["i", "path", "new"] } }, "rqw-base-tools: native read changed fields"],
