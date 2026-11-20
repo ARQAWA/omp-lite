@@ -2600,6 +2600,32 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители:** `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.reference.json`, `README.md`; `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`; `dev/agents/omp-upgrade/scripts/lib.js`, `tui.py`.
 
+## D-151 — выпуск RQW Windows Pack 0.0.19
+
+**Решение:** `arqawa.ompcli` 0.0.19 опубликован для `win32-x64`. В пакете `omp.exe` 19.0.0 и харнес с исправлением `glob` D-150.
+
+**Основание:** согласованный апгрейд OMP и штатный выпуск по D-139. Вариант без D-150 не загружался.
+
+**Проверка:** ревизия payload `676c206d480fe833f65d822084389d5856a3bd57`. `ompcli-0.0.19-win32-x64.vsix`: 213471369 байт, SHA-256 `075cde5a3b44f94fcec888d35f0643c919b100d6e6021da1168f798b88632035`. Оба файла D-150 и закреплённые программы сверены. Ответ Marketplace: `{"version":"0.0.19","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-19T05:53:31.193Z"}`. Полный `bun test dev/tests` прошёл, `verify --runtime` 216 из 216, живая проверка на Haiku High и Luna High 15 из 15.
+
+**Границы:** запуск на Windows VDI не проверен.
+
+**Носители:** `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`; `dist/ompcli-0.0.19-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
+
+## D-152 — первый ход сбора контекста: подсказка в `glob` и граница краткости в памятке
+
+**Решение:** две строки текста. В начало описания `glob`: «First research response: send it together with the three `grep` calls of `<file_work>` step 1.» В памятку `REMINDER` после «Be as brief as the task allows.»: «Brevity is for the answer only: read as much code as `<file_work>` orders.» `SYSTEM.md` не менялся.
+
+**Основание:** слова владельца от 2026-11-19: «чтобы агент максимально делал всё параллельно»; «оптимизировать сбор контекста»; «Да, давай вноси R3 в отдельной ветке».
+
+**Причина:** Sonnet High в первом ходе слал 2 вызова вместо 4 из шага 1 `<file_work>` и не искал по файлам сборки. Правки одного `SYSTEM.md`, памятки или описания по отдельности эффекта не дали; работает только пара.
+
+**Проверка:** замер 2026-11-19, OMP 19.0.0, харнес `676c206d48`, проект Superbot `a8d1875`, задачи «продажи» и «иены», Sonnet High, прежние тексты → новые. Первый ход из 4 вызовов: 0 из 40 → 20 из 20. `grep` по файлам сборки в первом ходе: 0 из 40 → 20 из 20. Прочитан Rust-вход сервиса: 29 из 40 → 20 из 20. Ходов, медиана: 5 → 4 и 9 → 7. Время и баллы ответа по эталону из 10 связей без изменений. Terra Extra High, 9 прогонов, три задачи: без ухудшений. Стенд и логи: `/tmp/omp-sysprobe.oF7Lgn`, пакеты C и D.
+
+**Границы:** один проект, две задачи на чтение; судья один, проход один; Haiku и DeepSeek не мерялись. Качество ответа не выросло. Подсказка в `glob` описывает порядок работы, не поведение тула.
+
+**Носители:** `src/modules/rqw-base-tools/rqw-base-tools.texts.json`, `src/modules/rqw-system-core/index.js`, `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`.
+
 ## D-153 — перехват bash убран, в описании `bash` мягкое правило по образцу Cursor
 
 **Решение:** блок `bashInterceptor` удалён из `rqw-base-tools.yml`: ни одна команда оболочки не блокируется. В описании `bash` строка про запрет заменена на: «A tool exists for the action: prefer it to a shell command (`read` over `cat`, `grep` and `glob` over shell search).» Тест маршрутов `routing.test.js` удалён вместе с правилами.
@@ -2616,28 +2642,18 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители:** `src/modules/rqw-base-tools/rqw-base-tools.yml`, `rqw-base-tools.texts.json`, `README.md`; `src/modules/README.md`.
 
-## D-152 — первый ход сбора контекста: подсказка в `glob` и граница краткости в памятке
+## D-154 — суперлайт: свои `grep`, `glob`, `read` убраны, тулы родные
 
-**Решение:** две строки текста. В начало описания `glob`: «First research response: send it together with the three `grep` calls of `<file_work>` step 1.» В памятку `REMINDER` после «Be as brief as the task allows.»: «Brevity is for the answer only: read as much code as `<file_work>` orders.» `SYSTEM.md` не менялся.
+**Решение:** из `rqw-base-tools` убраны обёртки `grep`, `glob`, `read`, их описания и схемы, метка `[whole file: N lines]` и сторож этих трёх тулов. Тулы родные от OMP. Остались: свои строки в описаниях `bash`, `edit`, `write`, правка по файлам со спасением патча, настройки. Подсказка первого хода из D-152 теперь стоит первой строкой перед родным описанием `glob`. Шаг 1 `<file_work>` переписан под родные параметры: «`grep` for the topic (join the topic, synonyms and spellings with `|`, `case: false`), `grep` for exact names or values, and `grep` for the topic in deploy/build files (`path`: `*compose*;Dockerfile*;Makefile`).» Показанные строки для пробы патча расширение берёт из ответов родных `read`, `grep`, `edit`. `dev/TOOLING-MANIFEST.md` удалён: он описывал убранные обёртки.
 
-**Основание:** слова владельца от 2026-11-19: «чтобы агент максимально делал всё параллельно»; «оптимизировать сбор контекста»; «Да, давай вноси R3 в отдельной ветке».
+**Основание:** слова владельца от 2026-11-20: «Все наши обертки, я имею в виду наш самодельный греб Glob Rid. Я бы хотел от них избавиться и использовать стандартные тулы»; «эту штуку про параллельное редактирование со спасением от ошибки надо сохранить»; «Да, давай доводи суперлайт+ до слияния в main и ставь в рантайм».
 
-**Причина:** Sonnet High в первом ходе слал 2 вызова вместо 4 из шага 1 `<file_work>` и не искал по файлам сборки. Правки одного `SYSTEM.md`, памятки или описания по отдельности эффекта не дали; работает только пара.
+**Причина:** замеры 2026-11-20 на проекте Superbot `a8d1875`, три задачи. Sonnet High, Terra Extra High, DeepSeek Flash Low, 81 прогон: время и точность правки на уровне прежней сборки; Terra правит через `edit` вместо `lsp`, 61 → 38 с; отказы «Native grep does not support …» исчезли. Sol 6.2 Low, 90 прогонов против стоковых OMP 19.0.0, Pi 1.5.2 и Codex CLI 0.171.0 в чистом окружении: нужных файлов прочитано 5 из 5 и 5 из 9 у прежней сборки и суперлайта, 2–3 из 5 и 3–4 из 9 у стоковых; переименование точное 30 из 30. Код 639 → 260 строк, тесты 588 → 294.
 
-**Проверка:** замер 2026-11-19, OMP 19.0.0, харнес `676c206d48`, проект Superbot `a8d1875`, задачи «продажи» и «иены», Sonnet High, прежние тексты → новые. Первый ход из 4 вызовов: 0 из 40 → 20 из 20. `grep` по файлам сборки в первом ходе: 0 из 40 → 20 из 20. Прочитан Rust-вход сервиса: 29 из 40 → 20 из 20. Ходов, медиана: 5 → 4 и 9 → 7. Время и баллы ответа по эталону из 10 связей без изменений. Terra Extra High, 9 прогонов, три задачи: без ухудшений. Стенд и логи: `/tmp/omp-sysprobe.oF7Lgn`, пакеты C и D.
+**Механика OMP 19.0.0**, каталог `packages/coding-agent/src`: `prompts/tools/grep.md`, `glob.md`, `read.md` (родные описания и параметры); `tools/grep.ts`, `tools/read.ts` (вид заголовков с меткой в ответах).
 
-**Границы:** один проект, две задачи на чтение; судья один, проход один; Haiku и DeepSeek не мерялись. Качество ответа не выросло. Подсказка в `glob` описывает порядок работы, не поведение тула.
+**Границы:** у суперлайта на чтении время больше на 10–20 с и больше входных токенов, чем у прежней сборки (Sol 6.2 Low). DeepSeek чаще уходит в `bash`. По 3–5 прогонов на клетку, один проект. `grep.contextBefore/After: 3` теперь действует на каждый `grep`.
 
-**Носители:** `src/modules/rqw-base-tools/rqw-base-tools.texts.json`, `src/modules/rqw-system-core/index.js`, `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`.
+**Заменяет:** D-145 и D-150 в части своих `grep`, `glob`, `read`; решения о метке целого файла; `dev/TOOLING-MANIFEST.md`.
 
-## D-151 — выпуск RQW Windows Pack 0.0.19
-
-**Решение:** `arqawa.ompcli` 0.0.19 опубликован для `win32-x64`. В пакете `omp.exe` 19.0.0 и харнес с исправлением `glob` D-150.
-
-**Основание:** согласованный апгрейд OMP и штатный выпуск по D-139. Вариант без D-150 не загружался.
-
-**Проверка:** ревизия payload `676c206d480fe833f65d822084389d5856a3bd57`. `ompcli-0.0.19-win32-x64.vsix`: 213471369 байт, SHA-256 `075cde5a3b44f94fcec888d35f0643c919b100d6e6021da1168f798b88632035`. Оба файла D-150 и закреплённые программы сверены. Ответ Marketplace: `{"version":"0.0.19","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-19T05:53:31.193Z"}`. Полный `bun test dev/tests` прошёл, `verify --runtime` 216 из 216, живая проверка на Haiku High и Luna High 15 из 15.
-
-**Границы:** запуск на Windows VDI не проверен.
-
-**Носители:** `src/modules/rqw-windows-pack/vscode/runtime.json`, `package.json`; `dist/ompcli-0.0.19-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
+**Носители:** `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.texts.json`, `rqw-base-tools.reference.json`, `README.md`; `src/modules/rqw-system-core/SYSTEM.md`; `src/modules/README.md`; `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`.

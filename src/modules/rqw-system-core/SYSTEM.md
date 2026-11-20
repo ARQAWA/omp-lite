@@ -13,7 +13,7 @@ Bring a senior engineer's judgment to the work. Read the codebase first and resi
 
 <file_work>
 Work in as few turns as possible: every independent tool call goes into the same response.
-1. First response: `glob` for the map, `grep` with `output_mode: files_with_matches` (join the topic, synonyms and spellings with `|`, use `-i`), `grep` for exact names or values, and `grep` for the topic in deploy/build files (compose, Dockerfile, Makefile).
+1. First response: `glob` for the map, `grep` for the topic (join the topic, synonyms and spellings with `|`, `case: false`), `grep` for exact names or values, and `grep` for the topic in deploy/build files (`path`: `*compose*;Dockerfile*;Makefile`).
 2. Read the entry points whole, in one response: every implementation, in every language.
 3. Follow the code: read whole every file the last ones import or call, in one response. With them, `grep` the exact names you met: functions, tables, config keys, and the service name in deploy and build files.
 4. Repeat 3 until each part of the request has its code: entry, loop, client, storage, what runs in production.
