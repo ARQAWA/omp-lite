@@ -16,9 +16,9 @@
 
 **установка:** три файла в `~/.omp/agent/extensions/rqw-base-tools/`. `rqw-base-tools.yml` вливается в `config.yml`. записи в `install.manifest.json`.
 
-**настройки:** `rqw-base-tools.yml`, 18 значений. Восемь из них сверяет сторож. `tools.intentTracing: true` сохраняет поле `i` в вызовах тулов и вне интерактивного режима. `grep.contextBefore/After: 3` действует только на родной маршрут; локальный `grep` по Cursor начинает с нуля. Четыре ключа выноса ответа в файл: `tools.artifactHeadBytes`, `tools.artifactTailBytes`, `tools.artifactTailLines`, `tools.artifactMaxBytes`. `find.enabled: "off"`, `astGrep.enabled: false` и `disassembler.backend: none`. Перехват bash: `bashInterceptor.enabled: true` и 9 правил.
+**настройки:** `rqw-base-tools.yml`, 16 значений. Восемь из них сверяет сторож. `tools.intentTracing: true` сохраняет поле `i` в вызовах тулов и вне интерактивного режима. `grep.contextBefore/After: 3` действует только на родной маршрут; локальный `grep` по Cursor начинает с нуля. Четыре ключа выноса ответа в файл: `tools.artifactHeadBytes`, `tools.artifactTailBytes`, `tools.artifactTailLines`, `tools.artifactMaxBytes`. `find.enabled: "off"`, `astGrep.enabled: false` и `disassembler.backend: none`.
 
-**перехват bash:** вместо команд чтения, поиска и вывода списков OMP предлагает `read`, `grep` или `glob`. правка на месте (`sed -i`, `perl -i`, `awk -i inplace`) проходит. свои `patterns` заменяют встроенный список OMP, не дополняют. это предпочтение, не изоляция: перехват не разбирает код интерпретаторов и не блокирует все пайпы.
+**bash:** перехвата и блокировок нет (`bashInterceptor.enabled` по умолчанию `false`, OMP 19.0.0 `exec/settings.ts`). описание `bash` даёт мягкое правило по образцу Cursor: есть тул, предпочти его команде оболочки.
 
 **выключение:** `extension-module:rqw-base-tools` в `disabledExtensions`. настройки файла убрать из конфига руками.
 

@@ -2600,6 +2600,22 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители:** `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.reference.json`, `README.md`; `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`; `dev/agents/omp-upgrade/scripts/lib.js`, `tui.py`.
 
+## D-153 — перехват bash убран, в описании `bash` мягкое правило по образцу Cursor
+
+**Решение:** блок `bashInterceptor` удалён из `rqw-base-tools.yml`: ни одна команда оболочки не блокируется. В описании `bash` строка про запрет заменена на: «A tool exists for the action: prefer it to a shell command (`read` over `cat`, `grep` and `glob` over shell search).» Тест маршрутов `routing.test.js` удалён вместе с правилами.
+
+**Основание:** слова владельца от 2026-11-20: «Давай вообще уберем блокировки и сделаем так же ... как в курсоре»; «сделаем мягкий ... мягкое правило, и полностью уберем перехват и блокировку»; «это рак мозга, блядь, блокировать работу агента, когда он уже выбрал какой-то путь».
+
+**Причина:** отказ стоит лишний ход. Замеры 2026-11-19 и 2026-11-20: DeepSeek Flash Low 16 отказов `bash` за 15 прогонов; Sonnet High один отказ в каждом переименовании на `grep -rl ... | xargs sed -i`. В реверсе Cursor (`~/ai-project/cursor-pi/research/cursor/reverse/runs-2026-10-16-T3`) запрета нет, только текст: «If a tool exists for an action, prefer to use the tool instead of shell commands (e.g ReadFile over cat).»
+
+**Механика OMP 19.0.0:** `packages/coding-agent/src/exec/settings.ts`: `bashInterceptor.enabled` по умолчанию `false`.
+
+**Границы:** поведение без перехвата не мерялось. Вместе с правилами чтения ушли правила про `echo >`, `nohup`, серверы разработки и режим слежения.
+
+**Заменяет:** D-034 в части включения `bashInterceptor`.
+
+**Носители:** `src/modules/rqw-base-tools/rqw-base-tools.yml`, `rqw-base-tools.texts.json`, `README.md`; `src/modules/README.md`.
+
 ## D-152 — первый ход сбора контекста: подсказка в `glob` и граница краткости в памятке
 
 **Решение:** две строки текста. В начало описания `glob`: «First research response: send it together with the three `grep` calls of `<file_work>` step 1.» В памятку `REMINDER` после «Be as brief as the task allows.»: «Brevity is for the answer only: read as much code as `<file_work>` orders.» `SYSTEM.md` не менялся.
