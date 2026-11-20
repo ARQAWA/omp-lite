@@ -10,6 +10,7 @@
 - [history/](history/README.md) — история решений по каждому модулю.
 - [REVIEW-LOG.md](REVIEW-LOG.md) — журнал кругов High Review по модулям.
 - [WORKFLOW-MANIFEST.md](WORKFLOW-MANIFEST.md) — личные принципы владельца, не процедура выполнения задач.
+- [TOOLING-MANIFEST.md](TOOLING-MANIFEST.md) — концепт тулов `grep`, `glob`, `read`: цель и решения владельца.
 - [config/](config/README.md) — настройки разработки.
 - [scripts/](scripts/README.md) — скрипты обслуживания репозитория.
 - [agents/](agents/README.md) — материалы агентов-разработчиков.

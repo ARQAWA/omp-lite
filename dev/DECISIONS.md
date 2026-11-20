@@ -2657,3 +2657,19 @@ Blind и high больше не различаются ни моделью, ни
 **Заменяет:** D-145 и D-150 в части своих `grep`, `glob`, `read`; решения о метке целого файла; `dev/TOOLING-MANIFEST.md`.
 
 **Носители:** `src/modules/rqw-base-tools/index.js`, `rqw-base-tools.texts.json`, `rqw-base-tools.reference.json`, `README.md`; `src/modules/rqw-system-core/SYSTEM.md`; `src/modules/README.md`; `dev/tests/harness/rqw-base-tools/rqw-base-tools.test.js`.
+
+## D-155 — обёртки `grep`, `glob`, `read` возвращены; `lsp` и `ast_edit` выключены
+
+**Решение:** D-154 отменён: `rqw-base-tools` снова со своими `grep`, `glob`, `read`, меткой целого файла и прежним шагом 1 `<file_work>`, как в коммите `5646b43`. `dev/TOOLING-MANIFEST.md` возвращён. Тулы `lsp` и `ast_edit` выключены настройками `lsp.enabled: false` и `astEdit.enabled: false`. `lsp.diagnosticsOnEdit: true` убран: без `lsp.enabled` он не действует.
+
+**Основание:** слова владельца от 2026-11-20: «Значит, получается мы оставляем обертки»; «насчет ЛСП Эдита и АСТ Эдита выключаем 100%, потому что до этого я работал целый год без них, и все было отлично всегда»; «надо оставить самый простой способ правок»; «Делай все три.»
+
+**Причина:** замер 2026-11-20, `gpt-6.2-sol` low, по 5 прогонов, проект Superbot `a8d1875` (`/tmp/omp-iso/results-iso.json`). С обёртками против суперлайта с подсказкой: «продажи» 41 против 59 с и 213 против 502 тыс. входных токенов; «иены» 35 против 48 с и 206 против 238 тыс.; нужных файлов прочитано поровну. Переименование через `lsp rename` 53–61 с, через `edit` 38–47 с, точность одинакова.
+
+**Механика OMP 19.0.0**, каталог `packages/coding-agent/src`: `tools/settings.ts` (`cfgBuiltinToolGates`: `astEdit`, `lsp`), `tools/index.ts` (тул `lsp` создаётся при `lsp.enabled`), `lsp/settings.ts`, `edit/index.ts` и `tools/write.ts` (диагностика и формат после записи тоже идут через `lsp.enabled`).
+
+**Границы:** вместе с тулом `lsp` ушла диагностика после `edit` и `write`. Переименование распространённого имени заменой текста не мерялось. Причина выигрыша обёрток не найдена; на Sonnet и Terra разницы по времени не было.
+
+**Заменяет:** D-154.
+
+**Носители:** `src/modules/rqw-base-tools/`, `src/modules/rqw-system-core/SYSTEM.md`, `src/modules/rqw-runtime-config/config.yml`, `dev/TOOLING-MANIFEST.md`, `dev/README.md`.

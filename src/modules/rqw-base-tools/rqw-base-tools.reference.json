@@ -1,5 +1,9 @@
 {
 	"engine": {
+		"glob": "function",
+		"grep": "function",
+		"FileType": "object",
+		"FileType.File": "number",
 		"EditSession": "function",
 		"EditSession.prototype.setArgsJson": "function",
 		"EditSession.prototype.finish": "function",
@@ -13,6 +17,7 @@
 		"EditStore.prototype.relocate": "function",
 		"hashlineFileHash": "function"
 	},
+	"notice": {"stripOutputNotice": "function"},
 	"settings": {
 		"read.defaultLimit": 4000,
 		"read.summarize.enabled": false,
@@ -24,66 +29,42 @@
 		"inlineToolDescriptors": "off"
 	},
 	"tools": {
+		"read": {
+			"description": "Use `read` for static web; browser only if needed.\n\nPut line ranges in `path`, never a separate range/offset/limit parameter:\n- `{\"path\":\"notes.txt:450-455\"}` reads lines 450-455; `{\"path\":\"notes.txt:-5\"}` reads the last 5.\n- Include the selector on every ranged call; repeating a bare path does not advance through the file.\n\nPath suffixes:\n- :50 line 50; :50- from line 50 on; :50-200 inclusive; :50+150 counts lines; :-60 last 60.\n- Commas join ranges (:5-16,960-973) or individual lines (:19,59).\n- A single non-raw range also shows 1 line before and 3 after (:50-80 shows 49-83).\n- Non-raw reads (comma lists too) may add the open/close line of a cut block; only :raw stays exact.\n- :raw verbatim without anchors/prefixes; combine :2-4:raw or :raw:2-4 for exactly those lines.\n\nSources:\n- Bare code: declarations only; re-read ONLY footer-named omissions, NEVER guess `..`/`…`.\n- Selected file: `[foo.ts#1A2B]` snapshot+lines. Copy `[FILENAME#TAG]` for anchored edits; NEVER invent tag.\n- Directory: complete root; child listings cap at 12 (`… N more`), read child; page via :N-M/:-N.\n- URLs: reader text/markdown, :raw original HTML; bare host:port needs trailing slash.\n- PDF/DOCX/PPTX/XLSX/EPUB: extracted text; notebooks: editable cells; images: decoded inline.\n- Also, with selectors in xd://read/sources (read it before first use):\n  - SQLite, archives (ZIP, TAR, 7z, RAR and more), JSON/JSONL by jq filter, executable metadata, video, SVG as image, merge conflicts.",
+			"fields": ["i", "path"],
+			"schema": {"type":"object","properties":{"path":{"type":"string","description":"Local path, internal URI, or URL; selectors inline."}},"required":["path"]}
+		},
 		"bash": {
 			"description": "Persistent bash 5.3.\ncwd will reset after each turn, don't rely on cd; `pty` = interactive.\nInternal URIs work as paths for builtins/coreutils, redirects, globs.\nIn-process builtins, ahead of PATH: ast-grep, awk, b2sum, base32, base64, basename, cat, chmod, cksum, cmp, combine, comm, cp, cut, date, dd, df, diff, direnv, dirname, du, entr, env, errno, fd, file, find, flock, fold, fswatch, grep, head, hostname, id, ifne, isutf8, jq, ln, ls, lsof, md5, md5sum, mkdir, mktemp, mv, nl, nohup, nproc, od, open, paste, pgrep, pidwait, pkill, printenv, ps, readlink, realpath, rg, rm, rmdir, rsync, say, sd, sed, seq, sg, sha1sum, sha224sum, sha256sum, sha384sum, sha512sum, shasum, sleep, sort, sponge, stat, strings, tac, tail, tar, tee, timeout, top, touch, tr, truncate, ts, uname, uniq, uptime, urlmap, watchexec, wc, which, whoami, xargs, xdg-open, yes.\n`async` defers finite results but keeps the deadline (default 300s); `timeout: 0` for watchers and long jobs.\n`notify` (regex; implies `async`) sends each matching output line as a follow-up while the job runs, ahead of its result. Match only lines you'd act on: too many matches switch it off.\nDon't trunc output by habit, result will be summarized and saved as an artifact.\nLong-lived services:\n- unique name; ready requires name; no async/timeout; pty defaults true.\n- ready needs log regex or port (both if given); host defaults localhost, ready.timeout 30s.\n- `notify` (regex) sends each matching output line as a follow-up while the service runs.\nNon-`pty` calls still running after 60s (or 1s before `timeout`, if sooner) usually move to background job `bg_N` and keep running to `timeout`.\nNo backgrounding when the client terminal runs the command or the job cap is reached.\nThe result arrives automatically as a follow-up message. NEVER poll.",
-			"fields": [
-				"async",
-				"command",
-				"cwd",
-				"i",
-				"name",
-				"notify",
-				"pty",
-				"ready",
-				"timeout"
-			]
+			"fields": ["async", "command", "cwd", "i", "name", "notify", "pty", "ready", "timeout"]
 		},
 		"edit": {
 			"description": "Hashline patches existing files; new files: `write`. Each file: `[PATH#TAG]`, `TAG` required 4-hex snapshot from latest `read`/`search`. Numbers: original `LINE:TEXT`, never hunk-shifted.\n\n<ops>\n`PUT N.=M:` replace inclusive N–M with `+` body (`N.=N` for one line); `PUT N*:` replace block N.\n`PUT <N:`/`PUT >N:` insert before/after N (`<1` head, `>$` tail). `PUT >N*:` insert after block N at sibling depth; inside, use `PUT >M:` at closer.\n`CUT N.=M`/`CUT N*` delete and capture, optionally as `@name`.\n`PUT <N @name`/`PUT >N @name` paste at gap (omit name for anonymous CUT); `PUT N.=M @name`/`PUT N* @name` paste over range/block (name REQUIRED). Register pastes have NO body; named registers persist across calls.\n`REM` delete file; `MV DEST` rename after prior edits (quote spaced paths).\n</ops>\n\n<rules>\n- `:` ops only: body rows `+TEXT` verbatim incl. indent; lone `+` blank. Literal `- item`/`+ item` → `+- item`/`++ item`. NEVER `-`/bare context. Body length independent of range; delete with CUT, not empty PUT.\n- Touch displayed changed lines only; `…`, `..`, collapsed `N-M:` and out-of-window lines UNSEEN. Re-read first. Tight ranges: split nonadjacent changes; NEVER include keepers or start/end mid-expression/block. Pure addition uses gap PUT.\n- `*` requires multi-line opener, NEVER closer/last/inner statement; use range/gap for one statement. Anchor first decorator/attribute/doc-comment to include it; standalone comments need explicit range.\n- Markdown heading blocks run through deeper headings until next same/higher; after section `PUT >N*:`, end body with blank line.\n- NEVER restyle unrelated code. After EVERY edit tag/numbers change: use edit response or fresh `read`; stale tag/surprise → STOP, re-read.\n</rules>\n\n<example>\n```\n[greet.py#A1B2]\nPUT 1*:\n+@cache\n+def greet(name):\n+    print(name)\n[PLAN.md#3C4D]\nPUT >2:\n+- task\n```\nCross-file move: `CUT 1* @fn` in source, then `PUT <1 @fn` in destination section.\n</example>",
-			"fields": [
-				"i",
-				"input"
-			],
+			"fields": ["i", "input"],
 			"alt": [
-				{
-					"fields": [
-						"definition",
-						"syntax",
-						"type"
-					]
-				},
+				{ "fields": ["definition", "syntax", "type"] },
 				{
 					"description": "Single file string replacement; fuzzy whitespace matching.\n\n<instruction>\n- MUST use smallest `old_string` uniquely identifying change.\n- Nonunique `old_string` → MUST add context or use `replace_all: true` for all occurrences.\n- Rename a string across file → use `replace_all: true`.\n- SHOULD edit existing files, not create new.\n</instruction>\n\n<output>\nSuccess/failure status.\nSuccess: file modified in place; replacement applied.\nFailure — e.g., `old_string` absent or multiple matches without `replace_all: true`: error describes issue.\n</output>\n\n<critical>\n- MUST read file at least once in conversation before editing. Tool errors on edit before read.\n</critical>\n\n<bash-alternatives>\nReplace content-addressed — identify change by text.\n\nPattern-addressed bulk changes: bash more efficient:\n\n|Operation|Command|\n|---|---|\n|Regex replace|`sed -E -i 's/pattern/replacement/g' file`|\n|Same replace in several files|`sed -E -i 's/pattern/replacement/g' a.ts b.ts`|\n\nUse Replace when content identifies location; `ast_edit` for structure-aware codemods.\nFor in-place edits prefer Replace or `write` — diff preview and fuzzy matching.\n</bash-alternatives>",
-					"fields": [
-						"i",
-						"new_string",
-						"old_string",
-						"path",
-						"replace_all"
-					]
+					"fields": ["i", "new_string", "old_string", "path", "replace_all"]
 				},
 				{
 					"description": "Hashline patches. Use only lines visible in latest `read`/`search`; elisions are unseen.\n\n```text\n*** Begin Patch\n[PATH#TAG]\nPUT 3.=3:\n+replacement\n*** End Patch\n```\n`TAG`: required 4-hex snapshot; `N,M`: original line numbers. Repeat the header per file.\n\nOps:\n- `PUT N.=M:` replaces inclusive N–M with `+` body; `PUT N*:` replaces the syntax block at N.\n- `PUT <N:` inserts before N; `PUT >N:` after N; `PUT >$:` appends. `PUT >N*:` inserts after block N at sibling depth; insert inside with `PUT >M:` at its closing line.\n- `CUT N.=M`/`CUT N*` deletes and captures, optionally as `@name`.\n- `PUT <N @name`, `PUT >N @name`, `PUT N.=M @name`, or `PUT N* @name` pastes. Range/block paste requires a named register; gap paste may be anonymous. Register pastes have no body.\n- `REM` deletes the file; `MV DEST` moves/renames after prior section edits.\n\nRules:\n- Body rows start `+`; lone `+` writes blank. Rest is verbatim, including indent. Never send removed `-` lines, bare context, or unchanged lines. Range/body lengths are independent. Literal leading `-`/`+`: `+- text`/`++ text`.\n- Re-read after each edit: tag/numbers change. Touch only changed lines; split nonadjacent changes. Additions use gaps. Ranges never start/end mid-expression/block.\n- Block ops target the opener of one multi-line node, never its closer/last/inner line; use range/gap for one statement. Anchor decorators/attributes/doc-comments at the first decorator; standalone line comments stay separate.\n- Markdown heading blocks include deeper headings until the next same/higher heading; inserted sections end blank.\n- Move via `CUT` then `PUT`; registers persist across sections. Do not restyle unrelated code."
 				}
 			]
 		},
-		"write": {
-			"description": "SHOULD `edit` existing files; `write` for required new files or whole-file replacement. NEVER create docs or emojis unless requested.\nArchive members and SQLite rows are writable too: xd://read/sources.",
-			"fields": [
-				"content",
-				"i",
-				"path"
-			]
-		},
 		"glob": {
 			"description": "Glob files/dirs: `;`-separated paths or internal URLs (local://*.md, omp://**/*.md); default workspace root.\n`gitignore` and `hidden` default true; ignored dotfiles need `gitignore: false`. Newest-first by directory; dirs end `/`.",
-			"fields": [
-				"gitignore",
-				"hidden",
-				"i",
-				"limit",
-				"path"
-			]
+			"fields": ["gitignore", "hidden", "i", "limit", "path"],
+			"schema": {"type":"object","properties":{"path":{"type":"string"},"hidden":{"type":"boolean"},"gitignore":{"type":"boolean"},"limit":{"type":"integer","minimum":1,"maximum":200}}}
+		},
+		"grep": {
+			"description": "Regex: Rust, then PCRE2. `path`: `;`-separated file/dir/glob/URL; default `.`. Default case-sensitive, gitignore respected; `skip` paginates files.\nFile-only selector: `src/foo.ts:50-100`. Literal `\\n`/`\\\\n` enables cross-line.\nBare glob `*.ts` matches any depth; `dir/*.ts` only `dir`'s direct children (`dir/**/*.ts` recurses). A `!glob` entry excludes matching files and folders below the searched paths (`src;!**/*.test.ts`).",
+			"fields": ["case", "gitignore", "i", "path", "pattern", "skip"],
+			"schema": {"type":"object","properties":{"pattern":{"type":"string"},"path":{"type":"string"},"case":{"type":"boolean"},"gitignore":{"type":"boolean"},"skip":{"anyOf":[{"type":"number"},{"type":"null"}]}},"required":["pattern"]}
+		},
+		"write": {
+			"description": "SHOULD `edit` existing files; `write` for required new files or whole-file replacement. NEVER create docs or emojis unless requested.\nArchive members and SQLite rows are writable too: xd://read/sources.",
+			"fields": ["content", "i", "path"]
 		}
 	}
 }

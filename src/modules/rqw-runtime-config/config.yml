@@ -184,7 +184,7 @@ edit:
   autoRepair:
     enabled: true
 lsp:
-  diagnosticsOnEdit: true
+  enabled: false
 claudeResets:
   autoRedeem5h: "no"
   autoRedeemWeekly: "no"

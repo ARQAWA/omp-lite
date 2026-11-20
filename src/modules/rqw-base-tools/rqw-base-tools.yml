@@ -18,6 +18,8 @@ tools:
 inlineToolDescriptors: "off"
 astGrep:
   enabled: false
+astEdit:
+  enabled: false
 find:
   enabled: "off"
 disassembler:
