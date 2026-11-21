@@ -5,7 +5,7 @@ RQW Codex Adapter: одно расширение OMP 19.0.0. Оно делает
 1. **Делегирование как в Codex.** Сабагенты только по прямой просьбе. Агент по умолчанию равен главному. `scout` и `sonic` только по своему назначению. `eval` по умолчанию пишет на JavaScript, прямые `agent()` и `workpool()` в нём блокируются.
 2. **`AGENTS.md` для сабагентов.** Сабагент получает эти файлы так же, как главный агент.
 3. **Поиск.** `web_search` ищет в живом интернете через бэкенд ChatGPT Codex: планировщик `gpt-6-luna`, усилие `xhigh`.
-4. **Транспорт Codex.** Запросы `openai-codex-responses` с тулами получают `parallel_tool_calls: true`, `reasoning.context: all_turns`, `text.verbosity: low`. Модель с `luna` в id получает `service_tier: priority`. Усилие не трогается.
+4. **Транспорт Codex.** Запросы `openai-codex-responses` с тулами получают `parallel_tool_calls: true`, `reasoning.context: all_turns`. `text.verbosity: low` шлёт сам OMP: настройка `textVerbosity`, по умолчанию `low`. Модель с `luna` в id получает `service_tier: priority`. Усилие не трогается.
 
 ## Файлы
 
@@ -16,6 +16,7 @@ RQW Codex Adapter: одно расширение OMP 19.0.0. Оно делает
 - `agents/task.md`, `agents/sonic.md`: профили с пустой ролью, уровень `medium`. `agents/scout.md`: роль исследователя, полный отчёт.
 - `rqw-codex-adapter.yml`: раздел настроек `task`. `perCallModel: "on"` включает поле `model` в `task`, уровень идёт хвостом `:level`. Кавычки нужны: голое `on` YAML читает как `true`. `scout` и `sonic` закреплены на Terra. Родные `reviewer` и `security-reviewer` выключены.
   `agentIdleTtlMs: 60000`: законченный сабагент выгружается из памяти через минуту и оживает с диска, когда ему пишут.
+  `completionProbe: false`: побочных запросов об оценке готовности сабагента нет.
 
 ## Вход
 

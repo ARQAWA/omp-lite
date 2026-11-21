@@ -590,7 +590,7 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 				const base = builtins?.[canon(tool.name)];
 				if (!base) return tool;
 				const schema = base.parameters.toJsonSchema();
-				return { name: tool.name, description: base.description, nativeSchema: schema, parameters: { ...schema, properties: { ...schema.properties, i: {} } } };
+				return { name: tool.name, description: base.description, nativeSchema: schema, parameters: schema };
 			});
 			const moved = checkReference(observed, await settings(pi, load, Object.keys(reference.settings)), ctx.agent?.kind === "sub") ?? await checkEngine(load);
 			if (moved) ctx.ui?.notify?.(moved, "warning");

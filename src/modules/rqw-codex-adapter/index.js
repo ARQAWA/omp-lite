@@ -66,7 +66,6 @@ export default function rqwCodexAdapter(pi) {
 			...body,
 			parallel_tool_calls: true,
 			reasoning: { ...body.reasoning, context: "all_turns" },
-			text: { ...body.text, verbosity: "low" },
 			...(/luna/i.test(ctx.model.id) && { service_tier: "priority" }),
 		};
 	});

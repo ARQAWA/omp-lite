@@ -189,6 +189,7 @@ test("settings: any model per spawn, scout and sonic on Terra, the native review
 		perCallModel: "on",
 		enableEffort: false,
 		agentIdleTtlMs: 60000,
+		completionProbe: false,
 		agentModelOverrides: { scout: "openai-codex/gpt-6.1-terra:xhigh", sonic: "openai-codex/gpt-6.1-terra:medium" },
 		disabledAgents: ["reviewer", "security-reviewer"],
 	});

@@ -8,11 +8,11 @@ RQW Runtime Config: общие настройки OMP 19.0.0 одним файл
 
 **Правило:** один ключ лежит в одном месте. Здесь только настройки, которые не принадлежат ни одному плагину. Свои настройки несут `rqw-base-tools`, `rqw-harness-interface`, `rqw-codex-adapter`. Итоговый конфиг это сумма их файлов.
 
-**Вход:** `config.yml`, 58 значений. Запись `config` в [манифесте](../../../install.manifest.json).
+**Вход:** `config.yml`, 59 значений. Запись `config` в [манифесте](../../../install.manifest.json).
 
 **Подогрев:** `providers.cacheWarmingStrategy: keepalive` не запускает сжатие ради сохранения кэша при долгом вызове тула. Когда подогрев перестаёт окупаться, кэш может истечь. `providers.cacheWarming` не задан: штатный `idle` допускает подогрев и в простое. Обычные пороги сжатия не меняются.
 
-**Экран:** `display.smoothStreaming: false` показывает текст и аргументы тулов по мере получения, без искусственной печати. Сам стриминг и остальные анимации не выключены. `display.collapseCompacted: true` прячет чат до компакшена за сводкой. `tui.completeScrollback: true` пишет в историю терминала верх растущего блока.
+**Экран:** `display.smoothStreaming: false` показывает текст и аргументы тулов по мере получения, без искусственной печати. Сам стриминг и остальные анимации не выключены. `display.collapseCompacted: true` прячет чат до компакшена за сводкой. `tui.completeScrollback: true` пишет в историю терминала верх растущего блока. `tui.autoGraph: "off"`: графиков под таблицами и запросов судье нет.
 
 **Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`. В `disabledProviders` перечислены 97 закрытых id: белого списка в OMP нет. `enabledModels` и роль `perCall` держат одни и те же 9 точных имён: четыре Claude, четыре GPT, DeepSeek через `openrouter`. `perCall` это модели, которые можно назвать сабагенту. Моделей `opencode-go` в списках нет; сам провайдер открыт: статуслайн показывает остаток его подписки. `modelRoles.default`: DeepSeek через `openrouter`. Он есть во встроенном каталоге OMP: старт не зависит от кэша моделей. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter сюда не входит: его кладут руками в `~/.omp/agent/models.yml`.
 

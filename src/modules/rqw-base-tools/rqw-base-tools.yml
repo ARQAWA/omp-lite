@@ -8,7 +8,7 @@ read:
   summarize:
     enabled: false
 tools:
-  intentTracing: true
+  intentTracing: false
   artifactSpillThreshold: 100
   outputMaxColumns: 0
   artifactHeadBytes: 50
@@ -20,6 +20,10 @@ astGrep:
   enabled: false
 astEdit:
   enabled: false
+debug:
+  enabled: false
+eval:
+  py: false
 find:
   enabled: "off"
 disassembler:

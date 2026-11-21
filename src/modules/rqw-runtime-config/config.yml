@@ -160,7 +160,7 @@ emojiAutocomplete: false
 dev:
   autoqaConsent: denied
 autolearn:
-  enabled: true
+  enabled: false
 display:
   showTokenUsage: false
   hideToolActivity: false
@@ -170,6 +170,7 @@ display:
   shellVisualization: false
   collapseCompacted: true
 tui:
+  autoGraph: "off"
   imeSafeCursor: true
   completeScrollback: true
 recap:

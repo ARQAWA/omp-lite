@@ -2737,3 +2737,19 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** остались без правки: настройки выключения в `rqw-base-tools.yml` и `rqw-runtime-config/config.yml` и их строка в README; параметр `lspFlush: false` в пробе патча `rqw-base-tools/index.js`; имя `ast-grep` в родном описании `bash` внутри эталона `rqw-base-tools.reference.json` (текст OMP, его сверяет сторож); старые записи этого журнала и `dev/history`.
 
 **Носители:** `src/modules/rqw-harness-interface/tool-summary.json`, `README.md`; `dev/tests/harness/rqw-harness-interface/tool-summary.test.js`.
+
+## D-161 — лишние настройки OMP выключены, дубль в адаптере убран
+
+**Решение:** выключены `tui.autoGraph` (`"off"`), `task.completionProbe`, `debug.enabled`, `autolearn.enabled`, `tools.intentTracing`, `eval.py`. Из `rqw-codex-adapter` убрана строка `text.verbosity: low`. Эталон сторожа переснят: поля `i` в списках полей тулов нет. `composer.predictions`, `launch`, `browser`, `async.widgets` и уровни `tier.*` не тронуты.
+
+**Основание:** слова владельца от 2026-11-21: «автограф отключи. Completion probe отключи тоже. Отладчик отключи»; «Autolearn выключай»; «Intent tracing тоже выключай. И надо снять эталон»; «Драйвал.пай выключай»; «Отключай из нашего адаптера Text Virposity Low, потому что его шлет сам ОМП»; «композер мы не выключаем»; «никаких быстрых режимов»; «лаунчи браузер не выключай. Сингвид виджет тоже не выключай».
+
+**Причина:** журнал сессий за 7 дней: `task-completion-probe` 602 запроса и 85 млн входных токенов; `auto-graph` 72 запроса, все с ошибкой 404 OpenRouter. Замер постоянной части запроса, Claude Haiku и GPT Sol: `debug` 1514 и 693 токена, `autolearn` 724 и 376, `tools.intentTracing` 298 и 88, `eval.py` 254 и 152.
+
+**Механика OMP 19.0.0:** `packages/coding-agent/src/session/settings.ts` (`textVerbosity`, по умолчанию `low`), `packages/ai/src/providers/openai-codex/request-transformer.ts` (шлёт `text.verbosity`), `sdk.ts` (`intentTracingActive`), `modes/interactive-mode.ts` (`tui.autoGraph`), `task/completion-probe.ts`, `tools/index.ts` (`debug`), `autolearn/controller.ts`.
+
+**Границы:** без `autolearn` нет тула `manage_skill`: управляемые скиллы остаются, агент их не правит. Без поля `i` карточка тула показывает только вызов. Влияние на время хода не мерялось.
+
+**Заменяет:** D-147 в части `tools.intentTracing: true`.
+
+**Носители:** `src/modules/rqw-base-tools/rqw-base-tools.yml`, `index.js`, `rqw-base-tools.reference.json`, `README.md`; `src/modules/rqw-codex-adapter/index.js`, `rqw-codex-adapter.yml`, `README.md`; `src/modules/rqw-runtime-config/config.yml`, `README.md`; тесты `rqw-base-tools` и `rqw-codex-adapter`.

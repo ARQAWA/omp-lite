@@ -38,7 +38,7 @@ function setup(natives = engine(), current = reference.settings, cwd = "/repo") 
 	});
 	const Base = name => class {
 		description = natives.descriptions?.[name] ?? reference.tools[name].description;
-		parameters = { toJsonSchema: () => natives.schemas?.[name] ?? (natives.fields?.[name] ? { properties: Object.fromEntries(natives.fields[name].filter(key => key !== "i").map(key => [key, {}])) } : reference.tools[name].schema) };
+		parameters = { toJsonSchema: () => natives.schemas?.[name] ?? (natives.fields?.[name] ? { properties: Object.fromEntries(natives.fields[name].map(key => [key, {}])) } : reference.tools[name].schema) };
 		approval = args => String(args?.path).includes("ssh://") ? "exec" : "read";
 		approvalCacheTargets = args => [`${name} ${args?.path ?? "."}`];
 	};
@@ -182,7 +182,7 @@ test("a subagent without a tool is not a change", async () => {
 test("the settings file sets every guarded setting", () => {
 	const flat = (node, prefix = "") => Object.entries(node).flatMap(([key, value]) => typeof value === "object" ? flat(value, `${prefix}${key}.`) : [[prefix + key, value]]);
 	expect(Object.fromEntries(flat(yml))).toMatchObject(reference.settings);
-	expect(yml.tools.intentTracing).toBe(true);
+	expect(yml.tools.intentTracing).toBe(false);
 });
 
 // ---- per-file patches ----
@@ -556,7 +556,7 @@ test("the guard compares the native implementations, not the replacement descrip
 		[{ ...engine(), schemas: { glob: { ...globSchema, properties: { ...globSchema.properties, limit: { type: "integer", description: "{minimum: 1, maximum: 200}" } } } } }, "rqw-base-tools: native glob changed schema"],
 		[{ ...engine(), FileType: {} }, "rqw-base-tools: engine FileType.File changed"],
 		[{ ...engine(), descriptions: { grep: "changed" } }, "rqw-base-tools: native grep changed description"],
-		[{ ...engine(), fields: { read: ["i", "path", "new"] } }, "rqw-base-tools: native read changed fields"],
+		[{ ...engine(), fields: { read: ["path", "new"] } }, "rqw-base-tools: native read changed fields"],
 		[{ ...engine(), schemas: { grep: { ...reference.tools.grep.schema, required: [] } } }, "rqw-base-tools: native grep changed schema"],
 	]) {
 		const { handlers, ctx, seen } = setup(natives), body = payload();
