@@ -2801,3 +2801,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** тесты 106 pass. На Windows VDI не проверено: за владельцем.
 
 **Носители:** `src/modules/rqw-windows-pack/vscode/index.js`, `vscode/package.json`, `voice/index.js`, README модуля, тесты `dev/tests/harness/rqw-windows-pack`.
+
+## D-165 — выпуск ARQAWA OMPCLI 0.0.21
+
+**Решение:** `arqawa.ompcli` 0.0.21 опубликован для `win32-x64`. В пакете имя `ARQAWA OMPCLI`, канал вывода `OMP CLI` и лог диктовки (D-164), лог ошибок расширений (D-163), руление на лету (D-162), настройки D-161.
+
+**Основание:** владелец выбрал «да, выпускай» в форме вопроса от 2026-11-21.
+
+**Проверка:** ревизия payload `7274c3bff796b6d68028ea55ae3cc0f9a848f4ec`. `ompcli-0.0.21-win32-x64.vsix`: 213462799 байт, SHA-256 `3fc09da57d539f83d86fcc6472de765d643b1a11dfde7cf17318e35d8189ee50`. `index.js`, `runtime.json` и закреплённые программы сверены. Ответ Marketplace: `{"displayName":"ARQAWA OMPCLI","v":[{"version":"0.0.21","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-21T18:13:38.83Z"}]}`. Тесты: 106 pass.
+
+**Границы:** запуск на Windows VDI не проверен.
+
+**Носители:** `src/modules/rqw-windows-pack/vscode/package.json`; `dist/ompcli-0.0.21-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
