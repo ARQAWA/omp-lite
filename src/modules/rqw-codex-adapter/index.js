@@ -82,7 +82,10 @@ export default function rqwCodexAdapter(pi) {
 	});
 
 	// An empty `disabled` file here brings the built-in web_search back; `web_search.enabled: false` turns search off.
-	if (existsSync(new URL("./disabled", import.meta.url)) || lookup("web_search.enabled")?.get(pi.pi.settings) === false) return;
+	// `omp usage` loads extensions before the settings: `pi.pi.settings` throws there, and that process needs no tool.
+	let off;
+	try { off = lookup("web_search.enabled")?.get(pi.pi.settings) === false; } catch { return; }
+	if (off || existsSync(new URL("./disabled", import.meta.url))) return;
 	pi.registerTool({
 		name: "web_search",
 		label: "Web Search",

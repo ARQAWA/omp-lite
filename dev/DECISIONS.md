@@ -2765,3 +2765,20 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** действует только на модели `openai-codex` и только при WebSocket-соединении. Живьём не проверено: в режиме без экрана нельзя писать во время ответа.
 
 **Носители:** `src/modules/rqw-runtime-config/config.yml`, `README.md`.
+
+## D-163 — ошибки расширений пишутся в лог OMP
+
+**Решение:**
+
+1. `rqw-codex-adapter` больше не падает при загрузке в `omp usage`: там `pi.pi.settings` бросает `Settings not initialized`, адаптер ловит это и не регистрирует `web_search`.
+2. `rqw-base-tools` (9 мест) и `rqw-harness-interface/subscriptions.js` (1 место) пишут пойманную ошибку в лог OMP штатным `pi.logger.warn`. Своих файлов лога нет.
+
+**Основание:** слова владельца от 2026-11-21: «Да, давай делай шаги 1 и 2». Замер по `~/.omp/logs` за 3 дня: 1552 записи `Failed to load extension` от адаптера, все из процессов `omp usage`, которые каждые 5 минут запускает статуслайн.
+
+**Механика OMP 19.0.0:** `packages/coding-agent/src/extensibility/extensions/loader.ts` (`logger` в API расширения), `packages/utils/src/logger.ts` (файлы `~/.omp/logs/omp.<дата>.<pid>.log`), `packages/coding-agent/src/config/settings.ts` (`Settings.instance` бросает до `Settings.init()`).
+
+**Не записывается, намеренно:** ожидаемые промахи (нет файла, строка потока не JSON, уборка временных файлов), ошибки, уже показанные на экране, расширение VS Code и диктовка (`rqw-windows-pack`).
+
+**Проверка:** `omp usage` с харнесом ветки: 0 ошибок загрузки; обычный запуск: `web_search` на месте, лишних записей нет; тесты 105 pass.
+
+**Носители:** `src/modules/rqw-base-tools/index.js`, `src/modules/rqw-harness-interface/subscriptions.js`, `src/modules/rqw-codex-adapter/index.js`, их README и тесты.

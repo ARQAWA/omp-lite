@@ -20,6 +20,8 @@
 
 **bash:** перехвата и блокировок нет (`bashInterceptor.enabled` по умолчанию `false`, OMP 19.0.0 `exec/settings.ts`). описание `bash` даёт мягкое правило по образцу Cursor: есть тул, предпочти его команде оболочки.
 
+**лог ошибок:** модуль не роняет ход на своей ошибке, но след оставляет: пойманная ошибка пишется в лог OMP (`~/.omp/logs/omp.<дата>.<pid>.log`, уровень `warn`) штатным `pi.logger`. сообщения `rqw-base-tools: ...`: `settings read`, `grep snapshot`, `engine check`, `engine import`, `native tool import`, `whole file count`, `edit mode`, `patch dry run`, `edit snapshot`. поиск: `rg 'rqw-' ~/.omp/logs`.
+
 **выключение:** `extension-module:rqw-base-tools` в `disabledExtensions`. настройки файла убрать из конфига руками.
 
 **тест:** `bun test dev/tests/harness/rqw-base-tools`.

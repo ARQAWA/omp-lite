@@ -34,11 +34,13 @@ const real = path => {
 	return up === path ? path : join(real(up), basename(path));
 };
 const answer = (text, isError) => ({ content: [{ type: "text", text }], details: undefined, ...(isError && { isError }) });
+// Caught errors go to the OMP log (~/.omp/logs): the turn goes on, the trace stays.
+let warn = () => {};
 const settings = async (pi, load, keys) => {
 	try {
 		const { lookup } = await load(`${OMP}config/registry`);
 		return Object.fromEntries(keys.map(key => [key, lookup(key)?.get(pi.pi.settings)]));
-	} catch {}
+	} catch (error) { warn("settings read", error); }
 };
 
 // ---- Cursor-style file tools ----
@@ -244,7 +246,7 @@ async function grepHeader(file, rows, ctx, signal, load, store, editable) {
 		if (/^\[.*#([0-9A-F]{4})\]/m.exec(result.content?.[0]?.text ?? "")?.[1] !== before) return untagged;
 	}
 	if (!seen.length || !unchanged(info, stamp(file.full))) return untagged;
-	try { store?.recordSnapshot(file.full, text, seen); } catch {}
+	try { store?.recordSnapshot(file.full, text, seen); } catch (error) { warn("grep snapshot", error); }
 	return `[${file.path}#${before}]`;
 }
 
@@ -346,7 +348,8 @@ async function checkEngine(load) {
 		}
 		const notice = await load(TUI);
 		for (const [name, kind] of Object.entries(reference.notice)) if (typeof notice[name] !== kind) return `rqw-base-tools: notice ${name} changed`;
-	} catch {
+	} catch (error) {
+		warn("engine check", error);
 		return "rqw-base-tools: engine import failed";
 	}
 }
@@ -494,7 +497,7 @@ function wholeFile(event) {
 	try {
 		const file = meta.source?.type === "path" && /:[^:/\\]*,/.test(event.input?.path) && meta.source.value;
 		if (total === undefined && file && statSync(file).size <= MAX_FILE_BYTES) total = readFileSync(file, "utf8").replace(/\r\n?/g, "\n").replace(/\n$/, "").split("\n").length;
-	} catch {}
+	} catch (error) { warn("whole file count", error); }
 	if (!Number.isInteger(total)) return;
 	if (details.isDirectory || details.truncation?.truncated || meta.truncation || meta.limits?.columnTruncated || details.summary !== undefined || details.spotlight) return;
 	// Web pages, internal addresses (`skill://`) and query answers (`a.json?q=`) are not ordinary files.
@@ -509,6 +512,7 @@ function wholeFile(event) {
 
 /** `load` imports an OMP module; tests replace it. */
 export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
+	warn = (where, error) => void pi.logger.warn(`rqw-base-tools: ${where}`, { error: String(error?.stack ?? error) });
 	const z = pi.zod, text = z.string().optional(), flag = z.boolean().optional();
 	const int = z.number().int(), nonnegative = int.min(0).max(Number.MAX_SAFE_INTEGER).optional();
 	let session, keys, store, builtins, natives;
@@ -517,18 +521,19 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 		try {
 			const [{ resolveFileDisplayMode }, { formatModelStringWithRouting }] = await Promise.all([load(`${OMP}utils/file-display-mode`), load(`${OMP}config/model-resolver`)]);
 			return resolveFileDisplayMode({ settings: pi.pi.settings, hasEditTool: pi.getActiveTools().some(name => canon(name) === "edit"), getActiveModelString: () => ctx.model && formatModelStringWithRouting(ctx.model) }).hashLines;
-		} catch { return false; }
+		} catch (error) { warn("edit mode", error); return false; }
 	};
 	pi.on("session_start", async (_event, ctx) => {
 		session = ctx.sessionManager;
 		keys = { ...(await load(`${OMP}tools/approval-cache`)), ...(await load(`${OMP}tools/approval-targets`)) };
-		natives = await load(NATIVES).catch(() => undefined);
+		natives = await load(NATIVES).catch(error => warn("engine import", error));
 		store = natives && new natives.EditStore();
 		const toolSession = { get cwd() { return session.getCwd(); }, settings: pi.pi.settings, hasEditTool: true, getSessionSpawns: () => "*" };
 		try {
 			const [read, grep, glob] = await Promise.all(["read", "grep", "glob"].map(name => load(`${OMP}tools/${name}`)));
 			builtins = { read: new read.ReadTool(toolSession), grep: new grep.GrepTool(toolSession), glob: new glob.GlobTool(toolSession) };
-		} catch {
+		} catch (error) {
+			warn("native tool import", error);
 			ctx.ui?.notify?.("rqw-base-tools: native tool import failed", "warning");
 		}
 	});
@@ -615,7 +620,7 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 		if (canon(event.toolName) !== "edit" || typeof input !== "string") return;
 		// Fail open: an error or a slow dry run leaves the patch to the native edit.
 		const partial = await Promise.race([
-			dryRunner(pi, load, ctx.cwd, store).then(dry => partialPatch(input, ctx.cwd, dry)).catch(() => {}),
+			dryRunner(pi, load, ctx.cwd, store).then(dry => partialPatch(input, ctx.cwd, dry)).catch(error => warn("patch dry run", error)),
 			new Promise(done => setTimeout(done, DRY_RUN_MS).unref()),
 		]);
 		if (!partial) return;
@@ -632,7 +637,7 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 				if (name === "edit" && path) store?.recordSnapshotFile(path, [0]);
 				recordShown(store, natives, ctx?.cwd ?? session?.getCwd(), path, event.content);
 			}
-		} catch {}
+		} catch (error) { warn("edit snapshot", error); }
 		if (content) return { content };
 		if (skips.delete(event.toolCallId)) return skippedResult(event, skipped);
 	});

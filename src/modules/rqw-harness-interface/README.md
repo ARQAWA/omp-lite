@@ -12,6 +12,8 @@
 
 **Установка:** девять файлов идут в `extensions/rqw-harness-interface/`, `status-line.yml` сливается в `config.yml`. Нужна новая сессия.
 
+**Лог ошибок:** сбой чтения остатков подписок: пойманная ошибка пишется в лог OMP (`~/.omp/logs/omp.<дата>.<pid>.log`, уровень `warn`) штатным `pi.logger`, сообщение `rqw-harness-interface: subscriptions`.
+
 **Выключить:** добавить `extension-module:rqw-harness-interface` в `disabledExtensions`. Одну часть можно убрать из списка в `index.js`; настройки статуслайна удалить из `config.yml` отдельно.
 
 **Тест:** `bun test dev/tests/harness/rqw-harness-interface`.

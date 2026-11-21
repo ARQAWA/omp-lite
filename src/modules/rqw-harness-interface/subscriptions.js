@@ -25,7 +25,7 @@ export default function subscriptions(pi, read = readUsage) {
 					return [key, values.length ? `${label} ${values.join("/")}` : undefined];
 				});
 				for (const [key, value] of marks) ctx.ui.setStatus(key, value);
-			} catch {} finally { busy = false; }
+			} catch (error) { pi.logger.warn("rqw-harness-interface: subscriptions", { error: String(error?.stack ?? error) }); } finally { busy = false; }
 		};
 		void paint();
 		ctx.setInterval(paint, 300000);

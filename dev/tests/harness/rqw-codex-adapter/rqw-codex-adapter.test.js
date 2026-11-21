@@ -26,11 +26,11 @@ afterEach(() => {
 	mock.restore();
 });
 
-function load(settings = {}) {
+function load(settings = {}, pi = { settings }) {
 	const hooks = {};
 	let tool;
 	adapter({
-		pi: { settings },
+		pi,
 		zod: { string: () => ({ describe: () => ({}) }), object: shape => shape },
 		on: (name, handler) => (hooks[name] = handler),
 		registerTool: definition => (tool = definition),
@@ -193,4 +193,10 @@ test("settings: any model per spawn, scout and sonic on Terra, the native review
 		agentModelOverrides: { scout: "openai-codex/gpt-6.1-terra:xhigh", sonic: "openai-codex/gpt-6.1-terra:medium" },
 		disabledAgents: ["reviewer", "security-reviewer"],
 	});
+});
+
+test("omp usage: settings are not ready, the adapter loads without the tool", () => {
+	const { hooks, tool } = load({}, { get settings() { throw new Error("Settings not initialized."); } });
+	expect(tool).toBeUndefined();
+	expect(hooks.before_provider_request).toBeFunction();
 });

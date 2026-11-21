@@ -31,7 +31,7 @@ const engine = (paths = [], calls = []) => ({
 });
 // One fake of OMP: the engine, the settings registry, the approval keys.
 function setup(natives = engine(), current = reference.settings, cwd = "/repo") {
-	const handlers = {}, tools = [], seen = [], active = ["read", "grep", "glob", "edit"];
+	const handlers = {}, tools = [], seen = [], logs = [], active = ["read", "grep", "glob", "edit"];
 	const field = (doc = {}) => ({
 		doc, optional: () => field(doc), nullable: () => field(doc), int: () => field({ ...doc, type: "integer" }),
 		min: n => field({ ...doc, minimum: n }), max: n => field({ ...doc, maximum: n }), positive: () => field({ ...doc, exclusiveMinimum: 0 }),
@@ -43,7 +43,7 @@ function setup(natives = engine(), current = reference.settings, cwd = "/repo") 
 		approvalCacheTargets = args => [`${name} ${args?.path ?? "."}`];
 	};
 	plugin(
-		{ zod: { string: () => field({ type: "string" }), boolean: () => field({ type: "boolean" }), number: () => field({ type: "number" }), enum: field, union: items => field({ anyOf: items.map(item => item.doc) }), object: shape => ({ ...shape, toJsonSchema: () => ({ properties: Object.fromEntries(Object.entries(shape).map(([key, value]) => [key, value.doc])) }) }) }, pi: { settings: current }, getActiveTools: () => active, on: (name, fn) => (handlers[name] = fn), registerTool: tool => tools.push(tool) },
+		{ zod: { string: () => field({ type: "string" }), boolean: () => field({ type: "boolean" }), number: () => field({ type: "number" }), enum: field, union: items => field({ anyOf: items.map(item => item.doc) }), object: shape => ({ ...shape, toJsonSchema: () => ({ properties: Object.fromEntries(Object.entries(shape).map(([key, value]) => [key, value.doc])) }) }) }, pi: { settings: current }, logger: { warn: (...entry) => logs.push(entry) }, getActiveTools: () => active, on: (name, fn) => (handlers[name] = fn), registerTool: tool => tools.push(tool) },
 		async name => name.endsWith("pi-natives") ? { FileType: { File: 1 }, EditSession, EditStore: class {
 			seen = []; snapshots = new Map(); lines = new Map();
 			recordSnapshot(path, text, lines) { this.snapshots.set(path, text); this.lines.set(path, lines); return "ABCD"; }
@@ -60,7 +60,7 @@ function setup(natives = engine(), current = reference.settings, cwd = "/repo") 
 			: { approvalDirectoryKey: dir => `${dir}/`, approvalTreeSearchKey: key => `tree ${key}`, approvalCacheKeyForPath: path => path },
 	);
 	const ctx = { cwd, model: { provider: "anthropic", id: "sonnet" }, agent: { kind: "main" }, ui: { notify: message => seen.push(message) }, sessionManager: { getSessionId: () => "one", getCwd: () => cwd } };
-	return { handlers, tools, seen, ctx, active };
+	return { handlers, tools, seen, logs, ctx, active };
 }
 const tmp = async run => {
 	const dir = realpathSync(await mkdtemp(join(tmpdir(), "rqw-base-tools-")));
@@ -585,4 +585,12 @@ test("a native notice is handed back once with metadata intact", async () => {
 	const result = await reader.execute("x", { path: "skill://test" }, undefined, undefined, ctx);
 	expect(result.content[0].text).toBe("native body");
 	expect(result.details.meta).toBe(meta);
+});
+
+test("log: a caught error goes to the OMP log and the turn goes on", () => {
+	const { handlers, logs } = setup();
+	const event = { toolName: "read", toolCallId: "r", input: { path: "gone.ts:1-2,5-9" }, content: [], details: { displayContent: { lineNumbers: [1] }, meta: { source: { type: "path", value: "/nonexistent/gone.ts" } } } };
+	expect(handlers.tool_result(event, {})).toBeUndefined();
+	expect(logs[0][0]).toBe("rqw-base-tools: whole file count");
+	expect(logs[0][1].error).toContain("ENOENT");
 });

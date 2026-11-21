@@ -4,11 +4,11 @@ const { default: subscriptions } = await import("../../../../src/modules/rqw-har
 const report = (provider, windows, metadata) => ({ provider, metadata, limits: windows.map(([id, value, scope = { shared: true }]) => ({ scope, window: { id }, amount: { remainingFraction: value } })) });
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); };
 function mount(read, override = {}) {
-	const handlers = {}, painted = []; let tick, interval;
-	subscriptions({ on: (name, fn) => handlers[name] = fn }, read);
+	const handlers = {}, painted = [], logs = []; let tick, interval;
+	subscriptions({ on: (name, fn) => handlers[name] = fn, logger: { warn: (...entry) => logs.push(entry) } }, read);
 	const ctx = { mode: "tui", hasUI: true, agent: { kind: "main" }, ui: { setStatus: (key, value) => painted.push([key, value]) }, setInterval: (fn, ms) => { tick = fn; interval = ms; }, ...override };
 	handlers.session_start({}, ctx);
-	return { painted, tick: () => tick(), interval };
+	return { painted, logs, tick: () => tick(), interval };
 }
 
 test("main TUI refreshes shared windows, chooses active account and clears absent marks", async () => {
@@ -46,4 +46,10 @@ test("failed and overlapping reads leave marks intact; other sessions do not rea
 	for (const override of [{ mode: "print" }, { hasUI: false }, { agent: { kind: "sub" } }]) {
 		const read = mock(() => ""); mount(read, override); expect(read).not.toHaveBeenCalled();
 	}
+});
+
+test("a failed usage read goes to the OMP log", async () => {
+	const m = mount(async () => { throw new Error("no usage"); }); await flush();
+	expect(m.painted).toEqual([]);
+	expect(m.logs[0]).toEqual(["rqw-harness-interface: subscriptions", { error: expect.stringContaining("no usage") }]);
 });
