@@ -2711,3 +2711,15 @@ Blind и high больше не различаются ни моделью, ни
 **Основание:** «Да, давай верни эти три инструмента». Они выпали при D-156 вопреки D-074.
 
 **Механика:** OMP 19.0.0, `packages/coding-agent/src/task/executor.ts`: список берётся из `agent.tools`; `spawns` задаётся отдельно.
+
+## D-159 — выпуск RQW Windows Pack 0.0.20
+
+**Решение:** `arqawa.ompcli` 0.0.20 опубликован для `win32-x64`. В пакете `omp.exe` 19.0.0 и харнес с тулингом D-152, D-153, D-155 и ревьюером D-156 – D-158.
+
+**Основание:** слова владельца от 2026-11-21: «Да, давай выпускай новый пакет для Windows».
+
+**Проверка:** ревизия payload `2a7055787788d73b27ca63041c79db324dec513b`. `ompcli-0.0.20-win32-x64.vsix`: 213462157 байт, SHA-256 `54a9025c13071dd697ca1bfe482ce1f23ff82939c0698ae40aa2c834807cd8c8`. `index.js`, `runtime.json` и закреплённые программы сверены; в payload `lsp.enabled: false`. Ответ Marketplace: `{"version":"0.0.20","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-21T14:57:33.42Z"}`. Полный `bun test dev/tests`: 102 прошли.
+
+**Границы:** запуск на Windows VDI не проверен.
+
+**Носители:** `src/modules/rqw-windows-pack/vscode/package.json`; `dist/ompcli-0.0.20-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
