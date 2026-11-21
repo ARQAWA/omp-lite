@@ -2,15 +2,4 @@
 
 Здесь учитывается только реально заказанная незавершённая или отложенная работа. Возможные идеи сами по себе не становятся задачами.
 
-## rqw-base-tools (прежний base-tools): выполнить план
-
-План принят владельцем 2026-11-10: `omp-lite-audit/cursor-hints/PLAN.md`. Проект: `BLUEPRINT.md` версия 3.
-
-Порядок строгий, одна задача одновременно. Ветка и worktree на задачу: `../omp-lite-worktrees/<task>`.
-
-Сделано: T0-T7. Замер: отчёт `omp-lite-audit/cursor-hints/bench/REPORT.md`. В рантайм установлено с разрешения владельца, D-076 и D-080. Журнал: `omp-lite-audit/cursor-hints/RUN-LOG.md`.
-
-Остаток:
-- проверка на Windows VDI: за владельцем (план T7, пункт 13).
-
-Уже сделано и лежит в [src/modules/](../src/modules/README.md): 24 модуля, список в README каталога.
+- проверка RQW Windows Pack 0.0.20 на Windows VDI: за владельцем (D-159).
