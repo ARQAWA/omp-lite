@@ -48,9 +48,10 @@ scope: <what to review: the owner's words given with this call, verbatim>
 ## 3. Review rounds
 1. Call `task` with `context: "acceptance review"` and one item: `agent: "acceptor"`, `solutionSpace: "fixed procedure"`, `model: "openai-codex/gpt-6.2-sol:low"`, `task`: the handoff. Every round is a new call: one fresh reviewer and a full check.
 2. First line `BROKEN`: correct the handoff where the line says and call again, once. `BROKEN` again: stop and report to the owner.
-3. First line `FINDINGS`: work through section 4, then go to step 1.
-4. First line `CLEAN`: go to section 5.
-5. The owner said something new about the task: add it to `Owner words` before the next round.
+3. Check that the answer is complete before you use it: a row line for every thing the owner ordered or forbade, and a part line for every file of `Work`. A crashed answer, an answer in another form or an incomplete answer is not a verdict: repeat the round once, then stop and report to the owner.
+4. First line `FINDINGS`: work through section 4, then go to step 1.
+5. First line `CLEAN`: go to section 5.
+6. The owner said something new about the task: add it to `Owner words` before the next round.
 
 ## 4. Findings
 1. Before you fix anything, open the place in the work yourself. The finding is right and it is about the order: fix it. A fix is the smallest one: first remove, then change, add only what the owner named.
@@ -62,7 +63,7 @@ scope: <what to review: the owner's words given with this call, verbatim>
 ## 5. Accepted
 1. A round is clean when its first line is `CLEAN`, or when every serious finding of it is a `settled` finding raised again.
 2. Two clean rounds in a row, with no change of the work between them: accepted.
-3. A round that is not clean resets the count. A crashed answer, an answer in another form, or an answer without a row line for every thing the owner ordered and a part line for every file of `Work` is not a verdict: repeat it once, then stop and report to the owner.
+3. A round that is not clean resets the count.
 4. Report once, at the end: the verdict, the number of rounds, the settled findings and the notes, one line each.
 
 ## Rules
