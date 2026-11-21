@@ -2703,3 +2703,11 @@ Blind и high больше не различаются ни моделью, ни
 **Заменяет:** D-156 в части модели ревьюера.
 
 **Носители:** `src/modules/rqw-reviewer/agents/acceptor.md`, `skills/reviewer/SKILL.md`, `README.md`; `dev/tests/harness/rqw-reviewer/rqw-reviewer.test.js`; `dev/history/review.md`; `dev/agents/omp-upgrade/references/reviews.md`.
+
+## D-158 — ревьюеру возвращены три тула
+
+**Решение:** вернуть `eval`, `task`, `web_search` в `tools` профиля `acceptor`. `write` и `edit` не добавлять. Модель, промпт и политика спавна не меняются.
+
+**Основание:** «Да, давай верни эти три инструмента». Они выпали при D-156 вопреки D-074.
+
+**Механика:** OMP 19.0.0, `packages/coding-agent/src/task/executor.ts`: список берётся из `agent.tools`; `spawns` задаётся отдельно.

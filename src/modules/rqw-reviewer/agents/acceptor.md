@@ -1,7 +1,7 @@
 ---
 name: acceptor
 description: Acceptance reviewer, read-only. Checks the work against the owner's words in a handoff. Launched only by the reviewer skill.
-tools: read, grep, glob, bash
+tools: read, grep, glob, bash, eval, task, web_search
 model: openai-codex/gpt-6.1-terra
 thinking-level: high
 ---
