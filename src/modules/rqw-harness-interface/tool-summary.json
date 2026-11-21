@@ -1,4 +1,4 @@
 {
   "labels": { "read": "read", "edit": "edit", "search": "search", "run": "run", "other": "other", "fail": "failed" },
-  "tools": { "read": "read", "edit": "edit", "apply_patch": "edit", "write": "edit", "ast_edit": "edit", "grep": "search", "glob": "search", "find": "search", "web_search": "search", "bash": "run", "eval": "run" }
+  "tools": { "read": "read", "edit": "edit", "apply_patch": "edit", "write": "edit", "grep": "search", "glob": "search", "find": "search", "web_search": "search", "bash": "run", "eval": "run" }
 }

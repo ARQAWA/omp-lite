@@ -2723,3 +2723,17 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** запуск на Windows VDI не проверен.
 
 **Носители:** `src/modules/rqw-windows-pack/vscode/package.json`; `dist/ompcli-0.0.20-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
+
+## D-160 — хвост `ast_edit` убран из строки тулов
+
+**Решение:** из `tool-summary.json`, его теста и README `rqw-harness-interface` убрано имя `ast_edit`. Тулы `lsp`, `ast_grep` и `ast_edit` выключены настройками (D-120, D-155); другого их следа в продукте и его README нет.
+
+**Основание:** слова владельца от 2026-11-21: «надо полностью отключить lsp во всех видах и так же ast_grep/edit»; «давай убираем мертвый хвост, асте едит из Harness интерфейса»; «чтобы у нас никаких упоминаний не было […] связанных с Лсп, Эст, кроме выключения этих тулов».
+
+**Механика OMP 19.0.0**, каталог `packages/coding-agent/src`: `lsp/settings.ts` (`lsp.enabled`: тул, диагностика после записи и правки, формат), `tools/index.ts` (`lsp`, `ast_grep`, `ast_edit` создаются только при своих настройках), `edit/index.ts`, `tools/write.ts`, `sdk.ts` (поиск и прогрев серверов).
+
+**Проверка:** живая проба на Haiku: после `edit` и `write` файла с ошибкой типа диагностики в ответах нет, процессов языковых серверов нет, тулов `lsp`, `ast_grep`, `ast_edit` в списке нет.
+
+**Границы:** остались без правки: настройки выключения в `rqw-base-tools.yml` и `rqw-runtime-config/config.yml` и их строка в README; параметр `lspFlush: false` в пробе патча `rqw-base-tools/index.js`; имя `ast-grep` в родном описании `bash` внутри эталона `rqw-base-tools.reference.json` (текст OMP, его сверяет сторож); старые записи этого журнала и `dev/history`.
+
+**Носители:** `src/modules/rqw-harness-interface/tool-summary.json`, `README.md`; `dev/tests/harness/rqw-harness-interface/tool-summary.test.js`.
