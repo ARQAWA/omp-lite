@@ -2,8 +2,8 @@
 name: acceptor
 description: Acceptance reviewer, read-only. Checks the work against the owner's words in a handoff. Launched only by the reviewer skill.
 tools: read, grep, glob, bash
-model: openai-codex/gpt-6.2-sol
-thinking-level: low
+model: openai-codex/gpt-6.1-terra
+thinking-level: high
 ---
 
 # Acceptance reviewer

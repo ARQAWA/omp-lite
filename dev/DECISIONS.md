@@ -2689,3 +2689,17 @@ Blind и high больше не различаются ни моделью, ни
 **Заменяет:** D-110 и D-119 в части сборщика, `facts.md`, `updates.md` и печати.
 
 **Носители:** `src/modules/rqw-reviewer/`, `src/modules/README.md`, `install.manifest.json`, `dev/tests/harness/rqw-reviewer/rqw-reviewer.test.js`, `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`, `dev/agents/omp-upgrade/SKILL.md`, `dev/history/review.md`.
+
+## D-157 — ревьюер переведён на Terra 6.1 High
+
+**Решение:** профиль `acceptor` и вызов в скилле `reviewer` идут на `openai-codex/gpt-6.1-terra`, усилие `high`, вместо `openai-codex/gpt-6.2-sol` `low`. В `dev/agents/omp-upgrade/references/reviews.md` убрано слово «сборщику»: сборщика нет с D-156.
+
+**Основание:** слова владельца от 2026-11-21: «Да, давай исправь строку и поставь ревьюера на Terra High».
+
+**Причина:** замер 2026-11-21, OMP 19.0.0, штатный `task`, пять реальных задач этого же дня (коммиты `84673d8`, `5eec7c8`, `d1959dc`, `0b0075d`, `80925b4`), по два прогона. Единственную серьёзную находку (`5eec7c8`) Terra High нашла 2 раза из 2, Terra Extra High 2 из 2, Sol Low 1 из 2, DeepSeek Low 1 из 2; DeepSeek High, Sonnet High, Sonnet Extra High и Opus Medium 0 из 2. Ложных серьёзных находок на чистых задачах нет ни у кого. Медиана времени круга: Terra High 37 с, Sol Low 48 с. Остаток «сборщику» нашли Sonnet, Opus и DeepSeek High.
+
+**Границы:** серьёзная находка одна на пять задач. Второй прогон шёл по 20 ревьюеров разом, время в нём завышено. Ревьюеры могли читать живой рантайм и основной репозиторий. Terra Max отменён владельцем после 4 прогонов из 10.
+
+**Заменяет:** D-156 в части модели ревьюера.
+
+**Носители:** `src/modules/rqw-reviewer/agents/acceptor.md`, `skills/reviewer/SKILL.md`, `README.md`; `dev/tests/harness/rqw-reviewer/rqw-reviewer.test.js`; `dev/history/review.md`; `dev/agents/omp-upgrade/references/reviews.md`.

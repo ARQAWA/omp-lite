@@ -3,9 +3,9 @@ import { expect, test } from "bun:test";
 const dir = `${import.meta.dir}/../../../../src/modules/rqw-reviewer`;
 const front = async file => Bun.YAML.parse((await Bun.file(`${dir}/${file}`).text()).split("---")[1]);
 
-test("the acceptor runs on Sol low and cannot write or edit", async () => {
+test("the acceptor runs on Terra high and cannot write or edit", async () => {
 	const p = await front("agents/acceptor.md");
-	expect([p.name, p.model, p["thinking-level"]]).toEqual(["acceptor", "openai-codex/gpt-6.2-sol", "low"]);
+	expect([p.name, p.model, p["thinking-level"]]).toEqual(["acceptor", "openai-codex/gpt-6.1-terra", "high"]);
 	expect(p.tools).not.toMatch(/write|edit/);
 });
 
