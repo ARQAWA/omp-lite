@@ -31,7 +31,7 @@ scope: <what to review: the owner's words given with this call, verbatim>
 <Before an answer or an approval, one line: `to: "<your question or proposal, copied>"`.>
 <A document the owner named as the order (a plan, a spec, an attached file): a line `document: <path>`. It is not on disk as the owner gave it: copy its text under that line instead.>
 <An owner message of the same period about another task: `[<n>] other task: <its first words>`.>
-<Not owner words: your own text, the body of a skill, a summary, a tool result.>
+<Not owner words: your own text, a goal objective you wrote, the body of a skill, a summary, a tool result.>
 
 ## Cancelled and deferred
 <`[<n>] cancels [<m>]: "<the cancelled words>"`, `[<n>] defers: "<the words>"`, or `none`.>
