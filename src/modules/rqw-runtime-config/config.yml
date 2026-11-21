@@ -19,6 +19,7 @@ enabledModels:
 providers:
   openrouterVariant: floor
   cacheWarmingStrategy: keepalive
+  openaiLiveSteering: true
 # Only anthropic, openai-codex, opencode-go and openrouter stay open: every other model provider of OMP 19.0.0.
 disabledProviders:
   - google

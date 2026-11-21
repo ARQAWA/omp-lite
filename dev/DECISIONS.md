@@ -2753,3 +2753,15 @@ Blind и high больше не различаются ни моделью, ни
 **Заменяет:** D-147 в части `tools.intentTracing: true`.
 
 **Носители:** `src/modules/rqw-base-tools/rqw-base-tools.yml`, `index.js`, `rqw-base-tools.reference.json`, `README.md`; `src/modules/rqw-codex-adapter/index.js`, `rqw-codex-adapter.yml`, `README.md`; `src/modules/rqw-runtime-config/config.yml`, `README.md`; тесты `rqw-base-tools` и `rqw-codex-adapter`.
+
+## D-162 — включено руление на лету для Codex
+
+**Решение:** `providers.openaiLiveSteering: true` в `rqw-runtime-config/config.yml`. `providers.openaiWebsockets` не тронут: `auto`.
+
+**Основание:** слова владельца от 2026-11-21: «Надо, короче, добавить в настройки, чтобы был включен этот кодекс лайфстилинг, мгновенный через веб-сокеты.»
+
+**Механика OMP 19.0.0**, каталог `packages`: `coding-agent/src/session/settings.ts` (`providers.openaiLiveSteering`, по умолчанию `false`), `coding-agent/src/session/settings-stream-fn.ts` (настройка пропускает канал руления к провайдеру), `agent/src/agent-loop.ts` (`openLiveSteering`), `ai/src/providers/openai-codex-responses.ts` и `openai-codex/live-steering.ts` (`response.steer` по WebSocket).
+
+**Границы:** действует только на модели `openai-codex` и только при WebSocket-соединении. Живьём не проверено: в режиме без экрана нельзя писать во время ответа.
+
+**Носители:** `src/modules/rqw-runtime-config/config.yml`, `README.md`.
