@@ -91,6 +91,11 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 		return key;
 	};
 	const ffmpeg = args => launch(bash, "ffmpeg", args);
+	// The note on the screen goes away: the OMP log keeps the error.
+	const fault = (ctx, error) => {
+		pi.logger.warn("rqw-windows-pack: voice", { error: String(error.stack ?? error) });
+		ctx.ui.notify(`${text.title}: ${error.message}`, "error");
+	};
 
 	// One attempt is one object: every step checks that it is still the current one.
 	const release = rec => {
@@ -99,7 +104,7 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 	};
 	const guard = (ctx, rec, work) => void work.catch(error => {
 		release(rec);
-		if (!rec.abort.signal.aborted) ctx.ui.notify(`${text.title}: ${error.message}`, "error");
+		if (!rec.abort.signal.aborted) fault(ctx, error);
 	});
 	const start = ctx => {
 		const rec = (job = { abort: new AbortController(), log: "" });
@@ -201,7 +206,7 @@ export default function voice(pi, { env = process.env, platform = process.platfo
 				if (probe.code !== 0) throw new Error(`ffmpeg: ${probe.stderr || probe.stdout}`);
 				ctx.ui.notify(text.ready, "info");
 			} catch (error) {
-				ctx.ui.notify(`${text.title}: ${error.message}`, "error");
+				fault(ctx, error);
 			}
 		},
 	});

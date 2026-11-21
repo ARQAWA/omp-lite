@@ -27,11 +27,12 @@ const until = async done => { while (!done()) await new Promise(next => setTimeo
 function world(platform = "win32", env = { OMPCLI_GIT_BASH: bash }) {
 	const dir = mkdtempSync(join(tmpdir(), "rqw-voice-test-")), keyFile = join(dir, "key.txt");
 	writeFileSync(join(dir, "stt.json"), JSON.stringify({ provider: { apiKeyFile: keyFile } }));
-	const w = { handlers: {}, notes: [], sent: [], calls: [], spawned: [], editor: "", sound: wav(1000), keyFile, exec: { code: 0 } };
+	const w = { handlers: {}, notes: [], logs: [], sent: [], calls: [], spawned: [], editor: "", sound: wav(1000), keyFile, exec: { code: 0 } };
 	const pi = {
 		on: (name, handler) => (w.handlers[name] = handler),
 		registerCommand: (name, command) => (w.command = { name, ...command }),
 		exec: async (...args) => (w.calls.push(args), w.exec),
+		logger: { warn: (...entry) => w.logs.push(entry) },
 	};
 	w.ctx = {
 		mode: "tui", hasUI: true,
@@ -125,6 +126,7 @@ test("alt+w records and inserts, Enter sends, Esc cancels; the label stands on t
 	w.input("alt+w");
 	await until(() => w.notes.length);
 	expect([w.notes, w.calls.length]).toEqual([[["voice: " + data.texts.silent, "error"]], before]);
+	expect(w.logs).toEqual([["rqw-windows-pack: voice", { error: expect.stringContaining(data.texts.silent) }]]);
 
 	// ffmpeg dies by itself: the error is shown, the label is idle again.
 	w.input("alt+w");

@@ -433,6 +433,10 @@ function createCli(host) {
 	const counts = { chat: 0, shell: 0 };
 	let swept = null;
 	let queue = Promise.resolve();
+	// A popup leaves no trace: every step and every error also goes to the `OMP CLI` output channel.
+	const channel = vscode.window.createOutputChannel("OMP CLI");
+	const log = line => channel.appendLine(new Date().toISOString() + " " + line);
+	const trace = error => log(error.stack ?? String(error));
 
 	// One window installs and updates in turn; the cleanup runs once, before the first of them.
 	function queued(action) {
@@ -463,10 +467,13 @@ function createCli(host) {
 		// An interrupted install is undone first: its journal may hold the pointer.
 		await rollback(env.agentDir);
 		const payload = await selectPayload(host);
-		const { layers } = await installHarness({ sourceDir: payload.dir, agentDir: env.agentDir }).catch(error => {
+		const { layers, changed } = await installHarness({ sourceDir: payload.dir, agentDir: env.agentDir }).catch(error => {
+			trace(error);
 			throw fail("installFailed", { reason: error.message });
 		});
+		log("install " + (payload.revision ?? "built-in") + ": " + (changed ? "changed" : "unchanged"));
 		await ensureModel(model, assets.model, env.web, write).catch(error => {
+			trace(error);
 			write(error.message);
 			void vscode.window.showWarningMessage(error.message);
 		});
@@ -506,7 +513,11 @@ function createCli(host) {
 			const child = proc;
 			processes.add(child);
 			child.onData(data => emitter.fire(data));
-			child.onExit(() => processes.delete(child));
+			log(kind + " tab started");
+			child.onExit(event => {
+				processes.delete(child);
+				log(kind + " tab exit " + event?.exitCode);
+			});
 			if (closed) kill(child);
 		}
 		const terminal = vscode.window.createTerminal({
@@ -516,6 +527,7 @@ function createCli(host) {
 				onDidWrite: emitter.event,
 				open: size =>
 					start(size).catch(error => {
+						trace(error);
 						emitter.fire(error.message + "\r\n");
 						void vscode.window.showErrorMessage(error.message);
 					}),
@@ -536,6 +548,7 @@ function createCli(host) {
 		const env = ready();
 		if (terminals.size) throw fail("closeTabs");
 		const result = await queued(() => updateHarness({ extensionPath, storageDir, version: host.version, agentDir: env.agentDir, web: env.web }));
+		log("update: changed " + result.changed + ", stale " + result.stale);
 		void vscode.window.showInformationMessage(messages.updated);
 		if (result.stale) void vscode.window.showInformationMessage(messages.stale);
 		return result;
@@ -545,6 +558,7 @@ function createCli(host) {
 		try {
 			return await action();
 		} catch (error) {
+			trace(error);
 			void vscode.window.showErrorMessage(wrap(error.message));
 		}
 	};
@@ -552,6 +566,7 @@ function createCli(host) {
 	return {
 		// Activation only registers the commands: nothing is downloaded, started or cleaned here.
 		activate: () => [
+			channel,
 			vscode.window.onDidChangeActiveTerminal(active => vscode.commands.executeCommand("setContext", "ompcli.terminalActive", terminals.has(active))),
 			vscode.window.onDidCloseTerminal(terminal => terminals.delete(terminal)),
 			vscode.commands.registerCommand("ompcli.newTab", guarded(() => openTab("chat"))),

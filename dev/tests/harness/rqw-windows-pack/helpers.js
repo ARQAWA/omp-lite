@@ -33,7 +33,7 @@ export function world({ settings = {}, env = {}, platform = "win32", request, fo
 		"src/config.yml": "a: 1\n",
 	});
 	for (const [name, data] of Object.entries(files)) write(join(root, name), data);
-	const state = { commands: {}, messages: [], terminals: [], spawned: [], context: {} };
+	const state = { commands: {}, messages: [], log: [], terminals: [], spawned: [], context: {} };
 	const event = () => {
 		const handlers = [];
 		const on = handler => (handlers.push(handler), { dispose() {} });
@@ -49,6 +49,7 @@ export function world({ settings = {}, env = {}, platform = "win32", request, fo
 			return terminal;
 		},
 		withProgress: (options, action) => action(),
+		createOutputChannel: () => ({ appendLine: line => state.log.push(line), dispose() {} }),
 	};
 	for (const name of ["showErrorMessage", "showInformationMessage", "showWarningMessage"]) window[name] = message => state.messages.push(message);
 	const vscode = {
