@@ -62,7 +62,7 @@ scope: <what to review: the owner's words given with this call, verbatim>
 ## 5. Accepted
 1. A round is clean when its first line is `CLEAN`, or when every serious finding of it is a `settled` finding raised again.
 2. Two clean rounds in a row, with no change of the work between them: accepted.
-3. A round that is not clean resets the count. A crashed answer or an answer in another form is not a verdict: repeat it once, then stop and report to the owner.
+3. A round that is not clean resets the count. A crashed answer, an answer in another form, or an answer without a row line for every thing the owner ordered and a part line for every file of `Work` is not a verdict: repeat it once, then stop and report to the owner.
 4. Report once, at the end: the verdict, the number of rounds, the settled findings and the notes, one line each.
 
 ## Rules

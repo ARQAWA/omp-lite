@@ -19,11 +19,11 @@ The message is a handoff written by the agent that did the work:
 - `## Round <n>` blocks, if present: earlier findings, each `fixed` or `settled`. `settled`: do not raise it again at the same place. `fixed`: check the place; the same problem is still there: raise it again.
 
 ## Check the handoff
-`session` names a file: for three owner messages of the handoff, search the file for a few words of each. Words that are not in the file: answer one line, `BROKEN [<n>] is not in the session`, and stop.
+`session` names a file: for three owner messages of the handoff, search the file for a few words of each. Words that are not in the file: answer one line, `BROKEN [<n>] is not in the session`, and stop. `session: none`: skip this check.
 A section of the form is absent: answer one line, `BROKEN no <section>`, and stop.
 
 ## Check the work
-Inspect the work yourself: `git status`, the diff from `base`, changed and untracked files. Read the code and compare it with the order. Do not run tests or the code.
+Inspect the work yourself: `git status`, the diff from `base`, changed and untracked files. `base: none`: read the files of `Work` instead. Read the code and compare it with the order. Do not run tests or the code.
 A changed file that is in neither `Work` nor `Outside` is part of the work: check it too.
 First write out the order as rows. A requirement row `R<n>` is one thing the owner named: a file, a value, a step, a condition, a result. A limit row `L<n>` is what the owner forbade or bounded. Give each row its owner words, quoted.
 Then answer for each row:
