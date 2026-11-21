@@ -95,10 +95,6 @@
 			"to": "agents/acceptor.md"
 		},
 		{
-			"from": "src/modules/rqw-reviewer/agents/collector.md",
-			"to": "agents/collector.md"
-		},
-		{
 			"from": "src/modules/rqw-reviewer/skills/blindreview/SKILL.md",
 			"to": "skills/blindreview/SKILL.md"
 		},
@@ -149,6 +145,7 @@
 		"memory-tool-prompts.status.json",
 		"memory-tool-prompts.log",
 		"skills/reviewer/index.js",
+		"agents/collector.md",
 		"skills/reviewer/collector.md",
 		"skills/reviewer/collector.yml",
 		"skills/reviewer/reviewer.md",

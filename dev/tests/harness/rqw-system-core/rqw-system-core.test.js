@@ -62,7 +62,7 @@ test("rules: always applied, main rule only for main, subagent note for every su
 	expect(sub.body).toStartWith("You are an agent in a team of agents.");
 	expect(applies(main.meta.agents, "main")).toBe(true);
 	expect(applies(sub.meta.agents, "main")).toBe(false);
-	for (const name of ["task", "sonic", "scout", "acceptor", "collector", "sub"]) {
+	for (const name of ["task", "sonic", "scout", "acceptor", "sub"]) {
 		expect(applies(main.meta.agents, name)).toBe(false);
 		expect(applies(sub.meta.agents, name)).toBe(true);
 	}

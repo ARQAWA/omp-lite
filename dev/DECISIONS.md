@@ -2673,3 +2673,19 @@ Blind и high больше не различаются ни моделью, ни
 **Заменяет:** D-154.
 
 **Носители:** `src/modules/rqw-base-tools/`, `src/modules/rqw-system-core/SYSTEM.md`, `src/modules/rqw-runtime-config/config.yml`, `dev/TOOLING-MANIFEST.md`, `dev/README.md`.
+
+## D-156 — сборщик убран: исполнитель сам сдаёт работу ревьюеру
+
+**Решение:** из `rqw-reviewer` убран профиль `collector`, с ним `facts.md`, `updates.md` и печать. Скилл `reviewer` задаёт форму сдачи: `session`, `repo`, `base`, `scope`, `Owner words`, `Cancelled and deferred`, `Work`, `Claims`. Исполнитель копирует слова владельца дословно; после сжатия берёт их из файла сессии. Сдача идёт сабагенту `acceptor` как текст задания. `acceptor` сам выписывает строки требований и ограничений, заявлениям исполнителя не верит, три реплики выборочно ищет в файле сессии. Возражения и правки идут в сдачу блоком `## Round <n>`. Виды находок, уровни, список «не находка», два чистых круга и модель `openai-codex/gpt-6.2-sol:low` прежние. Установленный `agents/collector.md` стоит в `remove` манифеста.
+
+**Основание:** слова владельца от 2026-11-21: «да давай»; «Хорошо, давай тогда переноси эту схему в продукт вместо коллектора.»
+
+**Причина:** замер 2026-11-21, OMP 19.0.0, ветка `collector-handoff-bench`, коммит `80925b4`, `dev/acceptance/collector-handoff/series3/`. Сдача исполнителем на Terra xhigh: 16-51 с против 46-114 с сбора коллектором; токенов в 6-7 раз меньше. Слепой Sol Low нашёл 22 заложенных дефекта из 22 на трёх задачах в двух прогонах.
+
+**Механика OMP 19.0.0**, каталог `packages/coding-agent/src`: `task/executor.ts` (сабагент не наследует переписку: сдача это весь его вход), `task/index.ts` (профили перечитываются при запуске сабагента).
+
+**Границы:** задачи синтетические, по два прогона, измерен один круг. Пропущенную исполнителем реплику ревьюер не найдёт. Черновик из `/guided-goal` в длинной задаче попал в сдачу как слова владельца; у коллектора была та же ошибка. Правила прежнего профиля про множества (`only`, `all`, `consistent`) и строки артефактов убраны и замером не проверялись.
+
+**Заменяет:** D-110 и D-119 в части сборщика, `facts.md`, `updates.md` и печати.
+
+**Носители:** `src/modules/rqw-reviewer/`, `src/modules/README.md`, `install.manifest.json`, `dev/tests/harness/rqw-reviewer/rqw-reviewer.test.js`, `dev/tests/harness/rqw-system-core/rqw-system-core.test.js`, `dev/agents/omp-upgrade/SKILL.md`, `dev/history/review.md`.

@@ -3,12 +3,10 @@ import { expect, test } from "bun:test";
 const dir = `${import.meta.dir}/../../../../src/modules/rqw-reviewer`;
 const front = async file => Bun.YAML.parse((await Bun.file(`${dir}/${file}`).text()).split("---")[1]);
 
-test("the collector runs on Terra xhigh, the acceptor on Sol low; the acceptor cannot write or edit", async () => {
-	for (const [name, model, level] of [["acceptor", "openai-codex/gpt-6.2-sol", "low"], ["collector", "openai-codex/gpt-6.1-terra", "xhigh"]]) {
-		const p = await front(`agents/${name}.md`);
-		expect([p.name, p.model, p["thinking-level"]]).toEqual([name, model, level]);
-		if (name === "acceptor") expect(p.tools).not.toMatch(/write|edit/);
-	}
+test("the acceptor runs on Sol low and cannot write or edit", async () => {
+	const p = await front("agents/acceptor.md");
+	expect([p.name, p.model, p["thinking-level"]]).toEqual(["acceptor", "openai-codex/gpt-6.2-sol", "low"]);
+	expect(p.tools).not.toMatch(/write|edit/);
 });
 
 test("skills: both entries and the hidden procedure", async () => {
