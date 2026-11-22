@@ -26,9 +26,10 @@ const enabled = (models, patterns) => {
 	return models.filter(model => tests.some(test => test.test(id(model))));
 };
 
-function picker(models, initial, effort, theme, done) {
-	let visible = models, selected = initial, filter = "", closed = false;
-	effort = nearest(selected, effort) ?? (data.effortOrder.includes(effort) ? effort : "high");
+function picker(models, initial, effort, theme, done, advisor) {
+	let visible = models, selected = initial, filter = "", closed = false, on = advisor?.enabled;
+	const accent = advisor?.view.accent ?? "accent";
+	if (!advisor) effort = nearest(selected, effort) ?? (data.effortOrder.includes(effort) ? effort : "high");
 	const finish = value => { if (!closed) { closed = true; done(value); } };
 	const refilter = () => {
 		visible = models.filter(model => `${id(model)} ${model.name ?? ""} ${data.aliases[id(model)] ?? ""}`.toLowerCase().includes(filter.toLowerCase()));
@@ -37,22 +38,24 @@ function picker(models, initial, effort, theme, done) {
 	};
 	const handleInput = input => {
 		if (closed) return;
-		if (input === "\r" || input === "\n" || /^\x1b\[(?:13(?:;2)?|27;2;13)(?::[12])?[u~]$/.test(input)) {
-			if (selected) finish({ model: selected, effort: levels(selected).length ? effort : undefined });
+		if (advisor?.isShortcut(input) || input === "\r" || input === "\n" || /^\x1b\[(?:13(?:;2)?|27;2;13)(?::[12])?[u~]$/.test(input)) {
+			if (selected) finish(advisor ? { model: selected, enabled: on } : { model: selected, effort: levels(selected).length ? effort : undefined });
 			return;
 		}
 		if (input === "\x1b" || input === "\x03" || /^\x1b\[27(?::[12])?u$/.test(input)) return finish();
 		const key = arrow(input);
 		if (key) {
-			if (key[2] === "3" || !selected) return;
+			if (key[2] === "3" || !selected || (advisor && key[1] && key[1] !== "1")) return;
 			if (key[3] === "A" || key[3] === "B") {
 				const next = visible[visible.indexOf(selected) + (key[3] === "A" ? -1 : 1)];
 				if (next) { selected = next; if (levels(next).length) effort = nearest(next, effort); }
-			} else {
+			} else if (advisor) on = key[3] === "C";
+			else {
 				const list = levels(selected), next = list[list.indexOf(effort) + (key[3] === "D" ? -1 : 1)];
 				if (next) effort = next;
 			}
-		} else if (input === "\x7f" || input === "\x08" || /^\x1b\[(?:127|8)(?::[12])?u$/.test(input)) {
+		} else if (advisor) return;
+		else if (input === "\x7f" || input === "\x08" || /^\x1b\[(?:127|8)(?::[12])?u$/.test(input)) {
 			filter = [...filter].slice(0, -1).join(""); refilter();
 		} else if (input && !/[\u0000-\u001f\u007f-\u009f]/.test(input)) {
 			filter += input; refilter();
@@ -61,19 +64,24 @@ function picker(models, initial, effort, theme, done) {
 	const render = width => {
 		if (width <= 0) return [];
 		const list = levels(selected).map(tag), needed = 3 + data.minName + size(list.join(" "));
-		if (selected && needed > width) {
+		if (!advisor && selected && needed > width) {
 			const text = data.effortNeeds.replace("{n}", String(needed)), rows = [];
 			for (let i = 0; i < size(text); i += width) rows.push(color("error", cut([...text].slice(i).join(""), width)));
 			return rows;
 		}
 		const index = visible.indexOf(selected);
-		const body = !visible.length ? [color("muted", cut(data.noModels, width)), "", "", "", ""] : [-2, -1, 0, 1, 2].map(offset => {
-			const model = visible[index + offset];
+		const rows = advisor ? visible : [-2, -1, 0, 1, 2].map(offset => visible[index + offset]);
+		const body = !visible.length ? [color("muted", cut(data.noModels, width)), "", "", "", ""] : rows.map(model => {
 			if (!model) return "";
-			if (offset) return "  " + color("muted", short(label(model), width - 2));
-			const names = levels(model), name = short(label(model), width - 3 - size(names.map(tag).join(" ")));
-			return color("accent", "› ") + theme.bold(name) + " " + names.map(level => level === effort ? color(level, theme.bold(tag(level))) : color("dim", tag(level))).join(" ");
+			if (model !== selected) return cut("  ", width) + color("muted", short(label(model), width - 2));
+			const names = advisor ? [] : levels(model), name = short(label(model), width - 3 - size(names.map(tag).join(" ")));
+			const ladder = names.map(level => level === effort ? color(level, theme.bold(tag(level))) : color("dim", tag(level))).join(" ");
+			return color(accent, cut("› ", width)) + theme.bold(name) + (advisor ? "" : " " + ladder);
 		});
+		if (advisor) {
+			const { title, on: yes, off: no, hint } = advisor.view;
+			return [color(accent, theme.bold(cut(`${title}: ${on ? yes : no}`, width))), "", ...body, "", color("dim", cut(hint, width))];
+		}
 		const actions = data.hintEnter + data.hintOk + data.hintEsc + data.hintCancel;
 		const hint = width >= size(data.hintWide + actions) ? data.hintWide : width >= size(data.hintMedium + actions) ? data.hintMedium : "";
 		return [
@@ -84,7 +92,7 @@ function picker(models, initial, effort, theme, done) {
 	return { handleInput, render, invalidate() {} };
 }
 
-export default function modelPicker(pi) {
+export default function modelPicker(pi, advisor) {
 	let generation = 0, unsubscribe, open = false;
 	const start = (_event, ctx) => {
 		if (ctx.agent.kind !== "main") return;
@@ -93,10 +101,19 @@ export default function modelPicker(pi) {
 		if (ctx.mode !== "tui" || !ctx.hasUI) return;
 		unsubscribe = ctx.ui.onTerminalInput(input => {
 			const key = arrow(input);
-			if (open || !key || key[1] !== "2" || key[2] === "3") return;
+			const choosingAdvisor = advisor?.isShortcut(input);
+			if (open || (!choosingAdvisor && (!key || key[1] !== "2" || key[2] === "3"))) return;
 			open = true;
 			void (async () => {
 				try {
+					if (choosingAdvisor) {
+						const { models, state, view, isShortcut } = advisor;
+						const selected = models.find(model => model.ref === state.model);
+						const draft = await ctx.ui.custom((_tui, theme, _keys, done) =>
+							picker(models, selected, undefined, theme, done, { enabled: state.enabled, view, isShortcut }));
+						if (draft && owner === generation) await advisor.save(draft);
+						return;
+					}
 					// OMP 19.1.0 model-api.ts lists models without enabledModels; session/model-controls.ts filters by cfgEnabledModels.
 					const models = enabled(ctx.models.list(), cfgEnabledModels.get(settings));
 					if (!models.length) return ctx.ui.notify(data.noModelsAvailable, "warning");

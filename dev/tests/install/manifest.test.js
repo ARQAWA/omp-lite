@@ -31,7 +31,7 @@ test("the removed memory description patch is not installed", () => {
 test("the removed Luna patch is removed from installations", () => expect(manifest.remove).toContain("extensions/codex-luna-search.js"));
 
 test("interface files replace the old installed extensions", () => {
-	for (const name of ["index.js", "model-picker.js", "model-picker.json", "subscriptions.js", "compactions.js", "tool-summary.js", "tool-summary.json", "turn-duration.js"])
+	for (const name of ["index.js", "advisor.js", "advisor.json", "model-picker.js", "model-picker.json", "subscriptions.js", "compactions.js", "tool-summary.js", "tool-summary.json", "turn-duration.js"])
 		expect(manifest.files).toContainEqual({ from: `src/modules/rqw-harness-interface/${name}`, to: `extensions/rqw-harness-interface/${name}` });
 	for (const name of ["model-picker.js", "model-picker.json", "subscriptions.js", "compactions.js", "tool-summary.js", "tool-summary.json", "turn-duration.js", "turn-duration.LICENSE", "rqw-harness-interface/LICENSE"])
 		expect(manifest.remove).toContain(`extensions/${name}`);

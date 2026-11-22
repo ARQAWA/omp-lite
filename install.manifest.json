@@ -63,6 +63,14 @@
 			"to": "extensions/rqw-harness-interface/index.js"
 		},
 		{
+			"from": "src/modules/rqw-harness-interface/advisor.js",
+			"to": "extensions/rqw-harness-interface/advisor.js"
+		},
+		{
+			"from": "src/modules/rqw-harness-interface/advisor.json",
+			"to": "extensions/rqw-harness-interface/advisor.json"
+		},
+		{
 			"from": "src/modules/rqw-harness-interface/model-picker.js",
 			"to": "extensions/rqw-harness-interface/model-picker.js"
 		},

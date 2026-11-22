@@ -1,7 +1,32 @@
 import { expect, mock, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 let config = [];
 mock.module("@oh-my-pi/pi-coding-agent/config/model-settings", () => ({ cfgEnabledModels: { get: () => config } }));
 mock.module("@oh-my-pi/pi-coding-agent/config/settings", () => ({ settings: {} }));
+let profile, maxCost, requests = [];
+const ctrlUp = "\x1b[1;6A", ctrlDown = "\x1b[1;6B";
+mock.module("@oh-my-pi/pi-agent-core", () => ({ instrumentedCompleteSimple: async (model, ctx, options) => {
+	requests.push({ model, ctx, options });
+	options.beforeDispatch();
+	return { stopReason: "stop", content: [{ type: "text", text: "Check the failing fixture." }] };
+} }));
+mock.module("@oh-my-pi/pi-coding-agent/commit/utils", () => ({ extractTextContent: message => message.content[0].text }));
+mock.module("@oh-my-pi/pi-coding-agent/secrets/index", () => ({ buildSecretObfuscator: async () => undefined }));
+mock.module("@oh-my-pi/pi-coding-agent/secrets/settings", () => ({ cfgSecretsEnabled: { get: () => false } }));
+mock.module("@oh-my-pi/pi-coding-agent/session/model-usage-journal", () => ({ journalCompletion: () => undefined }));
+mock.module("@oh-my-pi/pi-coding-agent/session/session-context", () => ({ buildSessionContext: messages => ({ messages }) }));
+mock.module("@oh-my-pi/pi-coding-agent/session/session-history-format", () => ({ formatSessionHistoryMarkdown: messages => messages.map(m => m.content).join("\n") }));
+mock.module("@oh-my-pi/pi-coding-agent/session/settings", () => ({ cfgSessionMaxCost: { get: () => maxCost } }));
+mock.module("@oh-my-pi/pi-coding-agent/utils/atomic-file", () => ({ writeFileAtomically: async (file, text) => writeFileSync(file, text) }));
+mock.module("@oh-my-pi/pi-tui/keys", () => ({
+	isKeyRelease: key => /:3[AB]$/.test(key),
+	isKeyRepeat: key => /:2[AB]$/.test(key),
+	matchesKey: (key, name) => key === (name.endsWith("up") ? ctrlUp : ctrlDown),
+}));
+mock.module("@oh-my-pi/pi-utils/dirs", () => ({ getAgentDir: () => profile }));
+const { default: advisor } = await import("../../../../src/modules/rqw-harness-interface/advisor.js");
 const { default: modelPicker } = await import("../../../../src/modules/rqw-harness-interface/model-picker.js");
 import data from "../../../../src/modules/rqw-harness-interface/model-picker.json";
 
@@ -14,13 +39,24 @@ const up = "\x1b[1;2A", down = "\x1b[1;2B", left = "\x1b[D", right = "\x1b[C";
 const strip = text => text.replace(/\x1b\[[\d;]*m/g, "").replaceAll("**", "");
 const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 
-function session({ models = [opus, sol, router, plain], level = "high", setModel } = {}) {
+function session({ models = [opus, sol, router, plain], level = "high", setModel, withAdvisor = false } = {}) {
 	const events = {}, inputs = [], dialogs = [], calls = [], notes = [];
+	let tool, active = ["read"];
+	const param = { trim: () => param, min: () => param };
 	const pi = {
-		on: (event, fn) => events[event] = fn,
+		on: (event, fn) => {
+			const previous = events[event];
+			events[event] = previous ? async (...args) => { await previous(...args); await fn(...args); } : fn;
+		},
 		getThinkingLevel: () => level,
 		setModel: value => { calls.push(["model", value]); return setModel ? setModel(value) : Promise.resolve(true); },
 		setThinkingLevel: value => calls.push(["effort", value]),
+		pi: { settings: {} },
+		logger: { warn: (...args) => notes.push(args) },
+		zod: { object: schema => schema, string: () => param },
+		registerTool: value => { tool = value; },
+		getActiveTools: () => active,
+		setActiveTools: async names => { active = names; },
 	};
 	const ctx = {
 		agent: { kind: "main" }, mode: "tui", hasUI: true, model: models[0],
@@ -31,11 +67,11 @@ function session({ models = [opus, sol, router, plain], level = "high", setModel
 			custom: (factory, options) => new Promise(resolve => { expect(options).toBeUndefined(); dialogs.push(factory({}, { bold: text => `**${text}**` }, {}, resolve)); }),
 		},
 	};
-	modelPicker(pi);
+	modelPicker(pi, withAdvisor ? advisor(pi) : undefined);
 	const start = (event = "session_start", context = ctx) => events[event]({}, context);
 	const open = (key = up) => inputs[0](key);
 	const rows = (width = 120) => dialogs.at(-1).render(width).map(strip);
-	return { events, inputs, dialogs, calls, notes, ctx, start, open, rows };
+	return { events, inputs, dialogs, calls, notes, ctx, start, open, rows, tool, active: pi.getActiveTools };
 }
 
 test("opening makes the first move, confirms in order and warns on failure", async () => {
@@ -138,4 +174,68 @@ test("subagents, non-TUI and headless sessions do not subscribe", () => {
 	for (const change of [{ agent: { kind: "sub" } }, { mode: "rpc" }, { hasUI: false }]) {
 		const s = session(); s.start("session_start", { ...s.ctx, ...change }); expect(s.inputs).toEqual([]);
 	}
+});
+
+test("advisor keys save model and power separately; cancel leaves both untouched", async () => {
+	profile = mkdtempSync(join(tmpdir(), "rqw-advisor-test-"));
+	try {
+		const s = session({ withAdvisor: true }); await s.start();
+		const key = input => s.dialogs.at(-1).handleInput(input);
+		expect(s.active()).toEqual(["read"]);
+		expect(s.open("\x1b[1;6:3A")).toBeUndefined();
+		expect(s.open(ctrlDown)).toEqual({ consume: true });
+		expect(s.rows().filter(Boolean).slice(0, 5)).toEqual(["Advisor: Off", "› Opus 5.5", "  Fable 5.2", "  Astra 6.2", "  Sol 6.2"]);
+		expect(s.dialogs.at(-1).render(120)[0]).toContain("\x1b[38;2;185;124;255m");
+		key("\x1b[B"); key(ctrlUp); await flush();
+		expect(s.active()).toEqual(["read"]);
+		s.open(ctrlUp);
+		expect(s.rows().join("\n")).toContain("› Fable 5.2");
+		key(right); key("\x1b"); await flush();
+		expect(s.active()).toEqual(["read"]);
+		s.open(ctrlDown); key(right); key("\r"); await flush();
+		expect(s.active()).toEqual(["read", "consult_advisor"]);
+		const fresh = session({ withAdvisor: true }); await fresh.start();
+		expect(fresh.active()).toEqual(s.active());
+		fresh.open(ctrlUp);
+		expect(fresh.rows().join("\n")).toContain("› Fable 5.2");
+		fresh.dialogs.at(-1).handleInput(left);
+		fresh.dialogs.at(-1).handleInput(ctrlDown); await flush();
+		expect(fresh.active()).toEqual(["read"]);
+		expect(await Bun.file(join(profile, "rqw-advisor.json")).json()).toEqual({ model: "anthropic/claude-fable-5-2", enabled: false });
+		expect([...s.calls, ...fresh.calls]).toEqual([]);
+	} finally { rmSync(profile, { recursive: true, force: true }); }
+});
+
+test("consultation uses only the saved advisor and medium; off or unavailable never dispatches", async () => {
+	profile = mkdtempSync(join(tmpdir(), "rqw-advisor-test-"));
+	requests = [];
+	try {
+		const selected = model("openai-codex", "gpt-6.2-sol", "Sol", ["medium", "high"]);
+		const s = session({ models: [opus, selected], withAdvisor: true }); await s.start();
+		const { tool, ctx } = s;
+		expect(tool.defaultInactive).toBe(true);
+		const consult = () => tool.execute("call", { question: "What next?" }, undefined, undefined, ctx);
+		await expect(consult()).rejects.toThrow("advisor is off");
+		writeFileSync(join(profile, "rqw-advisor.json"), JSON.stringify({ model: "openai-codex/gpt-6.2-sol", enabled: true }));
+		await s.start("session_switch");
+		ctx.modelRegistry = { resolver: (value, sessionId) => `${value.id}:${sessionId}` };
+		ctx.sessionManager = { getSessionId: () => "session", getLeafId: () => "leaf", getBranch: () => [
+			{ role: "user", content: "Find the regression" },
+			{ role: "toolResult", toolName: "read", content: "Regression in the fixture" },
+			{ role: "user", content: "Private prior message", excludeFromContext: true },
+		] };
+		expect(await consult()).toEqual({ content: [{ type: "text", text: "Check the failing fixture." }] });
+		expect(requests).toHaveLength(1);
+		expect(requests[0].model).toBe(selected);
+		expect(requests[0].options).toMatchObject({ apiKey: "gpt-6.2-sol:session", reasoning: "medium" });
+		expect(requests[0].ctx.tools).toBeUndefined();
+		for (const text of ["What next?", "Find the regression", "Regression in the fixture"]) expect(requests[0].ctx.messages[0].content).toContain(text);
+		expect(requests[0].ctx.messages[0].content).not.toContain("Private prior message");
+		maxCost = 1;
+		await expect(consult()).rejects.toThrow("session cost cap");
+		maxCost = undefined;
+		ctx.models.list = () => [opus];
+		await expect(consult()).rejects.toThrow("advisor is unavailable");
+		expect(requests).toHaveLength(1);
+	} finally { maxCost = undefined; rmSync(profile, { recursive: true, force: true }); }
 });
