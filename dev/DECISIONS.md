@@ -2849,3 +2849,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `-p` без модели отвечает `No model selected`; с `--model anthropic/claude-haiku-5-5` отвечает. Тесты 106 pass.
 
 **Носители:** `src/modules/rqw-runtime-config/config.yml`, README модуля, `dev/tests/harness/rqw-runtime-config/rqw-runtime-config.test.js`, `INSTALL.md`.
+
+## D-169 — уточнение D-168: без модели OMP не стартует
+
+**Решение:** текст D-168 про «сессия стартует без модели» неверен. OMP 19.0.0 не умеет стартовать без модели, когда задан `enabledModels`: `main.ts` берёт первую модель списка (`resolveScopedModels` → `scopedModels[0]`). После D-168 первая модель в `enabledModels` — `anthropic/claude-opus-5-5`, значит ею и стартует сессия. Ключа `modelRoles.default` по-прежнему нет: выбор через `/model` запоминается в роли `default` сам, а до выбора роль пустая.
+
+**Основание:** проверка живьём 2026-11-22 после D-168: `omp -p` без `--model` ответил на `anthropic/claude-opus-5-5` (`--mode json`, `message.model`). В изолированном доме без входов тот же запуск ответил `No model selected`, отсюда и ошибка в D-168.
+
+**Механика OMP 19.0.0:** `packages/coding-agent/src/main.ts` (`resolveScopedModels`, `scopedModels[0].model`), `config/model-resolver.ts` (`resolveModelRoleValue(undefined)` → нет модели), `sdk.ts` (`resolveDefaultModelRole`).
+
+**Границы:** если нужен другой стартовый вид, это порядок `enabledModels`, а не роль `default`.
+
+**Носители:** `src/modules/rqw-runtime-config/README.md`.
