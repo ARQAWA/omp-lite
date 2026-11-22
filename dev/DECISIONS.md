@@ -2861,3 +2861,15 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** если нужен другой стартовый вид, это порядок `enabledModels`, а не роль `default`.
 
 **Носители:** `src/modules/rqw-runtime-config/README.md`.
+
+## D-170 — первая модель enabledModels: Sonnet 5.5
+
+**Решение:** в `enabledModels` и в `modelRoles.perCall` `anthropic/claude-sonnet-5-5` стоит первой, дальше прежний порядок (Opus, Haiku, Fable, Astra, Sol, Terra, Luna, DeepSeek). Без `modelRoles.default` (D-168) это и есть модель, на которой стартует новая сессия.
+
+**Основание:** ответ владельца от 2026-11-22 на вопрос «какая модель должна стоять первой в enabledModels?»: «sonnet».
+
+**Механика OMP 19.0.0:** `packages/coding-agent/src/main.ts` (`resolveScopedModels`, `scopedModels[0].model`), `config/model-resolver.ts` (роль `default` без записи модели не даёт).
+
+**Проверка:** `omp -p` без `--model` отвечает на `anthropic/claude-sonnet-5-5`. Тесты 106 pass.
+
+**Носители:** `src/modules/rqw-runtime-config/config.yml`, README модуля.

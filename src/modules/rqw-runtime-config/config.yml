@@ -1,13 +1,14 @@
 modelRoles:
   web: openai-codex/gpt-6-luna
   perCall: >-
-    anthropic/claude-opus-5-5, anthropic/claude-haiku-5-5, anthropic/claude-sonnet-5-5, anthropic/claude-fable-5-2,
+    anthropic/claude-sonnet-5-5, anthropic/claude-opus-5-5, anthropic/claude-haiku-5-5, anthropic/claude-fable-5-2,
     openai-codex/gpt-6.2-astra, openai-codex/gpt-6.2-sol, openai-codex/gpt-6.1-terra, openai-codex/gpt-6-luna,
     openrouter/deepseek/deepseek-v4.1-flash-1017
 enabledModels:
+  # The first model is the one a session starts on: no modelRoles.default.
+  - anthropic/claude-sonnet-5-5
   - anthropic/claude-opus-5-5
   - anthropic/claude-haiku-5-5
-  - anthropic/claude-sonnet-5-5
   - anthropic/claude-fable-5-2
   - openai-codex/gpt-6.2-astra
   - openai-codex/gpt-6.2-sol
