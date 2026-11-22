@@ -2948,12 +2948,12 @@ Blind и high больше не различаются ни моделью, ни
 
 ## D-177 — GLM-5.3, Flash и FlashX в харнесе
 
-**Решение:** включены `zai/glm-5.3`, `zai/glm-5.3-flash` и `zai/glm-5.3-flashx` в пикере и `perCall`. Модель по умолчанию не меняется. GLM-5.3 и Flash сохраняют маршруты каталога OMP; FlashX идёт в платный API (`/api/paas/v4`). Установка добавляет секцию Z.ai в `models.yml`, не заменяя другие провайдеры.
+**Решение:** включены `zai/glm-5.3`, `zai/glm-5.3-flash` и `zai-api/glm-5.3-flashx` в пикере и `perCall`. Модель по умолчанию не меняется. GLM-5.3 и Flash используют штатный `zai` с ключом Coding Plan. FlashX идёт в `/api/paas/v4` с отдельным стандартным ключом. Его секцию `models.yml` добавляют после настройки ключа, не заменяя другие провайдеры.
 
 **Основание:** владелец: «Да, давай включай все три.»
 
-**Механика OMP 19.1.0:** `packages/catalog/src/compat/rules/runtime/behavior.kdl` задаёт маршруты каталога, `packages/coding-agent/src/config/custom-models.ts` читает `models.yml`, `config/model-registry.ts` применяет переопределения API и URL.
+**Механика OMP 19.1.0:** `packages/catalog/src/compat/rules/providers/zai.kdl` задаёт штатные модели, `packages/coding-agent/src/config/custom-models.ts` регистрирует платный маршрут отдельным провайдером, `config/resolve-config-value.ts` читает его ключ из окружения.
 
-**Проверка:** `bun test dev/tests` — 111 pass. Изолированный RPC-запуск OMP подтвердил три id, API и URL без запроса к Z.ai. На Mac по `INSTALL.md` сверены 31 файл и конфиг из четырёх фрагментов; `omp -p --no-session` ответил «ок». В рабочем профиле `omp models zai --json` вернул `{"models":[]}`: живой вызов Z.ai не проверен без учётных данных.
+**Проверка:** `bun test dev/tests` — 111 pass. Изолированный RPC проверил маршруты и число доступных моделей: без ключей 0, только Coding Plan — 2, только Standard — 1, оба — 3. На Mac по `INSTALL.md` сверены 31 файл и четыре фрагмента конфига. OMP стартует. Живые вызовы GLM-5.3 и Flash вернули «ок». Для живого вызова FlashX нет Standard API Key.
 
 **Носители:** `src/modules/rqw-runtime-config/`, `dev/tests/harness/rqw-runtime-config/`, `dev/tests/install/manifest.test.js`, `INSTALL.md`, `install.manifest.json`.
