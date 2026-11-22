@@ -18,7 +18,7 @@ RQW Runtime Config: общие настройки OMP 19.1.0. Кода нет.
 
 **Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `zai`. `enabledModels` и `perCall` держат одни и те же 12 имён: четыре Claude, четыре GPT, DeepSeek и три GLM. Моделей `opencode-go` в списках нет: провайдер открыт для остатков подписки. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter кладут руками в `~/.omp/agent/models.yml`.
 
-**Z.ai:** `glm-5.3` остаётся на штатном маршруте OMP. `glm-5.3-flash` идёт через Coding Plan. `glm-5.3-flashx` идёт через обычный API и оплачивается отдельно. Flash закрепляет область провайдерского URL за `openai-completions`. Вход: `/login zai` или `ZAI_API_KEY`.
+**Z.ai:** `zai/glm-5.3` и `zai/glm-5.3-flash` используют штатные маршруты OMP для Coding Plan. `zai-api/glm-5.3-flashx` использует отдельный стандартный ключ и оплачивается по токенам, независимо от подписки.
 
 **Хуки:** нет.
 
@@ -26,7 +26,7 @@ RQW Runtime Config: общие настройки OMP 19.1.0. Кода нет.
 
 **Установка:** по [INSTALL.md](../../../INSTALL.md). Секретов нет.
 
-**Выключение:** вернуть `config.bak` и прежнюю секцию `providers.zai` в `models.yml`.
+**Выключение:** вернуть `config.bak` и убрать добавленную секцию `providers.zai-api` из `models.yml`.
 
 **Тест:** `bun test dev/tests/harness/rqw-runtime-config`. Правило одного места проверяет `bun test dev/tests/install`.
 
@@ -39,4 +39,4 @@ RQW Runtime Config: общие настройки OMP 19.1.0. Кода нет.
 
 **Механика OMP 19.1.0**, каталог `packages/coding-agent/src`: `config/compaction-threshold.ts` (формы порога, точное имя главнее шаблона), `config/model-settings.ts` (`modelRoles`, `enabledModels`, `disabledProviders`), `config/model-resolver.ts` (`normalizeModelPatternList`, `resolveModelRoleValue`: роль это список через запятую, берётся первая доступная модель), `task/model-approval.ts` (список моделей в описании тула `task` строится из `perCall`), `session/settings.ts` (`providers.openrouterVariant`, подогрев, `retry.fallbackChains`), `session/cache-warmer.ts` (подогрев и стратегия), `tools/settings.ts` (`tools.approvalMode`, `dev.autoqaConsent`), `modes/controllers/event-controller.ts` (плавное появление текста и аргументов).
 
-**Маршруты Z.ai в OMP 19.1.0:** `packages/coding-agent/src/config/model-registry.ts` (область провайдерского `baseUrl`, замена строки по id), `custom-models.ts` (URL отдельной модели), `packages/catalog/src/compat/rules/runtime/behavior.kdl` (штатные маршруты).
+**Маршруты Z.ai в OMP 19.1.0:** `packages/catalog/src/compat/rules/providers/zai.kdl` (штатные модели), `packages/coding-agent/src/config/custom-models.ts` (отдельный провайдер для платного API), `config/resolve-config-value.ts` (чтение ключа из окружения).

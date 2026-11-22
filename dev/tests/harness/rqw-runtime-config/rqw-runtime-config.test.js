@@ -26,13 +26,15 @@ test("no default model, the same models are enabled and named per spawn", () => 
 	for (const name of ["claude", "claude-md", "claude-plugins"]) expect(config.disabledProviders).toContain(name);
 });
 
-test("only the three requested GLMs are enabled; FlashX uses the metered API", async () => {
-	const ids = ["zai/glm-5.3", "zai/glm-5.3-flash", "zai/glm-5.3-flashx"];
-	expect(config.enabledModels.filter(id => id.startsWith("zai/"))).toEqual(ids);
+test("only the three requested GLMs are enabled; FlashX uses a separate standard API key", async () => {
+	const ids = ["zai/glm-5.3", "zai/glm-5.3-flash", "zai-api/glm-5.3-flashx"];
+	expect(config.enabledModels.filter(id => /^zai(-api)?\//.test(id))).toEqual(ids);
 	for (const id of ids) expect(config.compaction.modelThresholds[id]).toBe("f400000");
-	const { providers: { zai } } = Bun.YAML.parse(await Bun.file(new URL("../../../../src/modules/rqw-runtime-config/zai-models.yml", import.meta.url)).text());
-	expect(zai).toEqual({
-		auth: "oauth", api: "openai-completions", baseUrl: "https://api.z.ai/api/coding/paas/v4",
-		models: [{ id: "glm-5.3-flash" }, { id: "glm-5.3-flashx", baseUrl: "https://api.z.ai/api/paas/v4" }],
+	const { providers } = Bun.YAML.parse(await Bun.file(new URL("../../../../src/modules/rqw-runtime-config/zai-models.yml", import.meta.url)).text());
+	expect(providers).toEqual({
+		"zai-api": {
+			apiKey: "ZAI_STANDARD_API_KEY", api: "openai-completions", baseUrl: "https://api.z.ai/api/paas/v4",
+			models: [{ id: "glm-5.3-flashx", name: "GLM-5.3-FlashX" }],
+		},
 	});
 });
