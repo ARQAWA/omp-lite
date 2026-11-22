@@ -2837,3 +2837,15 @@ Blind и high больше не различаются ни моделью, ни
 **Не выключается штатно, оставлено:** `daemon/modules/predict.ts` и `predict/foreign-history.ts` один раз читают `~/.claude/history.jsonl`, когда база подсказок композера пуста; импорт `--from-claude`; команда `omp claude-trace`. Маскировка под Claude Code в `packages/ai/src/providers/anthropic-*.ts` нужна подписке и не трогается.
 
 **Носители:** `src/modules/rqw-runtime-config/config.yml`, README модуля, `dev/tests/harness/rqw-runtime-config/rqw-runtime-config.test.js`.
+
+## D-168 — модель по умолчанию убрана
+
+**Решение:** ключа `modelRoles.default` больше нет в `rqw-runtime-config/config.yml`. Новая сессия OMP стартует без модели: первый запрос не уходит, OMP просит выбрать модель через `/model` или флаг `--model`. Роли `modelRoles.web` (Luna) и `modelRoles.perCall` не тронуты.
+
+**Основание:** слова владельца от 2026-11-22: «Убери вообще модель по умолчанию. Это возможно или нет?», «Да, убирай модель по умолчанию Сделай выгодку всего этого добра.»
+
+**Механика OMP 19.0.0**, каталог `packages/coding-agent/src`: `config/model-settings.ts` (`modelRoles`, пустой по умолчанию), `session/role-models.ts` (роль `default` без записи берётся из текущей модели сессии), `session/agent-session.ts` (без модели ход не начинается: `No model selected`).
+
+**Проверка:** `-p` без модели отвечает `No model selected`; с `--model anthropic/claude-haiku-5-5` отвечает. Тесты 106 pass.
+
+**Носители:** `src/modules/rqw-runtime-config/config.yml`, README модуля, `dev/tests/harness/rqw-runtime-config/rqw-runtime-config.test.js`, `INSTALL.md`.
