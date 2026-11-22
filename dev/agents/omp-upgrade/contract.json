@@ -28,13 +28,13 @@
 			"never": ["Read-only research MUST", "most specific"]
 		},
 		"eval": {
-			"once": ["Use JavaScript (Bun) by default", "my setup.js"],
+			"once": ["Use JavaScript (Bun) by default", "help://eval/helpers"],
 			"never": ["help://eval/agents", "workpool()", "Subagents have separate kernels"]
 		},
 		"bash": { "starts": "Terminal only" },
 		"read": { "starts": "Pass a bare path" },
 		"grep": { "starts": "Search file contents by regex" },
-		"glob": { "starts": "Find files recursively" },
+		"glob": { "starts": "First research response: send it together with the three `grep` calls of `<file_work>` step 1.\nFind files recursively" },
 		"edit": { "starts": ["Changes existing files", "Replaces `old_string`"] },
 		"write": { "starts": "Creates one file" }
 	},

@@ -2891,3 +2891,15 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** старые ожидания ворот не менялись. Проверка `archive.search` по ответу старой сессии остаётся на этапе установки. Живые пробы, установка и выпуск VSIX не выполнялись.
 
 **Носители:** `INSTALL.md`; `src/modules/rqw-base-tools/`, `rqw-codex-adapter/`, `rqw-runtime-config/`, `rqw-harness-interface/model-picker.js`, `rqw-system-core/README.md`, `rqw-windows-pack/`; `dev/agents/omp-upgrade/contract.json`; тесты адаптера, конфига, системного промпта и пинов Windows; `dev/DECISIONS.md`.
+
+## D-172 — исправлены проверки запросов OMP 19.1.0
+
+**Решение:** в `contract.json` проверка `eval` ждёт ровно одну ссылку `help://eval/helpers` вместо отсутствующего примера `my setup.js`; требование Bun и запреты сохранены. Проверка `glob` ждёт точное начало: правило `file_work`, затем `Find files recursively` на следующей строке. Продукт, промпты и логика проверки не изменены.
+
+**Основание:** владелец согласовал обе правки перед доставкой и выпуском VDI: «Да, давай вноси обе правки. Потом доставляй и выпускай пакет для VDI.»
+
+**Механика OMP 19.1.0:** `packages/coding-agent/src/prompts/tools/eval.md` и `tools/eval-doc-topics.ts` задают ссылку и справку; начало `glob` задаёт `rqw-base-tools.texts.json`.
+
+**Проверка:** `verify.js --runtime` 218/218, `bun test dev/tests` 107 pass, `probe.js` 15/15. Отклонены пропуск и дубль ссылки, перестановка строк `glob`. На Mac установлен OMP 19.1.0: `archive.search` нашёл ответ сессии 19.0.0, Luna приняла уточнение внутри одного ответа по WebSocket. Windows VDI не проверен.
+
+**Носители:** `dev/agents/omp-upgrade/contract.json`, `dev/agents/README.md`.
