@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 
 const config = Bun.YAML.parse(await Bun.file(new URL("../../../../src/modules/rqw-runtime-config/config.yml", import.meta.url)).text());
 
-test("compaction starts at 400k for 19 models", () => {
-	expect(Object.values(config.compaction.modelThresholds)).toEqual(Array(19).fill("f400000"));
+test("compaction starts at 400k for 30 models with windows above 500k", () => {
+	expect(Object.values(config.compaction.modelThresholds)).toEqual(Array(30).fill("f400000"));
 	expect(config.providers.cacheWarmingStrategy).toBe("keepalive");
 });
 
@@ -19,8 +19,8 @@ test("no default model, the same models are enabled and named per spawn", () => 
 	expect(config.modelRoles).not.toHaveProperty("default");
 	expect(config.modelRoles.perCall.split(", ")).toEqual(config.enabledModels);
 	expect(config.enabledModels[0]).toBe("anthropic/claude-sonnet-5-5");
-	expect(config.enabledModels).toHaveLength(11);
-	for (const name of ["anthropic", "openai-codex", "opencode-go", "openrouter", "zai"]) expect(config.disabledProviders).not.toContain(name);
+	expect(config.enabledModels).toHaveLength(22);
+	for (const name of ["anthropic", "openai-codex", "opencode-go", "openrouter", "zai", "agy"]) expect(config.disabledProviders).not.toContain(name);
 	expect(config.disabledProviders).toContain("kiro");
 	expect(config.disabledProviders).not.toContain("google-gemini-cli");
 	for (const name of ["claude", "claude-md", "claude-plugins"]) expect(config.disabledProviders).toContain(name);
@@ -31,4 +31,10 @@ test("Z.ai uses only the two requested Coding Plan models", () => {
 	expect(config.enabledModels.filter(id => /^zai(-api)?\//.test(id))).toEqual(ids);
 	expect(config.disabledProviders).toContain("zai-api");
 	for (const id of ids) expect(config.compaction.modelThresholds[id]).toBe("f400000");
+});
+
+test("AGY models are all enabled with the 400k compaction threshold", () => {
+	const ids = config.enabledModels.filter(id => id.startsWith("agy/"));
+	expect(ids).toHaveLength(11);
+	expect(ids.every(id => config.compaction.modelThresholds[id] === "f400000")).toBe(true);
 });

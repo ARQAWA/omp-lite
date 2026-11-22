@@ -4,7 +4,7 @@ RQW Runtime Config: общие настройки OMP 19.1.0. Кода нет.
 
 **Назначение:**
 1. общие настройки харнеса: провайдеры, модели, роли, тулы, интерфейс, служебное.
-2. порог сжатия контекста 400k: `compaction.modelThresholds`, 19 моделей, значение `f400000`.
+2. порог сжатия контекста 400k: `compaction.modelThresholds`, 30 моделей с окном больше 500k (Claude, GPT, GLM, AGY), значение `f400000`.
 
 **Правило:** один ключ лежит в одном месте. Здесь только настройки, которые не принадлежат ни одному плагину. Свои настройки несут `rqw-base-tools`, `rqw-harness-interface`, `rqw-codex-adapter`. Итоговый конфиг это сумма их файлов.
 
@@ -16,9 +16,11 @@ RQW Runtime Config: общие настройки OMP 19.1.0. Кода нет.
 
 **Экран:** `display.smoothStreaming: false` показывает текст и аргументы тулов по мере получения, без искусственной печати. Сам стриминг и остальные анимации не выключены. `display.collapseCompacted: true` прячет чат до компакшена за сводкой. `tui.autoGraph: "off"`: графиков под таблицами и запросов судье нет.
 
-**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `zai`. В `enabledModels` и `perCall` 11 имён: четыре Claude, четыре GPT, DeepSeek и две GLM. `opencode-go` открыт для остатков подписки, без моделей в списках. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter кладут в `~/.omp/agent/models.yml`.
+**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `zai`, `agy`. В `enabledModels` и `perCall` 22 имени: четыре Claude, четыре GPT, DeepSeek, две GLM и одиннадцать AGY. `opencode-go` открыт для остатков подписки, без моделей в списках. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter кладут в `~/.omp/agent/models.yml`.
 
 **Z.ai:** только `zai/glm-5.3` и `zai/glm-5.3-flash` через Coding Plan. Прежний платный провайдер `zai-api` выключен.
+
+**AGY:** одиннадцать моделей Google Antigravity через модуль [`rqw-agy-provider`](../rqw-agy-provider/README.md), авторизация из keychain agy. Окно 1M, порог сжатия тот же `f400000`.
 
 **Хуки:** нет.
 

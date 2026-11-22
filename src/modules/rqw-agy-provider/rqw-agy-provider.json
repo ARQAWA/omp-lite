@@ -1,0 +1,86 @@
+{
+	"endpoint": "https://daily-cloudcode-pa.googleapis.com",
+	"streamPath": "/v1internal:streamGenerateContent?alt=sse",
+	"tokenUrl": "https://oauth2.googleapis.com/token",
+	"loadCodeAssistPath": "/v1internal:loadCodeAssist",
+	"userAgent": "antigravity/cli/1.5.14 (aidev_client; os_type=darwin; arch=arm64; cl=1026970498; auth_method=consumer)",
+	"clientId": "MTA3MTAwNjA2MDU5MS10bWhzc2luMmgyMWxjcmUyMzV2dG9sb2poNGc0MDNlcC5hcHBzLmdvb2ds\nZXVzZXJjb250ZW50LmNvbQ==",
+	"clientSecret": "R09DU1BYLUs1OEZXUjQ4NkxkTEoxbUxCOHNYQzR6NnFEQWY=",
+	"keychain": {
+		"service": "gemini",
+		"account": "antigravity",
+		"prefix": "go-keyring-base64:"
+	},
+	"modelEnums": {
+		"gemini-4-neon-low": "MODEL_PLACEHOLDER_M534",
+		"gemini-4-neon-medium": "MODEL_PLACEHOLDER_M533",
+		"gemini-4-neon-high": "MODEL_PLACEHOLDER_M532",
+		"gemini-4-neon-xhigh": "MODEL_PLACEHOLDER_M535",
+		"gemini-4-hydrogen-low": "MODEL_PLACEHOLDER_M527",
+		"gemini-4-hydrogen-medium": "MODEL_PLACEHOLDER_M526",
+		"gemini-4-hydrogen-high": "MODEL_PLACEHOLDER_M525",
+		"gemini-4-hydrogen-xhigh": "MODEL_PLACEHOLDER_M528",
+		"gemini-4-argon-low": "MODEL_PLACEHOLDER_M419",
+		"gemini-4-argon-medium": "MODEL_PLACEHOLDER_M418",
+		"gemini-4-argon-high": "MODEL_PLACEHOLDER_M417"
+	},
+	"models": [
+		{
+			"id": "gemini-4-neon-low",
+			"name": "AGY Neon (Low)",
+			"maxTokens": 262144
+		},
+		{
+			"id": "gemini-4-neon-medium",
+			"name": "AGY Neon (Medium)",
+			"maxTokens": 262144
+		},
+		{
+			"id": "gemini-4-neon-high",
+			"name": "AGY Neon (High)",
+			"maxTokens": 262144
+		},
+		{
+			"id": "gemini-4-neon-xhigh",
+			"name": "AGY Neon (XHigh)",
+			"maxTokens": 262144
+		},
+		{
+			"id": "gemini-4-hydrogen-low",
+			"name": "AGY Hydrogen (Low)",
+			"maxTokens": 262144
+		},
+		{
+			"id": "gemini-4-hydrogen-medium",
+			"name": "AGY Hydrogen (Medium)",
+			"maxTokens": 262144
+		},
+		{
+			"id": "gemini-4-hydrogen-high",
+			"name": "AGY Hydrogen (High)",
+			"maxTokens": 262144
+		},
+		{
+			"id": "gemini-4-hydrogen-xhigh",
+			"name": "AGY Hydrogen (XHigh)",
+			"maxTokens": 262144
+		},
+		{
+			"id": "gemini-4-argon-low",
+			"name": "AGY Argon (Low)",
+			"maxTokens": 65536
+		},
+		{
+			"id": "gemini-4-argon-medium",
+			"name": "AGY Argon (Medium)",
+			"maxTokens": 65536
+		},
+		{
+			"id": "gemini-4-argon-high",
+			"name": "AGY Argon (High)",
+			"maxTokens": 65536
+		}
+	],
+	"clientSecretEncoding": "base64",
+	"clientIdEncoding": "base64"
+}
