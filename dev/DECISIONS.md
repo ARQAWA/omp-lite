@@ -2903,3 +2903,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `verify.js --runtime` 218/218, `bun test dev/tests` 107 pass, `probe.js` 15/15. Отклонены пропуск и дубль ссылки, перестановка строк `glob`. На Mac установлен OMP 19.1.0: `archive.search` нашёл ответ сессии 19.0.0, Luna приняла уточнение внутри одного ответа по WebSocket. Windows VDI не проверен.
 
 **Носители:** `dev/agents/omp-upgrade/contract.json`, `dev/agents/README.md`.
+
+## D-173 — веб-поиск на Terra Max
+
+**Решение:** `web_search` использует `gpt-6.1-terra`. Планировщик запрашивает `max`, поле `service_tier` не передаётся. Основной чат не меняется.
+
+**Основание:** владелец: «Terra Max, пусть ищет», «на обычном дефолт тире».
+
+**Механика OMP 19.1.0:** `packages/coding-agent/src/sdk.ts` ставит тул расширения на место встроенного. Штатный `packages/coding-agent/src/web/search/providers/codex.ts` возвращает готовый ответ, а наш адаптер сохраняет отдельный цикл `web.run`.
+
+**Проверка:** `bun test dev/tests`: 107 pass. Один и тот же живой запрос о последнем релизе OMP, по одному вызову на модель: Luna `xhigh` с `priority` в запросе — 8,68 с; Terra `max` без `service_tier` — 16,30 с. Оба вызова дали две находки и ссылку на релиз. Codex подтвердил Terra, `max` и `default`. Логи: `${TMPDIR}/omp-search-bench.wwEqN1/{luna,terra}.jsonl`.
+
+**Носители:** `src/modules/rqw-codex-adapter/`, `dev/tests/harness/rqw-codex-adapter/`.
