@@ -2948,6 +2948,8 @@ Blind и high больше не различаются ни моделью, ни
 
 ## D-177 — GLM-5.3, Flash и FlashX в харнесе
 
+**Заменено решением D-178.**
+
 **Решение:** включены `zai/glm-5.3`, `zai/glm-5.3-flash` и `zai-api/glm-5.3-flashx` в пикере и `perCall`. Модель по умолчанию не меняется. GLM-5.3 и Flash используют штатный `zai` с ключом Coding Plan. FlashX идёт в `/api/paas/v4` с отдельным стандартным ключом. Его секцию `models.yml` добавляют после настройки ключа, не заменяя другие провайдеры.
 
 **Основание:** владелец: «Да, давай включай все три.»
@@ -2957,3 +2959,13 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests` — 111 pass. Изолированный RPC проверил маршруты и число доступных моделей: без ключей 0, только Coding Plan — 2, только Standard — 1, оба — 3. На Mac по `INSTALL.md` сверены 31 файл и четыре фрагмента конфига. OMP стартует. Живые вызовы GLM-5.3 и Flash вернули «ок». Для живого вызова FlashX нет Standard API Key.
 
 **Носители:** `src/modules/rqw-runtime-config/`, `dev/tests/harness/rqw-runtime-config/`, `dev/tests/install/manifest.test.js`, `INSTALL.md`, `install.manifest.json`.
+
+## D-178 — Z.ai только по GLM Coding Plan
+
+**Решение:** оставлены `zai/glm-5.3` и `zai/glm-5.3-flash`. FlashX убрана из выбора и `perCall`. Провайдер `zai-api` выключен, обновление удаляет его установочный фрагмент.
+
+**Основание:** владелец: «мы не пользуемся ничем тем, что недоступно в кодинг-плане». [Документация Z.ai](https://docs.z.ai/guides/vlm/glm-5.3-flash#glm-coding-plan) исключает FlashX из плана.
+
+**Механика OMP 19.1.0:** `packages/coding-agent/src/config/model-settings.ts`, `config/model-resolver.ts` и `packages/catalog/src/compat/rules/providers/zai.kdl`.
+
+**Проверка:** `bun test dev/tests` — 111 pass. На Mac шаблон удалён. RPC показал только две модели Z.ai. Обе вернули «ок» на живой запрос.
