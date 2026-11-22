@@ -2945,3 +2945,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests`: 109 pass. В OMP с локальным макетом провайдера Off не добавил тул или запрос. По Ctrl+Shift выбраны Fable и On. В запросе Fable был `medium`, текст задачи и вывод чтения. Секрет не отправлен. Совет дошёл до Sonnet в том же ходе. Esc, сохранение Off и старый пикер проверены.
 
 **Носители:** `src/modules/rqw-harness-interface/`, `dev/tests/harness/rqw-harness-interface/`, `install.manifest.json`.
+
+## D-177 — GLM-5.3, Flash и FlashX в харнесе
+
+**Решение:** включены `zai/glm-5.3`, `zai/glm-5.3-flash` и `zai/glm-5.3-flashx` в пикере и `perCall`. Модель по умолчанию не меняется. GLM-5.3 и Flash сохраняют маршруты каталога OMP; FlashX идёт в платный API (`/api/paas/v4`). Установка добавляет секцию Z.ai в `models.yml`, не заменяя другие провайдеры.
+
+**Основание:** владелец: «Да, давай включай все три.»
+
+**Механика OMP 19.1.0:** `packages/catalog/src/compat/rules/runtime/behavior.kdl` задаёт маршруты каталога, `packages/coding-agent/src/config/custom-models.ts` читает `models.yml`, `config/model-registry.ts` применяет переопределения API и URL.
+
+**Проверка:** `bun test dev/tests` — 111 pass. Изолированный RPC-запуск OMP подтвердил три id, API и URL без запроса к Z.ai. На Mac по `INSTALL.md` сверены 31 файл и конфиг из четырёх фрагментов; `omp -p --no-session` ответил «ок». В рабочем профиле `omp models zai --json` вернул `{"models":[]}`: живой вызов Z.ai не проверен без учётных данных.
+
+**Носители:** `src/modules/rqw-runtime-config/`, `dev/tests/harness/rqw-runtime-config/`, `dev/tests/install/manifest.test.js`, `INSTALL.md`, `install.manifest.json`.
