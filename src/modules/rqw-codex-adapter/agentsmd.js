@@ -1,4 +1,4 @@
-// OMP 19.0.0 drops AGENTS.md from task subagents with one filter by file name. This patch keeps the files.
+// OMP 19.1.0 drops AGENTS.md from task subagents with one filter by file name. This patch keeps the files.
 import { isMainThread } from "node:worker_threads";
 
 const { filter } = Array.prototype;

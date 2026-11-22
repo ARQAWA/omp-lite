@@ -2873,3 +2873,21 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `omp -p` без `--model` отвечает на `anthropic/claude-sonnet-5-5`. Тесты 106 pass.
 
 **Носители:** `src/modules/rqw-runtime-config/config.yml`, README модуля.
+
+## D-171 — харнес на OMP 19.1.0: подготовка апдейта
+
+**Решение:** харнес подготовлен с OMP 19.0.0 на 19.1.0 для проверки, без установки и доставки.
+
+1. `bump.js` обновил версии, пин `omp.exe` (SHA-256 `b9ed82d7b06d6d5fa9e8149a845a37ffb1c0ab03bef9f1737ee5f9f2460bcb19`, 264806400 байт) и версию расширения 0.0.21 → 0.0.22. Другие программы и имя расширения не менялись.
+2. Эталон сторожа переснят для родных описаний `read` и `write`, схемы сохранены. Ссылка `read` ведёт на `help://read/sources`; адаптер удаляет из описания `eval` ссылку `help://eval/agents`, сохраняя другие справки и прежний запрет прямых вызовов.
+3. Из конфига убраны удалённые `tui.completeScrollback` и `google-gemini-cli`. Четыре разрешённых провайдера, девять моделей, Sonnet первой без `modelRoles.default`, `keepalive`, руление и отключение Claude Code сохранены. `hashline` и штатный архив остаются включены.
+
+**Основание:** владелец разрешил сборку без установки: «Так, хорошо. Давай запускай Terra Max на сборку без установки.» План `/tmp/omp-up/PLAN.md` и согласованные два диффа ссылок `/tmp/omp-up/prompt-diff.txt`.
+
+**Механика OMP 19.1.0:** `packages/coding-agent/src/prompts/tools/read.md`, `tools/read.ts`, `internal-urls/help-protocol.ts` (справка); `prompts/tools/eval.md`, `tools/eval-doc-topics.ts` (ссылки `eval`); `modes/settings.ts`, `packages/tui/src/chrome/transcript-container.ts` (экран); `packages/catalog/src/compat/provider-ids.ts` (провайдеры); `packages/coding-agent/src/main.ts` (первая доступная модель), `edit/settings.ts` (`hashline`), `tools/settings.ts` (`archive.enabled` по умолчанию `true`).
+
+**Проверка сборки:** 14 целевых тестов и 14 проверок локального сценария прошли. `verify.js`: 212 из 214, полный `bun test dev/tests` и проверка композера прошли. Два прежних FAIL: префикс `glob` и пример `my setup.js` в описании `eval`. Схемы общих тулов прежние; добавился только отложенный `goal`.
+
+**Границы:** старые ожидания ворот не менялись. Проверка `archive.search` по ответу старой сессии остаётся на этапе установки. Живые пробы, установка и выпуск VSIX не выполнялись.
+
+**Носители:** `INSTALL.md`; `src/modules/rqw-base-tools/`, `rqw-codex-adapter/`, `rqw-runtime-config/`, `rqw-harness-interface/model-picker.js`, `rqw-system-core/README.md`, `rqw-windows-pack/`; `dev/agents/omp-upgrade/contract.json`; тесты адаптера, конфига, системного промпта и пинов Windows; `dev/DECISIONS.md`.

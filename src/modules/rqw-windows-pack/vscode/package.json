@@ -2,7 +2,7 @@
 	"name": "ompcli",
 	"displayName": "ARQAWA OMPCLI",
 	"publisher": "arqawa",
-	"version": "0.0.21",
+	"version": "0.0.22",
 	"engines": {
 		"vscode": "^1.86.0"
 	},

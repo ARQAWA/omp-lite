@@ -1,6 +1,6 @@
 # rqw-windows-pack
 
-RQW Windows Pack переносит харнес на Windows VDI без прав администратора. Для OMP 19.0.0.
+RQW Windows Pack переносит харнес на Windows VDI без прав администратора. Для OMP 19.1.0.
 
 1. **OMP во вкладке VS Code.** Расширение `arqawa.ompcli` несёт `omp.exe` и ставит харнес само.
 2. **Диктовка.** `alt+w` начинает запись, второй `alt+w` ставит текст в конец поля ввода. Работает только во вкладке OMP CLI на Windows.
@@ -89,7 +89,7 @@ node-pty из VS Code
 
 Удалить расширение из VS Code: программы и слои настроек уходят с ним; файлы в `~/.omp/agent` остаются. Диктовка: строка `extension-module:pi-voice-stt` в настройке `disabledExtensions`.
 
-## Механика OMP 19.0.0
+## Механика OMP 19.1.0
 
 Каталог исходников: `packages/coding-agent/src`.
 

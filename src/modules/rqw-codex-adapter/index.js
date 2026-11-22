@@ -1,4 +1,4 @@
-// RQW Codex Adapter, OMP 19.0.0: opt-in delegation, AGENTS.md for subagents, live Codex web search, Codex transport.
+// RQW Codex Adapter, OMP 19.1.0: opt-in delegation, AGENTS.md for subagents, live Codex web search, Codex transport.
 import { existsSync } from "node:fs";
 import { withOAuthAccess } from "@oh-my-pi/pi-ai";
 import { lookup } from "@oh-my-pi/pi-coding-agent/config/registry";
@@ -31,7 +31,7 @@ const EDITS = {
 			" Subagents have separate kernels.",
 			"If blocked, leave `eval` and call `wait`.\n",
 			"For 2+ independent items, use a named `workpool()`; results auto-deliver.\n",
-			"- `agent`, `workpool`: background subagents, DAG waves \u2192 xd://eval/agents\n",
+			"- `agent`, `workpool`: background subagents, DAG waves \u2192 help://eval/agents\n",
 		],
 		add: "Use JavaScript (Bun) by default. Use Python only for rare tasks requiring Python-specific libraries, such as pandas, NumPy or Matplotlib.\nFor project file reading and searching, use the read, grep and glob tools. Use eval for computation, not as a substitute for those tools.",
 		swap: ['eval(language="py", code="%load \\"scripts/my setup.py\\"")', 'eval(language="js", code="%load \\"scripts/my setup.js\\"")'],

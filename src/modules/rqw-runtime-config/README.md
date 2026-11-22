@@ -1,6 +1,6 @@
 # rqw-runtime-config
 
-RQW Runtime Config: общие настройки OMP 19.0.0 одним файлом. Кода нет.
+RQW Runtime Config: общие настройки OMP 19.1.0 одним файлом. Кода нет.
 
 **Назначение:**
 1. общие настройки харнеса: провайдеры, модели, роли, тулы, интерфейс, служебное.
@@ -8,19 +8,19 @@ RQW Runtime Config: общие настройки OMP 19.0.0 одним файл
 
 **Правило:** один ключ лежит в одном месте. Здесь только настройки, которые не принадлежат ни одному плагину. Свои настройки несут `rqw-base-tools`, `rqw-harness-interface`, `rqw-codex-adapter`. Итоговый конфиг это сумма их файлов.
 
-**Вход:** `config.yml`, 60 значений. Запись `config` в [манифесте](../../../install.manifest.json).
+**Вход:** `config.yml`, 58 значений. Запись `config` в [манифесте](../../../install.manifest.json).
 
 **Подогрев:** `providers.cacheWarmingStrategy: keepalive` не запускает сжатие ради сохранения кэша при долгом вызове тула. Когда подогрев перестаёт окупаться, кэш может истечь. `providers.cacheWarming` не задан: штатный `idle` допускает подогрев и в простое. Обычные пороги сжатия не меняются.
 
 **Руление на лету:** `providers.openaiLiveSteering: true`. Сообщение, набранное во время ответа модели GPT-6, уходит в этот же ответ по WebSocket Codex, а не ждёт границы тула. Работает только на `openai-codex` и только пока соединение идёт по WebSocket (`providers.openaiWebsockets`, по умолчанию `auto`).
 
-**Экран:** `display.smoothStreaming: false` показывает текст и аргументы тулов по мере получения, без искусственной печати. Сам стриминг и остальные анимации не выключены. `display.collapseCompacted: true` прячет чат до компакшена за сводкой. `tui.completeScrollback: true` пишет в историю терминала верх растущего блока. `tui.autoGraph: "off"`: графиков под таблицами и запросов судье нет.
+**Экран:** `display.smoothStreaming: false` показывает текст и аргументы тулов по мере получения, без искусственной печати. Сам стриминг и остальные анимации не выключены. `display.collapseCompacted: true` прячет чат до компакшена за сводкой. `tui.autoGraph: "off"`: графиков под таблицами и запросов судье нет.
 
-**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`. В `disabledProviders` перечислены 97 закрытых id провайдеров моделей: белого списка в OMP нет. `enabledModels` и роль `perCall` держат одни и те же 9 точных имён: четыре Claude, четыре GPT, DeepSeek через `openrouter`. `perCall` это модели, которые можно назвать сабагенту. Моделей `opencode-go` в списках нет; сам провайдер открыт: статуслайн показывает остаток его подписки. `modelRoles.default`: DeepSeek через `openrouter`. Он есть во встроенном каталоге OMP: старт не зависит от кэша моделей. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter сюда не входит: его кладут руками в `~/.omp/agent/models.yml`.
+**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`. В `disabledProviders` перечислены 96 записей для провайдеров моделей, включая два id не из каталога 19.1.0; белого списка в OMP нет. `enabledModels` и роль `perCall` держат одни и те же 9 точных имён: четыре Claude, четыре GPT, DeepSeek через `openrouter`. `perCall` это модели, которые можно назвать сабагенту. Моделей `opencode-go` в списках нет; сам провайдер открыт: статуслайн показывает остаток его подписки. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter сюда не входит: его кладут руками в `~/.omp/agent/models.yml`.
 
 **Хуки:** нет.
 
-**Модель по умолчанию не закреплена:** ключа `modelRoles.default` нет. Штатного способа стартовать совсем без модели в OMP 19.0.0 нет: без `--model` сессия берёт первую модель из `enabledModels`, сейчас это `anthropic/claude-sonnet-5-5`. Роль `default` ставится только твоим выбором через `/model`, и тогда выбор запоминается. Пресеты и `--model` работают как раньше. Роли `web` (Luna) и `perCall` остались.
+**Модель по умолчанию не закреплена:** ключа `modelRoles.default` нет. В OMP 19.1.0 без сохранённого выбора и `--model` сессия берёт первую доступную модель из `enabledModels`, сейчас это `anthropic/claude-sonnet-5-5`. Роль `default` ставится только твоим выбором через `/model`, и тогда выбор запоминается. Пресеты и `--model` работают как раньше. Роли `web` (Luna) и `perCall` остались.
 
 **Установка:** по [INSTALL.md](../../../INSTALL.md). Секретов нет.
 
@@ -35,4 +35,4 @@ RQW Runtime Config: общие настройки OMP 19.0.0 одним файл
 - Новую модель надо дописать в три места: `enabledModels`, `perCall`, карта порогов.
 - Модель вне карты порогов сжимается по правилам OMP.
 
-**Механика OMP 19.0.0**, каталог `packages/coding-agent/src`: `config/compaction-threshold.ts` (формы порога, точное имя главнее шаблона), `config/model-settings.ts` (`modelRoles`, `enabledModels`, `disabledProviders`), `config/model-resolver.ts` (`normalizeModelPatternList`, `resolveModelRoleValue`: роль это список через запятую, берётся первая доступная модель), `task/model-approval.ts` (список моделей в описании тула `task` строится из `perCall`), `session/settings.ts` (`providers.openrouterVariant`, подогрев, `retry.fallbackChains`), `session/cache-warmer.ts` (подогрев и стратегия), `tools/settings.ts` (`tools.approvalMode`, `dev.autoqaConsent`), `modes/controllers/event-controller.ts` (плавное появление текста и аргументов).
+**Механика OMP 19.1.0**, каталог `packages/coding-agent/src`: `config/compaction-threshold.ts` (формы порога, точное имя главнее шаблона), `config/model-settings.ts` (`modelRoles`, `enabledModels`, `disabledProviders`), `config/model-resolver.ts` (`normalizeModelPatternList`, `resolveModelRoleValue`: роль это список через запятую, берётся первая доступная модель), `task/model-approval.ts` (список моделей в описании тула `task` строится из `perCall`), `session/settings.ts` (`providers.openrouterVariant`, подогрев, `retry.fallbackChains`), `session/cache-warmer.ts` (подогрев и стратегия), `tools/settings.ts` (`tools.approvalMode`, `dev.autoqaConsent`), `modes/controllers/event-controller.ts` (плавное появление текста и аргументов).

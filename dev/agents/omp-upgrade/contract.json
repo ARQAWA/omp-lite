@@ -29,7 +29,7 @@
 		},
 		"eval": {
 			"once": ["Use JavaScript (Bun) by default", "my setup.js"],
-			"never": ["xd://eval/agents", "workpool()", "Subagents have separate kernels"]
+			"never": ["help://eval/agents", "workpool()", "Subagents have separate kernels"]
 		},
 		"bash": { "starts": "Terminal only" },
 		"read": { "starts": "Pass a bare path" },
