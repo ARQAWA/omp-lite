@@ -2927,3 +2927,7 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** запуск на Windows VDI не проверен.
 
 **Носители:** `src/modules/rqw-windows-pack/vscode/`; `dist/ompcli-0.0.22-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
+
+## D-175 — возврат веб-поиска на Luna
+
+**Решение:** по просьбе владельца D-173 заменено: `web_search` снова использует `gpt-6-luna`, планировщик — `xhigh` и `service_tier: priority`. Основной чат не меняется.
