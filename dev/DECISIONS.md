@@ -2915,3 +2915,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests`: 107 pass. Один и тот же живой запрос о последнем релизе OMP, по одному вызову на модель: Luna `xhigh` с `priority` в запросе — 8,68 с; Terra `max` без `service_tier` — 16,30 с. Оба вызова дали две находки и ссылку на релиз. Codex подтвердил Terra, `max` и `default`. Логи: `${TMPDIR}/omp-search-bench.wwEqN1/{luna,terra}.jsonl`.
 
 **Носители:** `src/modules/rqw-codex-adapter/`, `dev/tests/harness/rqw-codex-adapter/`.
+
+## D-174 — выпуск ARQAWA OMPCLI 0.0.22
+
+**Решение:** `arqawa.ompcli` 0.0.22 опубликован для `win32-x64` под именем `ARQAWA OMPCLI`. В поставке OMP 19.1.0 и харнес D-171–D-172.
+
+**Основание:** владелец: «Да, давай вноси обе правки. Потом доставляй и выпускай пакет для VDI.»
+
+**Проверка:** ревизия payload `e8f01c3a01dbcad5746c80689067af486922e9e4`. `ompcli-0.0.22-win32-x64.vsix`: 215255417 байт, SHA-256 `6d2df272dd4b0f96f12ad70c6414390d1e551953210a5e45ca14c22479f78429`. `index.js`, `runtime.json` и три EXE сверены. Загрузка подтверждена в `2026-11-22T07:37:53Z`. Ответ Marketplace: `{"displayName":"ARQAWA OMPCLI","version":"0.0.22","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-22T07:50:14.42Z"}`. Для этой ревизии: 107 тестов, 218/218 ворот и 15/15 живых проб.
+
+**Границы:** запуск на Windows VDI не проверен.
+
+**Носители:** `src/modules/rqw-windows-pack/vscode/`; `dist/ompcli-0.0.22-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
