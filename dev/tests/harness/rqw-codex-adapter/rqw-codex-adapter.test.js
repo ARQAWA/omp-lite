@@ -121,18 +121,22 @@ const search = (fetch, accounts = [{ accessToken: "a" }]) => {
 	return load().tool.execute("id", { query: "q" }, undefined, undefined, { modelRegistry: { authStorage: accounts }, sessionManager: { getSessionId: () => "s" } });
 };
 
-test("web search: a 401 moves to the next account; only text commands are sent on", async () => {
+test("web search: Terra max at the default tier, 401 failover, text commands only", async () => {
 	const kept = { search_query: [{ q: "a" }], open: [{ ref_id: "r" }], click: [{ ref_id: "r", id: 1 }], find: [{ ref_id: "r", pattern: "p" }], response_length: "long" };
 	let planned = false;
 	let sent; const versions = [];
 	const result = await search(
 		(url, options) => {
 			if (options.headers.Authorization === "Bearer a") return new Response("no", { status: 401 });
+			const body = JSON.parse(options.body);
+			expect(body.model).toBe("gpt-6.1-terra");
+			expect(body).not.toHaveProperty("service_tier");
 			versions.push([url.endsWith("/alpha/search") ? "search" : "planner", options.headers.version]);
 			if (url.endsWith("/alpha/search")) {
-				sent = JSON.parse(options.body).commands;
+				sent = body.commands;
 				return Response.json({ output: "source" });
 			}
+			expect(body.reasoning.effort).toBe("max");
 			if (planned) return sse({ type: "response.completed", response: { output: [] } });
 			planned = true;
 			return plan({ ...kept, weather: [{}] });
