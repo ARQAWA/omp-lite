@@ -17,6 +17,7 @@ README модуля описывает:
 - `rqw-runtime-config` — общие настройки OMP одним `config.yml`: провайдеры, модели, роли, порог сжатия 400k. Кода нет. Тест: `dev/tests/harness/rqw-runtime-config/`.
 - `rqw-system-core` — основа: системный промпт, правила общения, памятка внутри каждого сообщения владельца. Тест: `dev/tests/harness/rqw-system-core/`.
 - `rqw-harness-interface` — пикер модели и усилия, статуслайн, лимиты, счётчики компакшенов и тулов, время хода. Тест: `dev/tests/harness/rqw-harness-interface/`.
+- `rqw-agy-provider` — нативный провайдер Google Antigravity: 11 моделей AGY, авторизация из keychain agy, пакет запроса и кэш как у оригинала. Тест: `dev/tests/harness/rqw-agy-provider/`.
 - `rqw-reviewer` — приёмка: профиль сабагента `acceptor`, три скилла. Кода нет. Тест: `dev/tests/harness/rqw-reviewer/`.
 - `rqw-base-tools` — тулинг файлов одним расширением: `grep`, `glob`, `read` по образцу Cursor с родным маршрутом для редких целей, свои описания `bash`, `edit`, `write`, сторож, правка по файлам, метка целого файла; настройки тулов в `rqw-base-tools.yml`. Тест: `dev/tests/harness/rqw-base-tools/`.
 - `rqw-codex-adapter` — одно расширение: делегирование как в Codex и три профиля сабагентов, `AGENTS.md` для сабагентов, Codex-поиск `web_search`, тюнинг транспорта Codex; настройки `task` в `rqw-codex-adapter.yml`. Тест: `dev/tests/harness/rqw-codex-adapter/`.

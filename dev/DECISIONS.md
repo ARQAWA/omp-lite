@@ -2969,3 +2969,15 @@ Blind и high больше не различаются ни моделью, ни
 **Механика OMP 19.1.0:** `packages/coding-agent/src/config/model-settings.ts`, `config/model-resolver.ts` и `packages/catalog/src/compat/rules/providers/zai.kdl`.
 
 **Проверка:** `bun test dev/tests` — 111 pass. На Mac шаблон удалён. RPC показал только две модели Z.ai. Обе вернули «ок» на живой запрос.
+
+## D-179 — Нативный провайдер AGY в харнесе
+
+**Решение:** добавлен модуль `rqw-agy-provider`: провайдер `agy` с 11 моделями Google Antigravity (Neon, Hydrogen, Argon с усилиями) через собственный api `agy-api` и `streamSimple`. Авторизация читается из keychain agy (`gemini`/`antigravity`), refresh-токен обменивается на access самим расширением. Пакет запроса воспроизводит agy-клиент по митм-реверсу: конверт `project`/`requestId`, `systemInstruction` с role user, `tools` с legacy `parameters`, labels, `sessionId`; неявный кэш Google подтверждён `cachedContentTokenCount`. Модели включены в `enabledModels` и `perCall`, порог сжатия `f400000` как у всех моделей с окном больше 500k.
+
+**Основание:** владелец: «надо, чтобы в этом Харнесе появился наш провайдер и чтобы он работал и в модул пикере, и везде в рамках Харнеса был реализован и по правилам Харнеса был доставлен на запушен в репозиторий и работал у нас локально»; «опираешься только на тот реверс инженеринг, который ты сам провел»; «у GLM моделей, так же как и у всех моделей с больше 500к контекстом, контекстное окно такое же в рамках правил нашего Харнеса».
+
+**Механика OMP 19.1.0:** расширение `pi.registerProvider` с собственным api (`packages/ai/src/api-registry.ts`, `packages/coding-agent/src/extensibility/`), пикер фильтрует `ctx.models.list()` по `enabledModels` (`rqw-harness-interface/model-picker.js`).
+
+**Проверка:** `bun test dev/tests/harness` — 102 pass. Локально после установки: пикер отдаёт 11 моделей AGY, живые вызовы Neon/Hydrogen/Argon вернули ответ, кэш виден в usage.
+
+**Носители:** `src/modules/rqw-agy-provider/`, `src/modules/rqw-runtime-config/`, `dev/tests/harness/rqw-agy-provider/`, `dev/tests/harness/rqw-runtime-config/`, `dev/tests/harness/rqw-codex-adapter/`, `install.manifest.json`, `INSTALL.md`.

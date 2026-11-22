@@ -47,6 +47,10 @@ rm -f "$HOME/.omp/agent/extensions/background-jobs.js"
 
 Прежние ключи вне фрагментов пропадают. Секретов во фрагментах нет: вход в провайдеров владелец делает сам.
 
+### AGY (Google Antigravity)
+
+Модели AGY берут авторизацию из keychain agy. Зайди один раз в agy (`agy login`), отдельный вход не нужен.
+
 ### Z.ai
 
 Для GLM-5.3 и Flash нужен GLM Coding Plan. Войди через `/login zai` или задай `ZAI_API_KEY` с ключом подписки.
@@ -66,7 +70,7 @@ omp -p --no-session "ответь одним словом: ок"
 
 Харнес виден только в новой сессии.
 
-В пикере харнеса из моделей Z.ai доступны GLM-5.3 и GLM-5.3-Flash.
+В пикере харнеса из моделей Z.ai доступны GLM-5.3 и GLM-5.3-Flash, из AGY — Neon, Hydrogen и Argon.
 
 ## Откат
 
