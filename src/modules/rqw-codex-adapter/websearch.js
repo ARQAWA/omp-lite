@@ -1,9 +1,9 @@
-// Live web search through the ChatGPT Codex backend: gpt-6.1-terra calls web.run, /alpha/search fetches the text.
+// Live web search through the ChatGPT Codex backend: a gpt-6-luna planner calls web.run, /alpha/search fetches the text.
 import { getCodexClientVersion } from "@oh-my-pi/pi-catalog/wire/codex-version";
 import tools from "./web-run.schema.json";
 
 const BASE = "https://chatgpt.com/backend-api/codex";
-const MODEL = "gpt-6.1-terra";
+const MODEL = "gpt-6-luna";
 const ROUNDS = 4;
 const CALLS = 8;
 const BYTES = 2 * 1024 * 1024;
@@ -85,7 +85,8 @@ export async function research(query, instructions, access, signal) {
 				tool_choice: "auto",
 				parallel_tool_calls: false,
 				include: ["reasoning.encrypted_content"],
-				reasoning: { effort: "max", context: "all_turns" },
+				reasoning: { effort: "xhigh", context: "all_turns" },
+				service_tier: "priority",
 				prompt_cache_key: crypto.randomUUID(),
 				input,
 			};
