@@ -87,7 +87,7 @@ test("a tab closed while it was loading starts nothing", async () => {
 test("the output channel keeps every step and every error", async () => {
 	const w = world();
 	await w.tab();
-	expect(w.state.log.map(line => line.slice(25))).toEqual(["install built-in: changed", "chat tab started"]);
+	expect(w.state.log.map(line => line.slice(25).replace(/ \/.*/, ""))).toEqual(["install: from", "install: 1 to change", "install: write", "install: committed", "chat tab started"]);
 	const bad = world({ platform: "darwin" });
 	await bad.run("ompcli.newTab");
 	expect(bad.state.log[0]).toContain("Error: OMP CLI requires Windows x64.\n    at ");

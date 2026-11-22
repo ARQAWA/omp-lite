@@ -192,7 +192,9 @@ async function rollback(agentDir) {
 }
 
 // Installs one payload. `pointer` is one more file of the same transaction: the revision pointer of Update.
-async function installHarness({ sourceDir, agentDir, pointer }) {
+// `log` names every step for the output channel.
+async function installHarness({ sourceDir, agentDir, pointer, log = () => {} }) {
+	log("install: from " + sourceDir + " to " + agentDir);
 	await fsp.mkdir(agentDir, { recursive: true });
 	await rollback(agentDir);
 	let manifest;
@@ -222,6 +224,7 @@ async function installHarness({ sourceDir, agentDir, pointer }) {
 	const layers = [];
 	for (const entry of manifest.config) layers.push(await source(entry.from));
 	if (pointer && (await readText(pointer.target)) !== pointer.data) changes.push(pointer);
+	log("install: " + changes.length + " to change");
 	if (!changes.length) return { changed: false, layers };
 	const base = path.join(agentDir, BACKUPS);
 	await fsp.mkdir(base, { recursive: true });
@@ -234,6 +237,7 @@ async function installHarness({ sourceDir, agentDir, pointer }) {
 	await writeAtomic(path.join(base, "journal.json"), JSON.stringify(journal));
 	try {
 		for (const change of changes) {
+			log("install: " + (change.data !== undefined ? "write " : "remove ") + change.target);
 			if (change.data !== undefined) await writeAtomic(change.target, change.data);
 			else {
 				await fsp.rm(change.target);
@@ -244,9 +248,11 @@ async function installHarness({ sourceDir, agentDir, pointer }) {
 		// Removing the journal is the commit, one step: before it everything can be undone.
 		await fsp.rm(path.join(base, "journal.json"));
 	} catch (error) {
+		log("install: rollback");
 		await rollback(agentDir);
 		throw error;
 	}
+	log("install: committed");
 	// Backups without a journal are dead: what stays here is dropped by the next install.
 	await drop(base).catch(() => {});
 	return { changed: true, layers };
@@ -337,9 +343,10 @@ async function unpack({ archive, stage, extensionPath }) {
 	return stale;
 }
 
-async function updateHarness({ extensionPath, storageDir, version, agentDir, web }) {
+async function updateHarness({ extensionPath, storageDir, version, agentDir, web, log }) {
 	const { sha } = await web.json(`https://api.github.com/repos/${REPO}/commits/main`, { accept: "application/vnd.github+json", "user-agent": "arqawa-ompcli" });
 	if (!SHA.test(sha)) throw fail("revision");
+	log("update: head " + sha);
 	// An interrupted install is undone first: its journal may hold the pointer.
 	await rollback(agentDir);
 	// A broken pointer stops here: nothing is written.
@@ -348,16 +355,18 @@ async function updateHarness({ extensionPath, storageDir, version, agentDir, web
 	const result = { changed: false, stale: false };
 	if (current.revision === sha || (current.revision === null && builtIn === sha)) {
 		// The revision is already here: it is installed again, so a lost harness file comes back.
-		result.changed = (await installHarness({ sourceDir: current.dir, agentDir })).changed;
+		result.changed = (await installHarness({ sourceDir: current.dir, agentDir, log })).changed;
 	} else {
 		const stage = path.join(current.base, sha);
 		// A name of its own per attempt: a broken download never blocks the next one.
 		const archive = path.join(storageDir, "omp-lite-" + sha + "." + randomUUID() + ".tar.gz");
 		try {
 			await fsp.mkdir(storageDir, { recursive: true });
+			log("update: download");
 			await web.download(`https://codeload.github.com/${REPO}/tar.gz/${sha}`, archive);
+			log("update: unpack");
 			result.stale = await unpack({ archive, stage, extensionPath });
-			await installHarness({ sourceDir: stage, agentDir, pointer: { target: current.pointer, data: JSON.stringify(sha) } });
+			await installHarness({ sourceDir: stage, agentDir, pointer: { target: current.pointer, data: JSON.stringify(sha) }, log });
 			result.changed = true;
 		} catch (error) {
 			await drop(stage);
@@ -467,11 +476,10 @@ function createCli(host) {
 		// An interrupted install is undone first: its journal may hold the pointer.
 		await rollback(env.agentDir);
 		const payload = await selectPayload(host);
-		const { layers, changed } = await installHarness({ sourceDir: payload.dir, agentDir: env.agentDir }).catch(error => {
+		const { layers } = await installHarness({ sourceDir: payload.dir, agentDir: env.agentDir, log }).catch(error => {
 			trace(error);
 			throw fail("installFailed", { reason: error.message });
 		});
-		log("install " + (payload.revision ?? "built-in") + ": " + (changed ? "changed" : "unchanged"));
 		await ensureModel(model, assets.model, env.web, write).catch(error => {
 			trace(error);
 			write(error.message);
@@ -547,7 +555,7 @@ function createCli(host) {
 	async function update() {
 		const env = ready();
 		if (terminals.size) throw fail("closeTabs");
-		const result = await queued(() => updateHarness({ extensionPath, storageDir, version: host.version, agentDir: env.agentDir, web: env.web }));
+		const result = await queued(() => updateHarness({ extensionPath, storageDir, version: host.version, agentDir: env.agentDir, web: env.web, log }));
 		log("update: changed " + result.changed + ", stale " + result.stale);
 		void vscode.window.showInformationMessage(messages.updated);
 		if (result.stale) void vscode.window.showInformationMessage(messages.stale);
