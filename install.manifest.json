@@ -119,6 +119,10 @@
 			"to": "extensions/pi-voice-stt/index.js"
 		},
 		{
+			"from": "src/modules/rqw-runtime-config/zai-models.yml",
+			"to": "zai-models.yml"
+		},
+		{
 			"from": "src/modules/rqw-windows-pack/voice/stt.windows.json",
 			"to": "extensions/pi-voice-stt/stt.windows.json"
 		}

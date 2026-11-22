@@ -1,0 +1,9 @@
+providers:
+  zai:
+    auth: oauth
+    api: openai-completions
+    baseUrl: https://api.z.ai/api/coding/paas/v4
+    models:
+      - id: glm-5.3-flash
+      - id: glm-5.3-flashx
+        baseUrl: https://api.z.ai/api/paas/v4

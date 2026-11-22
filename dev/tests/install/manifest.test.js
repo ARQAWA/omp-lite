@@ -45,10 +45,15 @@ test("rqw-base-tools replaces the old installed base-tools", () => {
 	expect(manifest.config).toContainEqual({ from: "src/modules/rqw-base-tools/rqw-base-tools.yml", to: "config.yml", mode: "merge" });
 });
 
+test("the Z.ai fragment ships without replacing personal models.yml", () => {
+	expect(manifest.files).toContainEqual({ from: "src/modules/rqw-runtime-config/zai-models.yml", to: "zai-models.yml" });
+	expect(manifest.files.some(entry => /^models\.ya?ml$/.test(entry.to))).toBe(false);
+});
+
 test("targets stay inside the agent root and are unique", () => {
 	const targets = new Set();
 	for (const entry of manifest.files) {
-		expect(["extensions/", "skills/", "agents/", "rules/"].some(dir => entry.to.startsWith(dir)) || entry.to === "SYSTEM.md").toBe(true);
+		expect(["extensions/", "skills/", "agents/", "rules/"].some(dir => entry.to.startsWith(dir)) || ["SYSTEM.md", "zai-models.yml"].includes(entry.to)).toBe(true);
 		expect(entry.to.split("/")).not.toContain("..");
 		expect(targets.has(entry.to)).toBe(false);
 		targets.add(entry.to);

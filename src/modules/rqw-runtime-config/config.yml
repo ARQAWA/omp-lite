@@ -3,7 +3,8 @@ modelRoles:
   perCall: >-
     anthropic/claude-sonnet-5-5, anthropic/claude-opus-5-5, anthropic/claude-haiku-5-5, anthropic/claude-fable-5-2,
     openai-codex/gpt-6.2-astra, openai-codex/gpt-6.2-sol, openai-codex/gpt-6.1-terra, openai-codex/gpt-6-luna,
-    openrouter/deepseek/deepseek-v4.1-flash-1017
+    openrouter/deepseek/deepseek-v4.1-flash-1017,
+    zai/glm-5.3, zai/glm-5.3-flash, zai/glm-5.3-flashx
 enabledModels:
   # The first model is the one a session starts on: no modelRoles.default.
   - anthropic/claude-sonnet-5-5
@@ -15,12 +16,15 @@ enabledModels:
   - openai-codex/gpt-6.1-terra
   - openai-codex/gpt-6-luna
   - openrouter/deepseek/deepseek-v4.1-flash-1017
+  - zai/glm-5.3
+  - zai/glm-5.3-flash
+  - zai/glm-5.3-flashx
 # The :floor variant is what reaches the OpenRouter flex tier.
 providers:
   openrouterVariant: floor
   cacheWarmingStrategy: keepalive
   openaiLiveSteering: true
-# Only anthropic, openai-codex, opencode-go and openrouter stay open: every other model provider of OMP 19.1.0.
+# Only anthropic, openai-codex, opencode-go, openrouter and zai stay open.
 disabledProviders:
   - google
   - local
@@ -109,7 +113,6 @@ disabledProviders:
   - xiaomi-token-plan-cn
   - xiaomi-token-plan-sgp
   - yolo-auto
-  - zai
   - zenmux
   - zhipu-coding-plan
   - chutes
@@ -144,6 +147,9 @@ compaction:
     anthropic/claude-sonnet-4-6: f400000
     anthropic/claude-sonnet-5: f400000
     anthropic/claude-sonnet-5-5: f400000
+    zai/glm-5.3: f400000
+    zai/glm-5.3-flash: f400000
+    zai/glm-5.3-flashx: f400000
 symbolPreset: unicode
 composer:
   shape: claude
