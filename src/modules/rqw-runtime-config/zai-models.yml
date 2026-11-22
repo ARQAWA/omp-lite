@@ -1,8 +1,0 @@
-providers:
-  zai-api:
-    apiKey: ZAI_STANDARD_API_KEY
-    api: openai-completions
-    baseUrl: https://api.z.ai/api/paas/v4
-    models:
-      - id: glm-5.3-flashx
-        name: GLM-5.3-FlashX

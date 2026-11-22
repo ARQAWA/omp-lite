@@ -49,9 +49,7 @@ rm -f "$HOME/.omp/agent/extensions/background-jobs.js"
 
 ### Z.ai
 
-1. Для GLM-5.3 и Flash войди в OMP через `/login zai` или задай `ZAI_API_KEY` с ключом Coding Plan.
-2. Для FlashX получи отдельный [Standard API Key](https://docs.z.ai/devpack/notice/api-key-management) и задай `ZAI_STANDARD_API_KEY` в окружении OMP. Нужен баланс обычного API, подписки не хватит.
-3. Только после настройки стандартного ключа влей `providers.zai-api` из установленного `zai-models.yml` в `~/.omp/agent/models.yml`. Если есть только `models.yaml`, используй его. Сохрани копию существующего файла и не меняй другие секции.
+Для GLM-5.3 и Flash нужен GLM Coding Plan. Войди через `/login zai` или задай `ZAI_API_KEY` с ключом подписки.
 
 После Windows `Update` шаги Z.ai те же.
 
@@ -68,9 +66,8 @@ omp -p --no-session "ответь одним словом: ок"
 
 Харнес виден только в новой сессии.
 
-После настройки ключей проверь GLM-5.3 и Flash через `omp models zai`, FlashX — через `omp models zai-api`. В пикере харнеса из семейства Z.ai разрешены только эти три модели.
+В пикере харнеса из моделей Z.ai доступны GLM-5.3 и GLM-5.3-Flash.
 
 ## Откат
 
 Верни `config.bak` на место конфига. Файлы прежней версии ставятся этим же документом из её коммита.
-Если добавлял `providers.zai-api`, убери эту секцию или восстанови её прежнее содержимое из копии `models.yml`.
