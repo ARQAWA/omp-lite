@@ -17,4 +17,5 @@ test("the same nine models are enabled and named per spawn, the default chain us
 	for (const item of config.modelRoles.default.split(", ")) expect(config.enabledModels).toContain(item.replace(/:\w+$/, ""));
 	for (const name of ["anthropic", "openai-codex", "opencode-go", "openrouter"]) expect(config.disabledProviders).not.toContain(name);
 	expect(config.disabledProviders).toContain("kiro");
+	for (const name of ["claude", "claude-md", "claude-plugins"]) expect(config.disabledProviders).toContain(name);
 });

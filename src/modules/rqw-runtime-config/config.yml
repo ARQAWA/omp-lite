@@ -119,6 +119,10 @@ disabledProviders:
   - bifrost
   - antigravity-cli
   - kiro
+# Claude Code's own files: CLAUDE.md, .claude/, ~/.claude/, its marketplace plugins. Claude models stay.
+  - claude
+  - claude-md
+  - claude-plugins
 retry:
   fallbackChains:
     web: []

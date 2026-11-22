@@ -16,7 +16,7 @@ RQW Runtime Config: общие настройки OMP 19.0.0 одним файл
 
 **Экран:** `display.smoothStreaming: false` показывает текст и аргументы тулов по мере получения, без искусственной печати. Сам стриминг и остальные анимации не выключены. `display.collapseCompacted: true` прячет чат до компакшена за сводкой. `tui.completeScrollback: true` пишет в историю терминала верх растущего блока. `tui.autoGraph: "off"`: графиков под таблицами и запросов судье нет.
 
-**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`. В `disabledProviders` перечислены 97 закрытых id: белого списка в OMP нет. `enabledModels` и роль `perCall` держат одни и те же 9 точных имён: четыре Claude, четыре GPT, DeepSeek через `openrouter`. `perCall` это модели, которые можно назвать сабагенту. Моделей `opencode-go` в списках нет; сам провайдер открыт: статуслайн показывает остаток его подписки. `modelRoles.default`: DeepSeek через `openrouter`. Он есть во встроенном каталоге OMP: старт не зависит от кэша моделей. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter сюда не входит: его кладут руками в `~/.omp/agent/models.yml`.
+**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`. В `disabledProviders` перечислены 97 закрытых id провайдеров моделей: белого списка в OMP нет. `enabledModels` и роль `perCall` держат одни и те же 9 точных имён: четыре Claude, четыре GPT, DeepSeek через `openrouter`. `perCall` это модели, которые можно назвать сабагенту. Моделей `opencode-go` в списках нет; сам провайдер открыт: статуслайн показывает остаток его подписки. `modelRoles.default`: DeepSeek через `openrouter`. Он есть во встроенном каталоге OMP: старт не зависит от кэша моделей. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter сюда не входит: его кладут руками в `~/.omp/agent/models.yml`.
 
 **Хуки:** нет.
 
@@ -27,6 +27,7 @@ RQW Runtime Config: общие настройки OMP 19.0.0 одним файл
 **Тест:** `bun test dev/tests/harness/rqw-runtime-config`. Правило одного места проверяет `bun test dev/tests/install`.
 
 **Границы:**
+- **Обвязка Claude Code выключена:** в `disabledProviders` стоят `claude` (`.claude/` проекта и `~/.claude/`: `CLAUDE.md`, скиллы, команды, хуки, тулы, расширения, `settings.json`, `SYSTEM.md`, MCP), `claude-md` (`CLAUDE.md` в проекте и выше) и `claude-plugins` (плагины Claude Code и их сабагенты). Модели Claude и вход в подписку Anthropic работают. Не выключаются штатно: разовое чтение `~/.claude/history.jsonl` демоном подсказок композера при пустой базе, импорт `--from-claude`, `omp claude-trace`.
 - `enabledModels` только прячет модели из выбора. Провайдера закрывает `disabledProviders`.
 - Новый провайдер новой версии OMP надо дописать в `disabledProviders` руками.
 - Новую модель надо дописать в три места: `enabledModels`, `perCall`, карта порогов.

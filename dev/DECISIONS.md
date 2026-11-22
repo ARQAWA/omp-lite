@@ -2825,3 +2825,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** тесты 106 pass.
 
 **Носители:** `src/modules/rqw-windows-pack/vscode/index.js`, README модуля, `dev/tests/harness/rqw-windows-pack/tabs.test.js`.
+
+## D-167 — обвязка Claude Code выключена
+
+**Решение:** в `disabledProviders` (`rqw-runtime-config/config.yml`) добавлены `claude`, `claude-md`, `claude-plugins`. OMP больше не читает `CLAUDE.md`, папки `.claude/` проекта и `~/.claude/` (скиллы, команды, хуки, тулы, расширения, `settings.json`, `SYSTEM.md`, MCP) и плагины Claude Code с их сабагентами. Модели Claude и вход в подписку Anthropic не тронуты.
+
+**Основание:** слова владельца от 2026-11-22: «надо всю поддержку клауд кода отключить полностью», «у нас модели клауд должны работать, а клауд-код не должны работать только внутренности именно для самого клауд-кода, то есть там всякие клауд Мд, всякие там сабагенты и прочая хуйня», «Да давай делай план выше».
+
+**Механика OMP 19.0.0**, каталог `packages/coding-agent/src`: `discovery/claude.ts`, `discovery/claude-md.ts`, `discovery/claude-plugins.ts` (id провайдеров), `capability/index.ts` (`disabledProviders` выключает провайдера и пользовательский источник), `task/discovery.ts` (`.claude/agents` OMP не читает; сабагенты плагинов идут через `claude-plugins`).
+
+**Не выключается штатно, оставлено:** `daemon/modules/predict.ts` и `predict/foreign-history.ts` один раз читают `~/.claude/history.jsonl`, когда база подсказок композера пуста; импорт `--from-claude`; команда `omp claude-trace`. Маскировка под Claude Code в `packages/ai/src/providers/anthropic-*.ts` нужна подписке и не трогается.
+
+**Носители:** `src/modules/rqw-runtime-config/config.yml`, README модуля, `dev/tests/harness/rqw-runtime-config/rqw-runtime-config.test.js`.
