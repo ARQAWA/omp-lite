@@ -49,7 +49,7 @@ rm -f "$HOME/.omp/agent/extensions/background-jobs.js"
 
 ### AGY (Google Antigravity)
 
-Модели AGY берут авторизацию из keychain agy. Зайди один раз в agy (`agy login`), отдельный вход не нужен.
+Модели AGY берут авторизацию из keychain agy: запусти agy один раз и войди в гугл, отдельный вход в omp не нужен. Только Mac: на машине VDI AGY не используется.
 
 ### Z.ai
 
