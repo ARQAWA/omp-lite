@@ -16,7 +16,7 @@ RQW Runtime Config: общие настройки OMP 19.1.0. Кода нет.
 
 **Экран:** `display.smoothStreaming: false` показывает текст и аргументы тулов по мере получения, без искусственной печати. Сам стриминг и остальные анимации не выключены. `display.collapseCompacted: true` прячет чат до компакшена за сводкой. `tui.autoGraph: "off"`: графиков под таблицами и запросов судье нет.
 
-**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `zai`, `agy`. В `enabledModels` и `perCall` 14 имён: четыре Claude, четыре GPT, DeepSeek, две GLM и три AGY. `opencode-go` открыт для остатков подписки, без моделей в списках. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter кладут в `~/.omp/agent/models.yml`.
+**Модели:** открыты `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `zai`, `agy`. Сбой `agy/gemini-4-hydrogen` уводит на `agy/gemini-4-neon` (`retry.fallbackChains` по ключу модели); роль `web` без запасных. В `enabledModels` и `perCall` 14 имён: четыре Claude, четыре GPT, DeepSeek, две GLM и три AGY. `opencode-go` открыт для остатков подписки, без моделей в списках. `providers.openrouterVariant: floor` просит самого дешёвого поставщика. Ключ OpenRouter кладут в `~/.omp/agent/models.yml`.
 
 **Z.ai:** только `zai/glm-5.3` и `zai/glm-5.3-flash` через Coding Plan. Прежний платный провайдер `zai-api` выключен.
 

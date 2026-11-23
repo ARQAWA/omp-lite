@@ -132,6 +132,8 @@ disabledProviders:
 retry:
   fallbackChains:
     web: []
+    "agy/gemini-4-hydrogen":
+      - agy/gemini-4-neon
 compaction:
   modelThresholds:
     openai-codex/gpt-6.2-sol: f400000
