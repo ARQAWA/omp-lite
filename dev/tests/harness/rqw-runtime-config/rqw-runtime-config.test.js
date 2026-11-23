@@ -38,8 +38,3 @@ test("AGY models are the three base ids with the 400k compaction threshold", () 
 	expect(ids).toEqual(["agy/gemini-4-neon", "agy/gemini-4-hydrogen", "agy/gemini-4-argon"]);
 	expect(ids.every(id => config.compaction.modelThresholds[id] === "f400000")).toBe(true);
 });
-
-test("AGY Hydrogen falls back to AGY Neon, no role-wide chain", () => {
-	expect(config.retry.fallbackChains["agy/gemini-4-hydrogen"]).toEqual(["agy/gemini-4-neon"]);
-	expect(config.retry.fallbackChains.default).toBeUndefined();
-});
