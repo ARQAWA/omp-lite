@@ -34,6 +34,22 @@ beforeEach(() => {
 	index.resetCaches();
 });
 
+test("токен: keychain, при пустом keychain файл agy, иначе ошибка с обоими источниками", async () => {
+	const spawn = spyOn(Bun, "spawnSync").mockImplementation(() => ({ stdout: Buffer.from(keychain + "\n") }));
+	const file = spyOn(Bun, "file").mockImplementation(() => ({ exists: async () => true, json: async () => ({ token: { refresh_token: "from-file" } }) }));
+	try {
+		expect(await index.readRefreshToken()).toBe("r1");
+		spawn.mockImplementation(() => ({ stdout: Buffer.from("") }));
+		expect(await index.readRefreshToken()).toBe("from-file");
+		expect(file.mock.calls[0][0]).toBe(data.tokenFile.replace("~", process.env.HOME));
+		file.mockImplementation(() => ({ exists: async () => false }));
+		expect(index.readRefreshToken()).rejects.toThrow("AGY: нет токена agy");
+	} finally {
+		spawn.mockRestore();
+		file.mockRestore();
+	}
+});
+
 test("cleanSchema сворачивает запрещённые ключи в description и чистит properties по значениям", () => {
 	const cleaned = index.cleanSchema({
 		type: "object",
@@ -44,7 +60,7 @@ test("cleanSchema сворачивает запрещённые ключи в de
 	expect(cleaned).toEqual({
 		type: "object",
 		properties: {
-			n: { type: "integer", description: "{minimum: 1, maximum: 9}" },
+			n: { type: "integer", minimum: 1, description: "{maximum: 9}" },
 			t: { type: "string", description: '{type: ["string","null"]}' },
 		},
 		required: ["n"],
@@ -61,6 +77,7 @@ test("buildRequest собирает конверт agy: labels по алфави
 			messages: [
 				{ role: "user", content: "вопрос" },
 				{ role: "assistant", content: [
+					{ type: "thinking", thinking: "думаю", summary: true },
 					{ type: "text", text: "ответ", textSignature: "SIG-TEXT" },
 					{ type: "toolCall", id: "c1", name: "read", arguments: { path: "a" }, thoughtSignature: "SIG-CALL" },
 				] },
@@ -93,17 +110,17 @@ test("buildRequest собирает конверт agy: labels по алфави
 	expect(request.request.tools).toEqual([{ functionDeclarations: [{ name: "read", description: "читай", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } }] }]);
 	expect(request.request.contents).toEqual([
 		{ role: "user", parts: [{ text: "вопрос" }] },
-		{ role: "model", parts: [{ text: "ответ", thoughtSignature: "SIG-TEXT" }, { functionCall: { name: "read", args: { path: "a" } }, thoughtSignature: "SIG-CALL" }] },
-		{ role: "user", parts: [{ functionResponse: { name: "read", response: { output: "данные" } } }] },
+		{ role: "model", parts: [{ text: "ответ", thoughtSignature: "SIG-TEXT" }, { functionCall: { id: "c1", name: "read", args: { path: "a" } }, thoughtSignature: "SIG-CALL" }] },
+		{ role: "model", parts: [{ functionResponse: { id: "c1", name: "read", response: { output: "данные" } } }] },
 	]);
 	expect(request.request.generationConfig).toEqual({ maxOutputTokens: 65536, thinkingConfig: { includeThoughts: true, thinkingLevel: "MEDIUM" } });
-	expect(request.request.sessionId).toMatch(/^-/);
+	expect(request.request.sessionId).toMatch(/^-?\d{1,19}$/);
 	expect(wireSchemaCalls).toEqual(["read"]);
 	// усилие маршрутизирует wire-id базовой модели
 	const xhigh = index.buildRequest({ id: "gemini-4-neon", provider: "agy" }, { messages: [] }, index.conversation("xh"), "proj-1", "xhigh");
 	expect(xhigh.model).toBe("gemini-4-neon-xhigh");
 	expect(xhigh.request.labels.model_enum).toBe("MODEL_PLACEHOLDER_M535");
-	expect(xhigh.request.generationConfig.thinkingConfig.thinkingLevel).toBe("XHIGH");
+	expect(xhigh.request.generationConfig.thinkingConfig.thinkingLevel).toBe(100);
 	expect(xhigh.request.generationConfig.maxOutputTokens).toBe(262144);
 });
 
@@ -141,15 +158,15 @@ test("401 на стриме обновляет токен и повторяет 
 		seenAuth.push(init.headers.authorization);
 		if (streamCalls === 1) return new Response("нет доступа", { status: 401 });
 		return new Response(sseBody([
-			{ response: { candidates: [{ content: { parts: [{ text: "ок" }] } }] } },
-			{ response: { candidates: [{ finishReason: "STOP" }] } },
+			{ response: { candidates: [{ content: { parts: [{ functionCall: { id: "call_7", name: "read", args: { path: "a" } }, thoughtSignature: "SIG-CALL" }] } }] } },
+			{ response: { candidates: [{ content: { parts: [{ text: "ок" }] }, finishReason: "STOP" }] } },
 		]));
 	};
 	index.run({ id: "gemini-4-neon-low", provider: "agy" }, { messages: [{ role: "user", content: "привет" }] }, { fetch: fetcher }, fakeStream());
 	await new Promise(resolve => setTimeout(resolve, 10));
 	expect(streamCalls).toBe(2);
 	expect(seenAuth).toEqual(["Bearer t1", "Bearer t2"]);
-	expect(events.find(event => event.type === "done").message.content[0].text).toBe("ок");
+	expect(events.find(event => event.type === "done").message.content).toMatchObject([{ type: "toolCall", id: "call_7", name: "read" }, { type: "text", text: "ок" }]);
 	spawn.mockRestore();
 });
 
@@ -207,4 +224,26 @@ test("agy models groups new Gemini efforts without adding old or non-chat rows",
 	} finally {
 		spawn.mockRestore();
 	}
+});
+
+test("квота agy: свой запрос retrieveUserQuotaSummary и два лимита Gemini в отчёте usage", async () => {
+	const calls = [];
+	const fetcher = async (url, init) => {
+		calls.push([url, init]);
+		if (url === data.tokenUrl) return new Response(JSON.stringify({ access_token: "t1", expires_in: 3600 }));
+		if (url.endsWith(data.loadCodeAssistPath)) return new Response(JSON.stringify({ cloudaicompanionProject: "aicode-consumers" }));
+		return new Response(JSON.stringify({ groups: [
+			{ buckets: [{ bucketId: "3p-5h", displayName: "Five Hour Limit Remaining", window: "5h", resetTime: "2026-11-23T12:25:12Z", remainingFraction: 1 }] },
+			{ buckets: [{ bucketId: "gemini-weekly", displayName: "Weekly Limit Remaining", window: "weekly", resetTime: "2026-11-29T11:19:33Z", remainingFraction: 0.75 }, { bucketId: "gemini-5h", displayName: "Five Hour Limit Remaining", window: "5h", resetTime: "2026-11-23T12:08:52Z", remainingFraction: 0.5 }] },
+		] }));
+	};
+	const registered = {};
+	index.default({ setLabel() {}, registerProvider: (name, config) => { registered[name] = config; } });
+	const report = await registered.agy.usage.fetchUsage({}, { fetch: fetcher });
+	expect(registered.agy.usage.id).toBe("agy");
+	expect(calls[2]).toEqual([data.endpoint + data.quotaPath, { method: "POST", headers: index.authHeaders("t1"), body: JSON.stringify({ project: "aicode-consumers" }) }]);
+	expect(report).toEqual({ provider: "agy", fetchedAt: expect.any(Number), limits: [
+		{ id: "gemini-weekly", label: "Weekly Limit Remaining", scope: { provider: "agy", windowId: "weekly", shared: true }, window: { id: "weekly", label: "Weekly Limit Remaining", resetsAt: Date.parse("2026-11-29T11:19:33Z") }, amount: { unit: "percent", remainingFraction: 0.75, usedFraction: 0.25 } },
+		{ id: "gemini-5h", label: "Five Hour Limit Remaining", scope: { provider: "agy", windowId: "5h", shared: true }, window: { id: "5h", label: "Five Hour Limit Remaining", resetsAt: Date.parse("2026-11-23T12:08:52Z") }, amount: { unit: "percent", remainingFraction: 0.5, usedFraction: 0.5 } },
+	] });
 });

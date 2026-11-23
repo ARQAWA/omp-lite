@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { reportMatchesActiveAccount } from "@oh-my-pi/pi-coding-agent/slash-commands/helpers/active-oauth-account";
 
 const readUsage = () => new Promise((resolve, reject) => execFile("omp", ["usage", "--json"], { timeout: 20000, maxBuffer: 1 << 20 }, (error, stdout) => error ? reject(error) : resolve(stdout)));
-const groups = [["anthropic", "10-cc", "CC", ["7d"]], ["openai-codex", "20-cx", "CX", ["7d"]], ["opencode-go", "30-go", "Go", ["7d", "monthly"]]];
+const groups = [["anthropic", "10-cc", "CC", ["7d"]], ["openai-codex", "20-cx", "CX", ["7d"]], ["opencode-go", "30-go", "Go", ["7d", "monthly"]], ["agy", "40-agy", "AGY", ["weekly", "5h"]]];
 
 export default function subscriptions(pi, read = readUsage) {
 	pi.on("session_start", (_event, ctx) => {

@@ -4,7 +4,7 @@
  * конверт project/requestId/labels/sessionId, systemInstruction с role user,
  * tools с legacy parameters, SSE-события {response:...}. Данные — в json рядом.
  */
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { AssistantMessageEventStream, toolWireSchema } from "@oh-my-pi/pi-ai";
 import { getBundledModel } from "@oh-my-pi/pi-catalog/models";
 import data from "./rqw-agy-provider.json";
@@ -12,7 +12,7 @@ import data from "./rqw-agy-provider.json";
 const STREAM_URL = data.endpoint + data.streamPath;
 const LOAD_CODE_ASSIST_URL = data.endpoint + data.loadCodeAssistPath;
 
-// ---------- авторизация: keychain agy + обмен токена ----------
+// ---------- авторизация: keychain или файл agy + обмен токена ----------
 
 let cachedToken;
 let tokenInFlight;
@@ -24,10 +24,12 @@ export function parseKeychainSecret(text, prefix = data.keychain.prefix) {
 	return typeof refresh === "string" && refresh ? refresh : undefined;
 }
 
-export function readRefreshToken() {
+// agy держит токен в keychain; когда keychain недоступен, пишет файл
+export async function readRefreshToken() {
 	const out = Bun.spawnSync(["security", "find-generic-password", "-s", data.keychain.service, "-a", data.keychain.account, "-w"]);
-	const refresh = parseKeychainSecret(out.stdout.toString().trim());
-	if (!refresh) throw new Error(`AGY: в keychain нет записи ${data.keychain.service}/${data.keychain.account} (залогинься в agy)`);
+	const file = Bun.file(data.tokenFile.replace("~", process.env.HOME));
+	const refresh = parseKeychainSecret(out.stdout.toString().trim()) ?? ((await file.exists()) ? (await file.json()).token?.refresh_token : undefined);
+	if (!refresh) throw new Error(`AGY: нет токена agy в keychain (${data.keychain.service}/${data.keychain.account}) и в файле ${data.tokenFile} (залогинься в agy)`);
 	return refresh;
 }
 
@@ -38,7 +40,7 @@ async function fetchToken(fetcher) {
 		client_id: decode(data.clientId, data.clientIdEncoding),
 		client_secret: decode(data.clientSecret, data.clientSecretEncoding),
 		grant_type: "refresh_token",
-		refresh_token: readRefreshToken(),
+		refresh_token: await readRefreshToken(),
 	});
 	const response = await fetcher(data.tokenUrl, {
 		method: "POST",
@@ -97,8 +99,8 @@ export function conversation(key) {
 	const k = key ?? "default";
 	let conv = conversations.get(k);
 	if (!conv) {
-		// sessionId — отрицательный int63, как у agy
-		const sessionId = `-${BigInt(Math.floor(Math.random() * 9e17)).toString()}`;
+		// sessionId — случайный int64 со знаком, как у agy
+		const sessionId = BigInt.asIntN(64, randomBytes(8).readBigUInt64BE()).toString();
 		conv = { agentId: randomUUID(), trajectoryId: randomUUID(), sessionId, step: 0, requestCount: 0 };
 		conversations.set(k, conv);
 	}
@@ -127,42 +129,44 @@ export function messageParts(message) {
 	}
 	if (message.role === "assistant") {
 		const parts = [];
+		// мысль перед вызовом тула agy в историю не возвращает
+		const toolCall = message.content.some(block => block.type === "toolCall");
 		for (const block of message.content) {
 			if (block.type === "text" && block.text.trim()) {
 				parts.push({ text: block.text, ...(block.textSignature ? { thoughtSignature: block.textSignature } : {}) });
-			} else if (block.type === "thinking" && (block.thinking.trim() || block.thinkingSignature)) {
+			} else if (block.type === "thinking" && !toolCall && (block.thinking.trim() || block.thinkingSignature)) {
 				parts.push({ thought: true, text: block.thinking, ...(block.thinkingSignature ? { thoughtSignature: block.thinkingSignature } : {}) });
 			} else if (block.type === "toolCall") {
 				parts.push({
-					functionCall: { name: block.name, args: block.arguments ?? {} },
+					functionCall: { id: block.id, name: block.name, args: block.arguments ?? {} },
 					...(block.thoughtSignature ? { thoughtSignature: block.thoughtSignature } : {}),
 				});
 			}
 		}
 		return parts;
 	}
-	// toolResult: functionResponse {name, response:{output|error}} одним part
+	// toolResult: functionResponse {id, name, response:{output|error}} одним part, id — как у вызова
 	const text = message.content.filter(c => c.type === "text").map(c => c.text).join("\n");
-	return [{ functionResponse: { name: message.toolName, response: message.isError ? { error: text } : { output: text } } }];
+	return [{ functionResponse: { id: message.toolCallId, name: message.toolName, response: message.isError ? { error: text } : { output: text } } }];
 }
 
 export function wireContents(context) {
 	const contents = [];
 	for (const message of context.messages) {
-		const role = message.role === "assistant" ? "model" : "user";
+		const role = message.role === "assistant" || message.role === "toolResult" ? "model" : "user";
 		const parts = messageParts(message);
 		if (!parts.length) continue;
-		// все functionResponse идут одним user-ходом, как у agy
+		// результат тула идёт своим ходом role model; подряд идущие результаты — одним ходом
 		const last = contents[contents.length - 1];
-		if (message.role === "toolResult" && last?.role === "user" && last.parts.some(p => p.functionResponse)) last.parts.push(...parts);
+		if (message.role === "toolResult" && last?.role === "model" && last.parts.some(p => p.functionResponse)) last.parts.push(...parts);
 		else contents.push({ role, parts });
 	}
 	return contents;
 }
 
-// google принимает ограниченный набор ключей схемы; у agy запрещённые
-// ключи свёрнуты в description строкой вида "{minimum: 1, maximum: ...}"
-const ALLOWED_SCHEMA_KEYS = { type: true, description: true, properties: true, required: true, items: true, enum: true, anyOf: true };
+// agy шлёт type, description, properties, required, items, enum, minimum, minLength, minItems;
+// прочие ключи сворачиваются в description строкой вида "{maximum: 9}"
+const ALLOWED_SCHEMA_KEYS = { type: true, description: true, properties: true, required: true, items: true, enum: true, minimum: true, minLength: true, minItems: true, anyOf: true };
 
 export function cleanSchema(schema) {
 	if (Array.isArray(schema)) return schema.map(cleanSchema);
@@ -227,7 +231,7 @@ export function buildRequest(model, context, conv, project, effort) {
 			labels,
 			generationConfig: {
 				maxOutputTokens: model.maxTokens ?? (wireModel.includes("argon") ? 65536 : 262144),
-				thinkingConfig: { includeThoughts: true, thinkingLevel: suffix.toUpperCase() },
+				thinkingConfig: { includeThoughts: true, thinkingLevel: suffix === "xhigh" ? 100 : suffix.toUpperCase() },
 			},
 			sessionId: conv.sessionId,
 		},
@@ -310,7 +314,6 @@ export async function run(model, context, options, stream) {
 			appendDelta(delta, signature);
 		};
 
-		let toolCounter = 0;
 		let started = false;
 		const handleChunk = chunk => {
 			if (chunk.error) throw new Error(`AGY: stream error ${chunk.error.code ?? ""} ${chunk.error.message ?? chunk.error.status ?? ""}`);
@@ -323,7 +326,7 @@ export async function run(model, context, options, stream) {
 					closeBlock();
 					const toolCall = {
 						type: "toolCall",
-						id: `${part.functionCall.name}_${Date.now()}_${++toolCounter}`,
+					id: part.functionCall.id,
 						name: part.functionCall.name,
 						arguments: part.functionCall.args ?? {},
 						...(part.thoughtSignature ? { thoughtSignature: part.thoughtSignature } : {}),
@@ -404,6 +407,31 @@ export function resetCaches() {
 	conversations.clear();
 }
 
+// ---------- квота: retrieveUserQuotaSummary, окна gemini-weekly и gemini-5h ----------
+
+export async function fetchUsage({ signal }, { fetch: fetcher }) {
+	const token = await accessToken(fetcher);
+	const response = await fetcher(data.endpoint + data.quotaPath, {
+		method: "POST",
+		headers: authHeaders(token),
+		body: JSON.stringify({ project: await project(fetcher, token) }),
+		signal,
+	});
+	if (!response.ok) throw new Error(`AGY: квота ${response.status}`);
+	const buckets = (await response.json()).groups?.flatMap(group => group.buckets ?? []) ?? [];
+	return {
+		provider: "agy",
+		fetchedAt: Date.now(),
+		limits: data.quotaBuckets.flatMap(id => buckets.filter(bucket => bucket.bucketId === id).map(bucket => ({
+			id,
+			label: bucket.displayName,
+			scope: { provider: "agy", windowId: bucket.window, shared: true },
+			window: { id: bucket.window, label: bucket.displayName, resetsAt: Date.parse(bucket.resetTime) },
+			amount: { unit: "percent", remainingFraction: bucket.remainingFraction, usedFraction: 1 - bucket.remainingFraction },
+		}))),
+	};
+}
+
 // ---------- регистрация провайдера ----------
 
 export async function discoverModels() {
@@ -439,6 +467,7 @@ export default function agyProvider(pi) {
 		apiKey: "agy-keychain",
 		api: "agy-api",
 		fetchDynamicModels: discoverModels,
+		usage: { id: "agy", fetchUsage },
 		streamSimple(model, context, options = {}) {
 			const stream = new AssistantMessageEventStream();
 			void run(model, context, options, stream);

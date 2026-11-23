@@ -14,15 +14,15 @@ function mount(read, override = {}) {
 test("main TUI refreshes shared windows, chooses active account and clears absent marks", async () => {
 	const active = { email: "a", orgId: "one" }, accounts = () => [{ ...active, active: true }], identity = provider => provider === "anthropic" ? active : undefined;
 	const ctx = { modelRegistry: { authStorage: { oauth: { accounts, identity } } }, sessionManager: { getSessionId: () => "s" } };
-	let reports = [report("anthropic", [["7d", .414]], active), report("anthropic", [["7d", .82]], { email: "a", orgId: "two" }), report("openai-codex", [["7d", .62]]), report("opencode-go", [["7d", .73], ["monthly", .84]])];
+	let reports = [report("anthropic", [["7d", .414]], active), report("anthropic", [["7d", .82]], { email: "a", orgId: "two" }), report("openai-codex", [["7d", .62]]), report("opencode-go", [["7d", .73], ["monthly", .84]]), report("agy", [["weekly", .83], ["5h", 1]])];
 	const m = mount(async () => JSON.stringify({ reports }), ctx); await flush();
 	expect(m.interval).toBe(300000);
-	expect(m.painted).toEqual([["10-cc", "CC 41%"], ["20-cx", "CX 62%"], ["30-go", "Go 73%/84%"]]);
+	expect(m.painted).toEqual([["10-cc", "CC 41%"], ["20-cx", "CX 62%"], ["30-go", "Go 73%/84%"], ["40-agy", "AGY 83%/100%"]]);
 	reports = [report("anthropic", [["7d", 1, { shared: true, tier: "model" }]]), report("opencode-go", [["monthly", .5]])];
 	m.tick(); await flush();
-	expect(m.painted.slice(3)).toEqual([["10-cc", undefined], ["20-cx", undefined], ["30-go", "Go 50%"]]);
+	expect(m.painted.slice(4)).toEqual([["10-cc", undefined], ["20-cx", undefined], ["30-go", "Go 50%"], ["40-agy", undefined]]);
 	reports = [report("anthropic", [["7d", .2]], active), report("anthropic", [["7d", .8]], active)];
-	m.tick(); await flush(); expect(m.painted.at(-3)).toEqual(["10-cc", "CC 80%"]);
+	m.tick(); await flush(); expect(m.painted.at(-4)).toEqual(["10-cc", "CC 80%"]);
 });
 
 test("OAuth identity and sticky API-key row select only matching reports", async () => {
@@ -33,16 +33,16 @@ test("OAuth identity and sticky API-key row select only matching reports", async
 	const m = mount(async () => JSON.stringify({ reports }), ctx); await flush();
 	expect(m.painted.slice(0, 2)).toEqual([["10-cc", "CC 41%"], ["20-cx", "CX 30%"]]);
 	reports = reports.filter((_, i) => i === 1 || i === 3); m.tick(); await flush();
-	expect(m.painted.slice(3, 5)).toEqual([["10-cc", undefined], ["20-cx", undefined]]);
+	expect(m.painted.slice(4, 6)).toEqual([["10-cc", undefined], ["20-cx", undefined]]);
 	identity = undefined; sticky = undefined; m.tick(); await flush();
-	expect(m.painted.slice(6, 8)).toEqual([["10-cc", "CC 82%"], ["20-cx", "CX 90%"]]);
+	expect(m.painted.slice(8, 10)).toEqual([["10-cc", "CC 82%"], ["20-cx", "CX 90%"]]);
 });
 
 test("failed and overlapping reads leave marks intact; other sessions do not read", async () => {
 	let resolve, reads = 0;
 	const m = mount(() => { reads++; return new Promise(r => resolve = r); });
 	m.tick(); expect(reads).toBe(1); resolve(JSON.stringify({ reports: [] })); await flush();
-	m.tick(); resolve("invalid"); await flush(); expect(m.painted).toHaveLength(3);
+	m.tick(); resolve("invalid"); await flush(); expect(m.painted).toHaveLength(4);
 	for (const override of [{ mode: "print" }, { hasUI: false }, { agent: { kind: "sub" } }]) {
 		const read = mock(() => ""); mount(read, override); expect(read).not.toHaveBeenCalled();
 	}
