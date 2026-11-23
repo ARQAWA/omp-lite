@@ -3017,3 +3017,17 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** при выпуске `5cba8e4` прошли все 119 тестов (`bun test dev/tests`). Установленный `SYSTEM.md` совпал с исходником побайтно.
 
 **Носители:** [системный промпт](../src/modules/rqw-system-core/SYSTEM.md), [README модуля](../src/modules/rqw-system-core/README.md).
+
+## D-183 — паритет транспорта AGY с agy и квота Gemini в виджете
+
+**Решение:** провайдер `agy` сверен с полными дампами agy 1.5.14 (35 вызовов модели) и поправлен своим кодом: токен из keychain, при пустом keychain из файла agy; xhigh шлёт `thinkingLevel: 100`; `sessionId` — случайный int64 со знаком; `id` тула берётся из ответа сервера и идёт в `functionCall` и `functionResponse`, результат тула — ходом `role: "model"`; мысль перед вызовом тула в историю не возвращается; `minimum`, `minLength`, `minItems` идут полями схем. Своя квота: `POST retrieveUserQuotaSummary`, бакеты `gemini-weekly` и `gemini-5h` уходят в `omp usage` через `usage` провайдера. Виджет печатает `AGY <неделя>%/<5 ч>%` после `Go`.
+
+**Основание:** владелец: «Убедиться в том, что у нас транспорт сетевой антигравити надежно реализован и работает так же, как у оригинального, снятого через Reverse Engineering»; «нужно спланировать апгрейд виджета этих юзеджев и запилить туда юзадж Гемини недельный 5-часовой»; «мы пишем свой нет код»; «Мы не переиспользуем чужой код, готовый, связанный с неткодом»; «встраиваем в OMP конвенциональным способом ОМПшным». План на восемь задач принят: «Да давай, делай задачи полностью твоя от начала до конца».
+
+**Механика OMP 19.1.1:** `usage?: UsageProvider` в `packages/coding-agent/src/extensibility/extensions/types.ts`, контракт отчёта в `packages/ai/src/usage.ts`. Из OMP — только крючки `registerProvider`, `streamSimple`, `usage`.
+
+**Границы:** сервер Google отвечает `429 RESOURCE_EXHAUSTED` на штатный промпт OMP без `SYSTEM.md`: фильтр срабатывает на строку `You are omp's trusted coding assistant` (`packages/coding-agent/src/prompts/system/system-prompt.md:1`). Промпт из `SYSTEM.md` строки не содержит, с ним вызовы проходят. Обход фильтра не делался: решение за владельцем. Не внесено по плану: типы схем тулов строчными, одна part в `systemInstruction`, телеметрия agy.
+
+**Проверка:** `bun test dev/tests` — 121 pass. Живые вызовы штатным входом с промптом `SYSTEM.md`: xhigh (`thinkingLevel: 100`, HTTP 200), тул `read` (HTTP 200 на обоих ходах, `id` от сервера, `cacheRead` 796), `omp usage --json` — отчёт `agy` с двумя бакетами, статус-бар — `AGY 83%/98%`. Слепое ревью работы: 3 раунда, принято.
+
+**Носители:** [провайдер](../src/modules/rqw-agy-provider/index.js), [README провайдера](../src/modules/rqw-agy-provider/README.md), [виджет](../src/modules/rqw-harness-interface/subscriptions.js), [история провайдера](history/rqw-agy-provider.md), [история виджета](history/subscriptions.md), [INSTALL.md](../INSTALL.md), `dev/tests/harness/rqw-agy-provider/`, `dev/tests/harness/rqw-harness-interface/subscriptions.test.js`.
