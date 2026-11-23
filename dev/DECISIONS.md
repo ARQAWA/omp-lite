@@ -2993,3 +2993,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `verify` 216/216; `bun test dev/tests` 119 pass за 246 мс. После установки `verify --runtime --no-tests` 219/219. Живые пробы 15/15: запросы повторно разобраны по сохранённым снимкам после исправления проверки стартовых шаблонов. В `perCall` видны GLM-5.4 и единственный DeepSeek OpenRouter. Без Anthropic восстанавливается сохранённая GLM-5.4.
 
 **Носители:** `src/modules/rqw-runtime-config/`, `src/modules/rqw-agy-provider/`, `install.manifest.json`.
+
+## D-181 — выпуск ARQAWA OMPCLI 0.0.23
+
+**Решение:** `arqawa.ompcli` 0.0.23 опубликован для `win32-x64`. В поставке OMP 19.1.1 и харнес D-180.
+
+**Основание:** владелец попросил сначала поставить в лайв и запушить, затем выпустить Marketplace, если нужен новый пакет. Пин `omp.exe` изменился.
+
+**Проверка:** ревизия payload `f4ff886a1b61d5c4b49b72c91cf6fcc9d9cf001b`. VSIX: 215035201 байт, SHA-256 `b63f414b1ecba0dd1c6339fd8508b323264394679fd5005399a002b180134cb9`. Загружен `2026-11-23T10:51:39Z`. Marketplace: `{"version":"0.0.23","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-23T11:03:44.33Z"}`. 119 тестов за 246 мс, 219/219 проверок установки и 15/15 групп проб на Mac.
+
+**Границы:** запуск на Windows VDI не проверен.
+
+**Носители:** `src/modules/rqw-windows-pack/vscode/`; `dist/ompcli-0.0.23-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
