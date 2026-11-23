@@ -239,8 +239,8 @@ export function registration(version, id) {
 	return text.slice(text.lastIndexOf("register(", at), text.indexOf("});", at));
 }
 export const providerIds = version => [...show(version, contract.providers.ids).matchAll(/\|\s*"([^"]+)"/g)].map(found => found[1]);
-/** Every model id the config names: enabled, thresholds, roles. */
-export const modelsOf = config => [...new Set([...config.enabledModels, ...Object.keys(config.compaction?.modelThresholds ?? {}), ...Object.values(config.modelRoles ?? {}).flatMap(role => role.split(",").map(id => id.trim().replace(/:\w+$/, "")))])];
+/** Exact selectors the config names; startup scope globs are not model ids. */
+export const modelsOf = config => [...new Set([...config.enabledModels, ...Object.keys(config.compaction?.modelThresholds ?? {}), ...Object.values(config.modelRoles ?? {}).flatMap(role => role.split(",").map(id => id.trim().replace(/:\w+$/, "")))])].filter(id => !/[*?[]/.test(id));
 
 /**
  * The harness of `repo` against OMP `version`: every reliance of the harness on OMP, one row each.

@@ -99,6 +99,14 @@
 			"to": "extensions/rqw-harness-interface/turn-duration.js"
 		},
 		{
+			"from": "src/modules/rqw-runtime-config/index.js",
+			"to": "extensions/rqw-runtime-config/index.js"
+		},
+		{
+			"from": "src/modules/rqw-runtime-config/blocked-models.json",
+			"to": "extensions/rqw-runtime-config/blocked-models.json"
+		},
+		{
 			"from": "src/modules/rqw-agy-provider/index.js",
 			"to": "extensions/rqw-agy-provider/index.js"
 		},

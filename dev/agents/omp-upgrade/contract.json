@@ -7,12 +7,15 @@
 	"providers": {
 		"config": "src/modules/rqw-runtime-config/config.yml",
 		"ids": "packages/catalog/src/compat/provider-ids.ts",
-		"open": ["anthropic", "openai-codex", "opencode-go", "openrouter"]
+		"open": ["anthropic", "openai-codex", "opencode-go", "openrouter", "zai"]
 	},
 	"pin": "src/modules/rqw-windows-pack/vscode/runtime.json",
 	"exports": {
 		"@oh-my-pi/pi-coding-agent/config/registry": ["lookup"],
 		"@oh-my-pi/pi-coding-agent/config/model-resolver": ["formatModelStringWithRouting"],
+		"@oh-my-pi/pi-coding-agent/config/model-settings": ["cfgEnabledModels"],
+		"@oh-my-pi/pi-coding-agent/session/context-settings": ["cfgCompactionModelThresholds"],
+		"@oh-my-pi/pi-coding-agent/task/settings": ["cfgTaskPerCallModelAllow"],
 		"@oh-my-pi/pi-coding-agent/utils/file-display-mode": ["resolveFileDisplayMode"],
 		"@oh-my-pi/pi-coding-agent/tools/approval-cache": ["approvalDirectoryKey", "approvalCacheKeyForPath"],
 		"@oh-my-pi/pi-coding-agent/tools/read": ["ReadTool"],
@@ -46,6 +49,8 @@
 		{ "use": "rqw-codex-adapter: поля Codex", "path": "packages/ai/src/providers/openai-codex/request-transformer.ts", "has": "all_turns" },
 		{ "use": "rqw-system-core: threads выключены", "path": "packages/ai/src/providers/anthropic-threads.ts", "has": "PI_ANTHROPIC_MESSAGE_THREADS" },
 		{ "use": "rqw-system-core: памятка без пометки per-call", "path": "packages/coding-agent/src/extensibility/extensions/runner.ts", "has": "#isRepeatedProjection" },
+		{ "use": "rqw-runtime-config: обновление списка моделей", "path": "packages/coding-agent/src/config/model-registry.ts", "has": "subscribeMirror" },
+		{ "use": "rqw-agy-provider: подхват каталога AGY", "path": "packages/coding-agent/src/extensibility/extensions/types.ts", "has": "fetchDynamicModels" },
 		{ "use": "rqw-harness-interface model-picker.js: список без enabledModels", "path": "packages/coding-agent/src/extensibility/extensions/model-api.ts", "has": "getAvailable" },
 		{ "use": "rqw-harness-interface model-picker.js: фильтр enabledModels", "path": "packages/coding-agent/src/config/model-settings.ts", "has": "cfgEnabledModels" },
 		{ "use": "rqw-harness-interface model-picker.js: глобальные настройки", "path": "packages/coding-agent/src/config/settings.ts", "has": "export const settings" },

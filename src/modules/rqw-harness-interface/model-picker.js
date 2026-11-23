@@ -114,7 +114,7 @@ export default function modelPicker(pi, advisor) {
 						if (draft && owner === generation) await advisor.save(draft);
 						return;
 					}
-					// OMP 19.1.0 model-api.ts lists models without enabledModels; session/model-controls.ts filters by cfgEnabledModels.
+					// OMP 19.1.1 model-api.ts lists models without enabledModels; session/model-controls.ts filters by cfgEnabledModels.
 					const models = enabled(ctx.models.list(), cfgEnabledModels.get(settings));
 					if (!models.length) return ctx.ui.notify(data.noModelsAvailable, "warning");
 					const current = ctx.models.current() ?? ctx.model;

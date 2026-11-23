@@ -1,10 +1,10 @@
 {
-  "version": "19.1.0",
+  "version": "19.1.1",
   "assets": {
     "omp": {
-      "url": "https://github.com/can1357/oh-my-pi/releases/download/v19.1.0/omp-windows-x64.exe",
-      "sha256": "b9ed82d7b06d6d5fa9e8149a845a37ffb1c0ab03bef9f1737ee5f9f2460bcb19",
-      "size": 264806400,
+      "url": "https://github.com/can1357/oh-my-pi/releases/download/v19.1.1/omp-windows-x64.exe",
+      "sha256": "4e18f472975bb87f9b1992f1d5981b9a1403fd559cdb3eb96f1f1a7d709096ef",
+      "size": 261432320,
       "file": "omp.exe"
     },
     "model": {

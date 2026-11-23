@@ -1,27 +1,14 @@
 modelRoles:
   web: openai-codex/gpt-6-luna
-  perCall: >-
-    anthropic/claude-sonnet-5-5, anthropic/claude-opus-5-5, anthropic/claude-haiku-5-5, anthropic/claude-fable-5-2,
-    openai-codex/gpt-6.2-astra, openai-codex/gpt-6.2-sol, openai-codex/gpt-6.1-terra, openai-codex/gpt-6-luna,
-    openrouter/deepseek/deepseek-v4.1-flash-1017,
-    zai/glm-5.3, zai/glm-5.3-flash,
-    agy/gemini-4-neon, agy/gemini-4-hydrogen, agy/gemini-4-argon
 enabledModels:
-  # The first model is the one a session starts on: no modelRoles.default.
+  # Startup preference; the extension fills the live scope from the catalog.
   - anthropic/claude-sonnet-5-5
-  - anthropic/claude-opus-5-5
-  - anthropic/claude-haiku-5-5
-  - anthropic/claude-fable-5-2
-  - openai-codex/gpt-6.2-astra
-  - openai-codex/gpt-6.2-sol
-  - openai-codex/gpt-6.1-terra
-  - openai-codex/gpt-6-luna
+  - "anthropic/*"
+  - "openai-codex/*"
+  - "opencode-go/*"
   - openrouter/deepseek/deepseek-v4.1-flash-1017
-  - zai/glm-5.3
-  - zai/glm-5.3-flash
-  - agy/gemini-4-neon
-  - agy/gemini-4-hydrogen
-  - agy/gemini-4-argon
+  - "zai/*"
+  - "agy/*"
 # The :floor variant is what reaches the OpenRouter flex tier.
 providers:
   openrouterVariant: floor
@@ -132,30 +119,6 @@ disabledProviders:
 retry:
   fallbackChains:
     web: []
-compaction:
-  modelThresholds:
-    openai-codex/gpt-6.2-sol: f400000
-    openai-codex/gpt-6.1-terra: f400000
-    anthropic/claude-fable-5: f400000
-    anthropic/claude-fable-5-1: f400000
-    anthropic/claude-fable-5-2: f400000
-    anthropic/claude-haiku-5-5: f400000
-    anthropic/claude-mythos-5: f400000
-    anthropic/claude-mythos-5-1: f400000
-    anthropic/claude-mythos-5-2: f400000
-    anthropic/claude-opus-4-6: f400000
-    anthropic/claude-opus-4-7: f400000
-    anthropic/claude-opus-4-8: f400000
-    anthropic/claude-opus-5: f400000
-    anthropic/claude-opus-5-5: f400000
-    anthropic/claude-sonnet-4-6: f400000
-    anthropic/claude-sonnet-5: f400000
-    anthropic/claude-sonnet-5-5: f400000
-    zai/glm-5.3: f400000
-    zai/glm-5.3-flash: f400000
-    agy/gemini-4-neon: f400000
-    agy/gemini-4-hydrogen: f400000
-    agy/gemini-4-argon: f400000
 symbolPreset: unicode
 composer:
   shape: claude

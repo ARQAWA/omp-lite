@@ -6,6 +6,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { AssistantMessageEventStream, toolWireSchema } from "@oh-my-pi/pi-ai";
+import { getBundledModel } from "@oh-my-pi/pi-catalog/models";
 import data from "./rqw-agy-provider.json";
 
 const STREAM_URL = data.endpoint + data.streamPath;
@@ -225,7 +226,7 @@ export function buildRequest(model, context, conv, project, effort) {
 			...(tools ? { tools } : {}),
 			labels,
 			generationConfig: {
-				maxOutputTokens: wireModel.includes("argon") ? 65536 : 262144,
+				maxOutputTokens: model.maxTokens ?? (wireModel.includes("argon") ? 65536 : 262144),
 				thinkingConfig: { includeThoughts: true, thinkingLevel: suffix.toUpperCase() },
 			},
 			sessionId: conv.sessionId,
@@ -405,12 +406,39 @@ export function resetCaches() {
 
 // ---------- регистрация провайдера ----------
 
+export async function discoverModels() {
+	const child = Bun.spawn(["agy", "models"], { stdout: "pipe", stderr: "ignore" });
+	const text = await new Response(child.stdout).text();
+	if (await child.exited) throw new Error("agy models failed");
+	const models = new Map();
+	for (const line of text.split("\n")) {
+		const [wire, name] = line.split("\t");
+		if (!name || !wire.startsWith("gemini-") || /orchestrator|-(?:image|disabled|sonar)(?:-|$)/.test(wire)) continue;
+		const effort = wire.match(/-(low|medium|high|xhigh)$/)?.[1];
+		const id = effort ? wire.slice(0, -effort.length - 1) : wire;
+		if (data.models.some(model => model.id === id)) continue;
+		if (!models.has(id)) {
+			const known = getBundledModel("antigravity-cli", id) ?? getBundledModel("google-antigravity", id);
+			models.set(id, { id, name: name.replace(/ \([^)]+\)$/, ""), input: ["text", "image"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: known?.contextWindow ?? undefined, maxTokens: known?.maxTokens ?? 64000 });
+		}
+		if (effort) {
+			const model = models.get(id);
+			model.reasoning = true;
+			model.thinking ??= { mode: "google-level", efforts: [], defaultLevel: effort };
+			model.thinking.efforts.push(effort);
+		}
+	}
+	return [...models.values()];
+}
+
 export default function agyProvider(pi) {
+	if (process.platform !== "darwin") return;
 	pi.setLabel("AGY Antigravity");
 	pi.registerProvider("agy", {
 		baseUrl: data.endpoint,
 		apiKey: "agy-keychain",
 		api: "agy-api",
+		fetchDynamicModels: discoverModels,
 		streamSimple(model, context, options = {}) {
 			const stream = new AssistantMessageEventStream();
 			void run(model, context, options, stream);

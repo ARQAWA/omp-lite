@@ -18,6 +18,9 @@ mock.module("@oh-my-pi/pi-ai", () => ({
 		throw last;
 	},
 }));
+mock.module("@oh-my-pi/pi-catalog/models", () => ({
+	getBundledModel: (provider, id) => provider === "antigravity-cli" && id === "gemini-4-new" ? { contextWindow: 750000, maxTokens: 64000 } : undefined,
+}));
 const index = await import("../../../../src/modules/rqw-agy-provider/index.js");
 import data from "../../../../src/modules/rqw-agy-provider/rqw-agy-provider.json";
 
@@ -189,4 +192,19 @@ test("заблокированный фильтром запрос отдаёт 
 	expect(streamCalls).toBe(1);
 	expect(events.find(event => event.type === "error").error.errorMessage).toBe("AGY: запрос заблокирован фильтром (SAFETY)");
 	spawn.mockRestore();
+});
+
+test("agy models groups new Gemini efforts without adding old or non-chat rows", async () => {
+	const spawn = spyOn(Bun, "spawn").mockReturnValue({
+		stdout: "gemini-4-new-high\tGemini 4 New (High)\ngemini-4-new-low\tGemini 4 New (Low)\ngemini-4-neon-high\tNeon\nclaude-sonnet-5-5\tClaude\ngemini-4-new-image\tImage\n",
+		exited: Promise.resolve(0),
+	});
+	try {
+		const models = await index.discoverModels();
+		expect(models.map(({ id, thinking }) => [id, thinking.efforts])).toEqual([["gemini-4-new", ["high", "low"]]]);
+		expect(models[0].contextWindow).toBe(750000);
+		expect(index.buildRequest(models[0], { messages: [] }, index.conversation("new"), "project", "low").model).toBe("gemini-4-new-low");
+	} finally {
+		spawn.mockRestore();
+	}
 });

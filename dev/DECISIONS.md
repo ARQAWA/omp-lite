@@ -2981,3 +2981,15 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests/harness` — 102 pass. Локально после установки: пикер отдаёт 11 моделей AGY, живые вызовы Neon/Hydrogen/Argon вернули ответ, кэш виден в usage.
 
 **Носители:** `src/modules/rqw-agy-provider/`, `src/modules/rqw-runtime-config/`, `dev/tests/harness/rqw-agy-provider/`, `dev/tests/harness/rqw-runtime-config/`, `dev/tests/harness/rqw-codex-adapter/`, `install.manifest.json`, `INSTALL.md`.
+
+## D-180 — Каталог моделей OMP 19.1.1
+
+**Решение:** храним исключённые `provider/id`. Пикер и `perCall` получают один список из каталога. Из OpenRouter остаётся только DeepSeek Flash. GLM-5.3-FlashX-Legal исключена. Для окон больше 500 000 действует `f400000`. AGY берёт новые Gemini из `agy models`.
+
+В точное ожидание ворот добавлен уже открытый `zai`; доступность других провайдеров не менялась.
+
+**Механика OMP 19.1.1:** `packages/coding-agent/src/config/model-registry.ts`, `config/registry.ts`, `task/model-approval.ts`, `extensibility/extensions/types.ts` (`fetchDynamicModels`). Версии OMP и Windows-пакета подняты; эталон `read` обновлён.
+
+**Проверка:** `verify` 216/216; `bun test dev/tests` 119 pass за 246 мс. После установки `verify --runtime --no-tests` 219/219. Живые пробы 15/15: запросы повторно разобраны по сохранённым снимкам после исправления проверки стартовых шаблонов. В `perCall` видны GLM-5.4 и единственный DeepSeek OpenRouter. Без Anthropic восстанавливается сохранённая GLM-5.4.
+
+**Носители:** `src/modules/rqw-runtime-config/`, `src/modules/rqw-agy-provider/`, `install.manifest.json`.
