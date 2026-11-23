@@ -52,7 +52,7 @@ test("cleanSchema сворачивает запрещённые ключи в de
 test("buildRequest собирает конверт agy: labels по алфавиту, подписи, functionResponse, thinkingLevel", () => {
 	const conv = index.conversation("build");
 	const request = index.buildRequest(
-		{ id: "gemini-4-argon-medium", provider: "agy" },
+		{ id: "gemini-4-argon", provider: "agy" },
 		{
 			systemPrompt: [" СИС ", ""],
 			messages: [
@@ -67,6 +67,7 @@ test("buildRequest собирает конверт agy: labels по алфави
 		},
 		conv,
 		"proj-1",
+		"medium",
 	);
 	expect(request.project).toBe("proj-1");
 	expect(request.requestId).toMatch(/^agent\/[0-9a-f-]+\/\d+\/[0-9a-f-]+\/1$/);
@@ -95,6 +96,12 @@ test("buildRequest собирает конверт agy: labels по алфави
 	expect(request.request.generationConfig).toEqual({ maxOutputTokens: 65536, thinkingConfig: { includeThoughts: true, thinkingLevel: "MEDIUM" } });
 	expect(request.request.sessionId).toMatch(/^-/);
 	expect(wireSchemaCalls).toEqual(["read"]);
+	// усилие маршрутизирует wire-id базовой модели
+	const xhigh = index.buildRequest({ id: "gemini-4-neon", provider: "agy" }, { messages: [] }, index.conversation("xh"), "proj-1", "xhigh");
+	expect(xhigh.model).toBe("gemini-4-neon-xhigh");
+	expect(xhigh.request.labels.model_enum).toBe("MODEL_PLACEHOLDER_M535");
+	expect(xhigh.request.generationConfig.thinkingConfig.thinkingLevel).toBe("XHIGH");
+	expect(xhigh.request.generationConfig.maxOutputTokens).toBe(262144);
 });
 
 test("стрим ведёт текст, подпись и usage с cacheRead до done", async () => {

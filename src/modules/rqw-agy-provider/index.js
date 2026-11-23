@@ -197,10 +197,12 @@ export function wireTools(tools) {
 	})) }];
 }
 
-export function buildRequest(model, context, conv, project) {
+export function buildRequest(model, context, conv, project, effort) {
 	const systemPrompts = (context.systemPrompt ?? []).map(t => t.trim()).filter(Boolean);
-	const suffix = model.id.match(/-(low|medium|high|xhigh)$/)?.[1] ?? "medium";
-	const modelEnum = data.modelEnums[model.id];
+	// усилие выбирает wire-id: gemini-4-neon + high -> gemini-4-neon-high
+	const wireModel = effort && !/-(low|medium|high|xhigh)$/.test(model.id) ? `${model.id}-${effort}` : model.id;
+	const suffix = wireModel.match(/-(low|medium|high|xhigh)$/)?.[1] ?? "medium";
+	const modelEnum = data.modelEnums[wireModel];
 	// labels — ключи в алфавитном порядке, как у agy
 	const labels = {
 		cascade_id: conv.agentId,
@@ -223,12 +225,12 @@ export function buildRequest(model, context, conv, project) {
 			...(tools ? { tools } : {}),
 			labels,
 			generationConfig: {
-				maxOutputTokens: model.id.includes("argon") ? 65536 : 262144,
+				maxOutputTokens: wireModel.includes("argon") ? 65536 : 262144,
 				thinkingConfig: { includeThoughts: true, thinkingLevel: suffix.toUpperCase() },
 			},
 			sessionId: conv.sessionId,
 		},
-		model: model.id,
+		model: wireModel,
 		userAgent: "antigravity",
 		requestType: "agent",
 	};
@@ -254,7 +256,7 @@ export async function run(model, context, options, stream) {
 	try {
 		const fetcher = options.fetch ?? fetch;
 		let token = await accessToken(fetcher);
-		const wire = buildRequest(model, context, conversation(options.sessionId), await project(fetcher, token));
+		const wire = buildRequest(model, context, conversation(options.sessionId), await project(fetcher, token), options.reasoning);
 		const send = () => fetcher(STREAM_URL, { method: "POST", headers: authHeaders(token), body: JSON.stringify(wire), signal: options.signal });
 		let response = await send();
 		if (response.status === 401) {
@@ -411,6 +413,7 @@ export default function agyProvider(pi) {
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 			contextWindow: 1048576,
 			maxTokens: m.maxTokens,
+			thinking: { mode: "google-level", efforts: m.efforts, defaultLevel: m.efforts.includes("medium") ? "medium" : m.efforts.at(-1) },
 		})),
 	});
 }

@@ -3,7 +3,7 @@
 AGY Antigravity: нативный провайдер моделей Google Antigravity для OMP. OMP сам собирает пакет запроса и шлёт его в Google, без посредников.
 
 **Назначение:**
-1. провайдер `agy` с 11 моделями: Neon, Hydrogen (low, medium, high, xhigh) и Argon (low, medium, high);
+1. провайдер `agy` с 3 моделями: Neon, Hydrogen и Argon; усилие — переключателем omp (low, medium, high, xhigh; у Argon без xhigh), на провод уходит id вида `gemini-4-neon-high`;
 2. авторизация из keychain agy (`gemini`/`antigravity`) с обменом refresh-токена на access;
 3. пакет запроса как у оригинального agy-клиента: конверт `project`/`requestId`, `systemInstruction` с role user, `tools` с legacy `parameters`, labels, `sessionId`;
 4. неявный кэш Google: неизменный префикс и стабильные ids конверсации, `cachedContentTokenCount` уходит в `cacheRead`.

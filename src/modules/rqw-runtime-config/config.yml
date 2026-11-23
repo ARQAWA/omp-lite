@@ -5,7 +5,7 @@ modelRoles:
     openai-codex/gpt-6.2-astra, openai-codex/gpt-6.2-sol, openai-codex/gpt-6.1-terra, openai-codex/gpt-6-luna,
     openrouter/deepseek/deepseek-v4.1-flash-1017,
     zai/glm-5.3, zai/glm-5.3-flash,
-    agy/gemini-4-neon-low, agy/gemini-4-neon-medium, agy/gemini-4-neon-high, agy/gemini-4-neon-xhigh, agy/gemini-4-hydrogen-low, agy/gemini-4-hydrogen-medium, agy/gemini-4-hydrogen-high, agy/gemini-4-hydrogen-xhigh, agy/gemini-4-argon-low, agy/gemini-4-argon-medium, agy/gemini-4-argon-high
+    agy/gemini-4-neon, agy/gemini-4-hydrogen, agy/gemini-4-argon
 enabledModels:
   # The first model is the one a session starts on: no modelRoles.default.
   - anthropic/claude-sonnet-5-5
@@ -19,17 +19,9 @@ enabledModels:
   - openrouter/deepseek/deepseek-v4.1-flash-1017
   - zai/glm-5.3
   - zai/glm-5.3-flash
-  - agy/gemini-4-neon-low
-  - agy/gemini-4-neon-medium
-  - agy/gemini-4-neon-high
-  - agy/gemini-4-neon-xhigh
-  - agy/gemini-4-hydrogen-low
-  - agy/gemini-4-hydrogen-medium
-  - agy/gemini-4-hydrogen-high
-  - agy/gemini-4-hydrogen-xhigh
-  - agy/gemini-4-argon-low
-  - agy/gemini-4-argon-medium
-  - agy/gemini-4-argon-high
+  - agy/gemini-4-neon
+  - agy/gemini-4-hydrogen
+  - agy/gemini-4-argon
 # The :floor variant is what reaches the OpenRouter flex tier.
 providers:
   openrouterVariant: floor
@@ -161,17 +153,9 @@ compaction:
     anthropic/claude-sonnet-5-5: f400000
     zai/glm-5.3: f400000
     zai/glm-5.3-flash: f400000
-    agy/gemini-4-neon-low: f400000
-    agy/gemini-4-neon-medium: f400000
-    agy/gemini-4-neon-high: f400000
-    agy/gemini-4-neon-xhigh: f400000
-    agy/gemini-4-hydrogen-low: f400000
-    agy/gemini-4-hydrogen-medium: f400000
-    agy/gemini-4-hydrogen-high: f400000
-    agy/gemini-4-hydrogen-xhigh: f400000
-    agy/gemini-4-argon-low: f400000
-    agy/gemini-4-argon-medium: f400000
-    agy/gemini-4-argon-high: f400000
+    agy/gemini-4-neon: f400000
+    agy/gemini-4-hydrogen: f400000
+    agy/gemini-4-argon: f400000
 symbolPreset: unicode
 composer:
   shape: claude
