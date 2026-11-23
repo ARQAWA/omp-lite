@@ -309,13 +309,12 @@ export async function run(model, context, options, stream) {
 			appendDelta(delta, signature);
 		};
 
-		const reader = response.body.getReader();
-		const decoder = new TextDecoder();
-		let buffer = "";
 		let toolCounter = 0;
 		let started = false;
 		const handleChunk = chunk => {
 			if (chunk.error) throw new Error(`AGY: stream error ${chunk.error.code ?? ""} ${chunk.error.message ?? chunk.error.status ?? ""}`);
+			const blockReason = chunk.response?.promptFeedback?.blockReason;
+			if (blockReason) throw new Error(`AGY: запрос заблокирован фильтром (${blockReason})`);
 			const candidate = chunk.response?.candidates?.[0];
 			for (const part of candidate?.content?.parts ?? []) {
 				if (!started) { started = true; stream.push({ type: "start", partial: output }); }
@@ -360,17 +359,29 @@ export async function run(model, context, options, stream) {
 				};
 			}
 		};
-		for (;;) {
-			const { done, value } = await reader.read();
-			if (done) break;
-			buffer += decoder.decode(value, { stream: true });
-			let index;
-			while ((index = buffer.indexOf("\n")) >= 0) {
-				const line = buffer.slice(0, index).trim();
-				buffer = buffer.slice(index + 1);
-				if (!line.startsWith("data:")) continue;
-				handleChunk(JSON.parse(line.slice(5)));
+		const consume = async response => {
+			const reader = response.body.getReader();
+			const decoder = new TextDecoder();
+			let buffer = "";
+			for (;;) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				buffer += decoder.decode(value, { stream: true });
+				let index;
+				while ((index = buffer.indexOf("\n")) >= 0) {
+					const line = buffer.slice(0, index).trim();
+					buffer = buffer.slice(index + 1);
+					if (!line.startsWith("data:")) continue;
+					handleChunk(JSON.parse(line.slice(5)));
+				}
 			}
+		};
+		await consume(response);
+		// сервер иногда рвёт стрим без ошибки: один повтор, пока ответ пуст
+		if (!sawFinish && !output.content.length) {
+			response = await send();
+			if (!response.ok || !response.body) throw new Error(`AGY: ${response.status} ${(await response.text().catch(() => "")).slice(0, 500)}`);
+			await consume(response);
 		}
 		closeBlock();
 		if (!sawFinish) throw new Error("AGY: стрим оборвался без finishReason");

@@ -149,3 +149,44 @@ test("401 на стриме обновляет токен и повторяет 
 	expect(events.find(event => event.type === "done").message.content[0].text).toBe("ок");
 	spawn.mockRestore();
 });
+
+test("мёртвый стрим без finishReason повторяется один раз", async () => {
+	const spawn = spyOn(Bun, "spawnSync").mockImplementation(() => ({ stdout: Buffer.from(keychain + "\n") }));
+	let streamCalls = 0;
+	const fetcher = async (url, init) => {
+		if (url === data.tokenUrl) return new Response(JSON.stringify({ access_token: "t1", expires_in: 3600 }));
+		if (url.endsWith(data.loadCodeAssistPath)) return new Response(JSON.stringify({ cloudaicompanionProject: "p" }));
+		streamCalls += 1;
+		if (streamCalls === 1) return new Response(sseBody([
+			{ response: { candidates: [], usageMetadata: { promptTokenCount: 111444, totalTokenCount: 111444 } } },
+		]));
+		return new Response(sseBody([
+			{ response: { candidates: [{ content: { parts: [{ text: "ок" }] } }] } },
+			{ response: { candidates: [{ finishReason: "STOP" }] } },
+		]));
+	};
+	index.run({ id: "gemini-4-hydrogen", provider: "agy" }, { messages: [{ role: "user", content: "привет" }] }, { fetch: fetcher, reasoning: "high" }, fakeStream());
+	await new Promise(resolve => setTimeout(resolve, 10));
+	expect(streamCalls).toBe(2);
+	expect(events.filter(event => event.type === "error")).toHaveLength(0);
+	expect(events.find(event => event.type === "done").message.content[0].text).toBe("ок");
+	spawn.mockRestore();
+});
+
+test("заблокированный фильтром запрос отдаёт blockReason без повтора", async () => {
+	const spawn = spyOn(Bun, "spawnSync").mockImplementation(() => ({ stdout: Buffer.from(keychain + "\n") }));
+	let streamCalls = 0;
+	const fetcher = async url => {
+		if (url === data.tokenUrl) return new Response(JSON.stringify({ access_token: "t1", expires_in: 3600 }));
+		if (url.endsWith(data.loadCodeAssistPath)) return new Response(JSON.stringify({ cloudaicompanionProject: "p" }));
+		streamCalls += 1;
+		return new Response(sseBody([
+			{ response: { promptFeedback: { blockReason: "SAFETY" }, usageMetadata: { promptTokenCount: 10, totalTokenCount: 10 } } },
+		]));
+	};
+	index.run({ id: "gemini-4-hydrogen", provider: "agy" }, { messages: [{ role: "user", content: "привет" }] }, { fetch: fetcher }, fakeStream());
+	await new Promise(resolve => setTimeout(resolve, 10));
+	expect(streamCalls).toBe(1);
+	expect(events.find(event => event.type === "error").error.errorMessage).toBe("AGY: запрос заблокирован фильтром (SAFETY)");
+	spawn.mockRestore();
+});
