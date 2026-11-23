@@ -8,7 +8,7 @@ AGY Antigravity: нативный провайдер моделей Google Antig
 3. пакет запроса как у оригинального agy-клиента: конверт `project`/`requestId`, `systemInstruction` с role user, `tools` с legacy `parameters`, labels, `sessionId`;
 4. неявный кэш Google: неизменный префикс и стабильные ids конверсации, `cachedContentTokenCount` уходит в `cacheRead`.
 
-**Источник поведения:** митм-реверс agy-клиента 1.5.14 (дампы у владельца). Константы — в `rqw-agy-provider.json`.
+**Источник поведения:** митм-реверс agy-клиента 1.5.14. Инструмент для новых снимков — репозиторий `~/ai-project/agy-tools` (по соседству с omp-lite): mitm-прокси и CA, запуск описан в его README. Константы — в `rqw-agy-provider.json`.
 
 **Вход OMP:** расширение `extensions/rqw-agy-provider/index.js`, `pi.registerProvider("agy", ...)` с собственным api `agy-api` и `streamSimple`. Механика расширений и `streamSimple` — OMP 19.1.0 `packages/coding-agent/src/extensibility/`, `packages/ai/src/api-registry.ts`.
 
