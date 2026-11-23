@@ -46,6 +46,18 @@ test("subagents get nothing", () => {
 	expect(run([{ role: "user", content: "hi" }], "sub")).toBeUndefined();
 });
 
+test("the OMP critical block leaves every request, the payload itself stays", () => {
+	let handler;
+	core({ on: (name, fn) => name === "before_provider_request" && (handler = fn) });
+	const head = "<critical>\n- Each response MUST advance the task; completion only stopping condition.\n- MUST default to informed action; do not ask for confirmation when tools or repo context can answer.\n";
+	const main = `${head}- Before yielding, MUST verify significant behavioral changes: run the specific test, command, or scenario covering the change.\n</critical>`;
+	const sub = `${head}- Changes complete → yield; verification is main agent's job. NEVER run it yourself unless your assignment explicitly instructs it.\n</critical>`;
+	const other = "<critical>\nNEVER repeat successful setup.\n</critical>";
+	const payload = { system: [{ text: `</project-context>\n\n${main}\n\nappend` }], input: [{ content: [{ text: `ctx\n\n${sub}` }] }], tools: [{ description: other }], n: 1 };
+	expect(handler({ payload })).toEqual({ system: [{ text: "</project-context>\n\nappend" }], input: [{ content: [{ text: "ctx" }] }], tools: [{ description: other }], n: 1 });
+	expect(payload.system[0].text).toContain(main);
+});
+
 test("threads are off", () => {
 	expect(process.env.PI_ANTHROPIC_MESSAGE_THREADS).toBe("0");
 });

@@ -20,7 +20,9 @@
 
 **Памятка:** константа `REMINDER`, два блока: `## Communication` и `## Workflow`. Она дописывается последним блоком в каждое сообщение владельца по пути к модели. Модель видит одно сообщение: текст владельца и памятку. История и экран не меняются. Сабагенты памятку не получают.
 
-**Хук:** `context`, перед каждым запросом (`extensibility/extensions/runner.ts`, `emitContext`).
+**Хуки:** `context`, перед каждым запросом (`extensibility/extensions/runner.ts`, `emitContext`). `before_provider_request`, перед отправкой каждого запроса (`emitBeforeProviderRequest`).
+
+**Блок `<critical>` OMP:** OMP всегда дописывает его после `SYSTEM.md` (`prompts/system/project-prompt.md`, `system-prompt.ts`, `buildSystemPrompt`), выключателя нет. Главному агенту блок велит запускать проверку перед сдачей: это спорит с `SYSTEM.md`. Хук `before_provider_request` вырезает блок из запроса у главного агента и у сабагентов. Другие блоки `<critical>` остаются. Хук отдаёт копию запроса: OMP сравнивает свой запрос со следующим (`packages/ai/src/providers/openai-codex-responses.ts`, `buildCodexChainedRequestBody`). Граница: провайдер `agy` хук не зовёт, там блок остаётся. После обновления OMP сверь текст блока с регуляркой `CRITICAL`.
 
 **Костыль в коде модуля, файлы OMP не правятся:**
 

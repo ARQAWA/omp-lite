@@ -3031,3 +3031,17 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests` — 121 pass. Живые вызовы штатным входом с промптом `SYSTEM.md`: xhigh (`thinkingLevel: 100`, HTTP 200), тул `read` (HTTP 200 на обоих ходах, `id` от сервера, `cacheRead` 796), `omp usage --json` — отчёт `agy` с двумя бакетами, статус-бар — `AGY 83%/98%`. Слепое ревью работы: 3 раунда, принято.
 
 **Носители:** [провайдер](../src/modules/rqw-agy-provider/index.js), [README провайдера](../src/modules/rqw-agy-provider/README.md), [виджет](../src/modules/rqw-harness-interface/subscriptions.js), [история провайдера](history/rqw-agy-provider.md), [история виджета](history/subscriptions.md), [INSTALL.md](../INSTALL.md), `dev/tests/harness/rqw-agy-provider/`, `dev/tests/harness/rqw-harness-interface/subscriptions.test.js`.
+
+## D-184 — блок `<critical>` OMP вырезается из запроса
+
+**Решение:** [rqw-system-core](../src/modules/rqw-system-core/index.js) хуком `before_provider_request` вырезает из каждого запроса блок `<critical>`, который OMP дописывает после `SYSTEM.md`. Режутся обе формы блока: главного агента и сабагента. Другие блоки `<critical>` остаются. Хук отдаёт копию запроса.
+
+**Основание:** владелец: «Надо отключить именно критикал, критикал блок, полностью вырезать его. Весь критикал»; «перехватит подготовительный payload перед отправкой в провайдер и просто вырежет». Строка блока «Before yielding, MUST verify significant behavioral changes: run the specific test» спорит с D-182.
+
+**Механика OMP 19.1.1:** блок зашит в `packages/coding-agent/src/prompts/system/project-prompt.md` и клеится всегда (`system-prompt.ts`, `buildSystemPrompt`); настройки нет. `before_agent_start` не подошёл: ход без сообщения владельца идёт без него (`session/agent-session.ts`, `#prepareUserAuthoredWake`). Копия нужна Codex: `packages/ai/src/providers/openai-codex-responses.ts`, `buildCodexChainedRequestBody` сравнивает прошлый запрос с новым.
+
+**Границы:** провайдер `agy` не зовёт `onPayload`, у него блок остаётся. Текст блока привязан к OMP 19.1.1.
+
+**Проверка:** тест модуля на обе формы блока, чужой `<critical>` и неизменность исходного запроса.
+
+**Носители:** [код](../src/modules/rqw-system-core/index.js), [README модуля](../src/modules/rqw-system-core/README.md), `dev/tests/harness/rqw-system-core/`.
