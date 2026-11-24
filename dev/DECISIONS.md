@@ -3101,3 +3101,7 @@ Blind и high больше не различаются ни моделью, ни
 ## D-192 — три переноса между модулями
 
 `rqw-base-tools` владеет подсказкой `eval` о JavaScript и работе с файлами, а также `edit.autoRepair.enabled`. Правила делегирования остаются в `rqw-codex-adapter`. Удаление `extensions/background-jobs.js` задаёт `remove` манифеста для обеих установок.
+
+## D-193 — штатное поведение редактора
+
+Харнес больше не включает авторемонт. Без переопределения OMP 19.1.1 использует `false` (`packages/coding-agent/src/edit/settings.ts`).
