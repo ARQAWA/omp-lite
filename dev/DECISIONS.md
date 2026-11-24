@@ -3083,3 +3083,17 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests` — 114 pass, 0 fail. В OMP 19.1.1 команды RPC `get_available_models` и `get_model_picker` вернули ровно две модели Go.
 
 **Носители:** `src/modules/rqw-runtime-config/`, его тест, `INSTALL.md`.
+
+## D-191 — три расхождения из ревью харнеса
+
+**Решение:** из описания `eval` убрана строка «Use Python only for rare tasks...»: `eval.py: false` выключает Python. Из `rqw-runtime-config/config.yml` убран `display.showTurnTime`. В корневом `README.md` число модулей: 7.
+
+**Основание:** владелец: «да, исправь пункты 1, 3, 4».
+
+**Механика OMP 19.1.1:** `packages/tui/src/chat/chat-transcript-builder.ts`: время хода выводится только вместе с расходом токенов, а `display.showTokenUsage: false`. Время хода показывает `turn-duration.js`.
+
+**Границы:** уточняет D-146 и запись о выключении `eval.py`. В рантайм не установлено.
+
+**Проверка:** `bun test dev/tests` — 114 pass, 0 fail.
+
+**Носители:** `src/modules/rqw-codex-adapter/index.js`, его тест, `src/modules/rqw-runtime-config/config.yml`, `README.md`.
