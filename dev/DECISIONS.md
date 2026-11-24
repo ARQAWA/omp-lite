@@ -3069,3 +3069,17 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** диф и тест профиля сверены чтением; запусков нет.
 
 **Носители:** `src/modules/rqw-reviewer/`, `dev/tests/harness/rqw-reviewer/`.
+
+## D-190 — две модели OpenCode Go в выборе OMP
+
+**Решение:** в `enabledModels` остаются `opencode-go/deepseek-v4.1-flash` и `opencode-go/hy4-flash-free`. При обновлении каталога модуль берёт эти точные имена из глобального конфига или установочного слоя VDI. Старые исключения Go удалены. Пикеры и `perCall` получают отфильтрованный список; другие провайдеры не меняются.
+
+**Основание:** владелец: «Патч запрещен, делаем то в рамках чего у нас есть доступ максимально что для нас доступно».
+
+**Механика OMP 19.1.1:** `packages/coding-agent/src/config/settings.ts` (`mirrorState`), `config/model-registry.ts` (`subscribeMirror`), `session/model-controls.ts` (`getAvailableModels`), `task/model-approval.ts` (`perCall`).
+
+**Границы:** уточняет D-180 для Go. Штатный каталог `omp models` и явный ручной выбор не ограничены. OMP и VSIX не меняются.
+
+**Проверка:** `bun test dev/tests` — 114 pass, 0 fail. В OMP 19.1.1 команды RPC `get_available_models` и `get_model_picker` вернули ровно две модели Go.
+
+**Носители:** `src/modules/rqw-runtime-config/`, его тест, `INSTALL.md`.
