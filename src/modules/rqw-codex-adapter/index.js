@@ -34,7 +34,7 @@ const EDITS = {
 			"For 2+ independent items, use a named `workpool()`; results auto-deliver.\n",
 			"- `agent`, `workpool`: background subagents, DAG waves \u2192 help://eval/agents\n",
 		],
-		add: "Use JavaScript (Bun) by default. Use Python only for rare tasks requiring Python-specific libraries, such as pandas, NumPy or Matplotlib.\nFor project file reading and searching, use the read, grep and glob tools. Use eval for computation, not as a substitute for those tools.",
+		add: "Use JavaScript (Bun) by default.\nFor project file reading and searching, use the read, grep and glob tools. Use eval for computation, not as a substitute for those tools.",
 		swap: ['eval(language="py", code="%load \\"scripts/my setup.py\\"")', 'eval(language="js", code="%load \\"scripts/my setup.js\\"")'],
 	},
 };

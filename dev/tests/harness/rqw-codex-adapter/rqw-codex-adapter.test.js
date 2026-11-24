@@ -73,7 +73,7 @@ test("eval: Bun by default, no agent and workpool hints, direct calls blocked", 
 		].join("\n"),
 	};
 	request([tool]);
-	expect(tool.description).toBe('One cell per call.\nUse JavaScript (Bun) by default. Use Python only for rare tasks requiring Python-specific libraries, such as pandas, NumPy or Matplotlib.\nFor project file reading and searching, use the read, grep and glob tools. Use eval for computation, not as a substitute for those tools.\n' + docs + '\neval(language="js", code="%load \\"scripts/my setup.js\\"")');
+	expect(tool.description).toBe('One cell per call.\nUse JavaScript (Bun) by default.\nFor project file reading and searching, use the read, grep and glob tools. Use eval for computation, not as a substitute for those tools.\n' + docs + '\neval(language="js", code="%load \\"scripts/my setup.js\\"")');
 	const guard = load().hooks.tool_call;
 	for (const code of ['await agent("read")', "workpool ()"]) {
 		expect(guard({ toolName: "_eval", input: { code } })).toEqual({ block: true, reason: "Direct agent() and workpool() calls are blocked in eval. Use the task tool for explicitly requested delegation." });
