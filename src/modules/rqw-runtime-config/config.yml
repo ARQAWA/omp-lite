@@ -145,7 +145,6 @@ display:
   hideToolActivity: false
   subagentLivePreview: false
   smoothStreaming: false
-  showTurnTime: true
   shellVisualization: false
   collapseCompacted: true
 tui:
