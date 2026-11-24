@@ -28,6 +28,7 @@
     "max": "#ff4757"
   },
   "aliases": {
+    "zai/glm-5.4": "GLM 5.4",
     "openrouter/deepseek/deepseek-v4.1-flash-1017": "DeepSeek Flash OpenRouter"
   }
 }
