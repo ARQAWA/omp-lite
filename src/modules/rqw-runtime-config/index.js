@@ -26,7 +26,7 @@ export default async function runtimeConfig(pi, modules) {
 				entries.set(id, model.contextWindow);
 			}
 			const ids = [...entries.keys()].sort((a, b) => a === sonnet ? -1 : b === sonnet ? 1 : a.localeCompare(b));
-			const thresholds = Object.fromEntries(ids.filter(id => entries.get(id) > 500000).map(id => [id, "f400000"]));
+			const thresholds = Object.fromEntries(ids.filter(id => entries.get(id) >= 500000).map(id => [id, "f400000"]));
 			const { global, project, configOverlay, overrides } = scope.mirrorState();
 			const current = allow(overrides);
 			if (!Bun.deepEquals(current, applied)) runtimeAllow = current;

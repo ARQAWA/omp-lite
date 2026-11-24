@@ -70,13 +70,13 @@ test("the live catalog updates both model lists and compaction thresholds", asyn
 	expect(scope.enabled).toEqual([sonnet, deepseek, "zai/glm-5.3"]);
 	expect(scope.roles.perCall.split(", ")).toEqual(scope.enabled);
 	expect(scope.allow).toEqual(scope.enabled);
-	expect(scope.thresholds).toEqual({});
-	models.push(model("zai", "glm-5.4", 500001), model("openai-codex", "gpt-6.3", 500000), model("openrouter", "deepseek/deepseek-v4.2-flash", 900000));
+	expect(scope.thresholds).toEqual({ "zai/glm-5.3": "f400000" });
+	models.push(model("zai", "glm-5.4", 500001), model("openai-codex", "gpt-6.2-sol", 500000), model("openrouter", "deepseek/deepseek-v4.2-flash", 900000));
 	discover();
-	expect(scope.enabled).toEqual([sonnet, "openai-codex/gpt-6.3", deepseek, "zai/glm-5.3", "zai/glm-5.4"]);
+	expect(scope.enabled).toEqual([sonnet, "openai-codex/gpt-6.2-sol", deepseek, "zai/glm-5.3", "zai/glm-5.4"]);
 	expect(scope.roles.perCall.split(", ")).toEqual(scope.enabled);
 	expect(scope.allow).toEqual(scope.enabled);
-	expect(scope.thresholds).toEqual({ "zai/glm-5.4": "f400000" });
+	expect(scope.thresholds).toEqual({ "openai-codex/gpt-6.2-sol": "f400000", "zai/glm-5.3": "f400000", "zai/glm-5.4": "f400000" });
 	expect(scope.roles.web).toBe(config.modelRoles.web);
 	expect(shutdown()).toBeUndefined();
 });

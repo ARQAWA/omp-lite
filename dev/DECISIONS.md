@@ -3043,3 +3043,15 @@ Blind и high больше не различаются ни моделью, ни
 **Границы:** запуск на Windows VDI не проверен.
 
 **Носители:** `src/modules/rqw-windows-pack/vscode/`; `dist/ompcli-0.0.24-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
+
+## D-188 — порог сжатия для окна 500 000
+
+**Решение:** `f400000` действует для окон от 500 000 токенов. Это уточняет порог из D-180; список моделей не меняется.
+
+**Основание:** владелец: «больше либо равно 500к».
+
+**Механика OMP 19.1.1:** `packages/coding-agent/src/config/compaction-threshold.ts` и `session/context-settings.ts`.
+
+**Проверка:** `bun test dev/tests`: 113 pass, 0 fail. Граница 500 000 проверена при старте и обновлении каталога.
+
+**Носители:** [код](../src/modules/rqw-runtime-config/index.js), [README](../src/modules/rqw-runtime-config/README.md).
