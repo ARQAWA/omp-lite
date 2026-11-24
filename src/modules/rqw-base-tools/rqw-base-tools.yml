@@ -1,7 +1,5 @@
 edit:
   mode: hashline
-  autoRepair:
-    enabled: true
 grep:
   contextBefore: 3
   contextAfter: 3

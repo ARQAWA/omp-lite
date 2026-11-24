@@ -18,7 +18,7 @@
 
 **установка:** три файла в `~/.omp/agent/extensions/rqw-base-tools/`. `rqw-base-tools.yml` вливается в `config.yml`. записи в `install.manifest.json`.
 
-**настройки:** `rqw-base-tools.yml`, 20 значений. Восемь из них сверяет сторож. `edit.autoRepair.enabled: true` включает штатную попытку исправления ошибки разбора после правки. `tools.intentTracing: false`: поля `i` в вызовах тулов нет. `debug.enabled: false` и `eval.py: false`: отладчика и Python в `eval` нет. `grep.contextBefore/After: 3` действует только на родной маршрут; локальный `grep` по Cursor начинает с нуля. Четыре ключа выноса ответа в файл: `tools.artifactHeadBytes`, `tools.artifactTailBytes`, `tools.artifactTailLines`, `tools.artifactMaxBytes`. `find.enabled: "off"`, `astGrep.enabled: false`, `astEdit.enabled: false` (правка одна: `edit`) и `disassembler.backend: none`.
+**настройки:** `rqw-base-tools.yml`, 19 значений. Восемь из них сверяет сторож. `tools.intentTracing: false`: поля `i` в вызовах тулов нет. `debug.enabled: false` и `eval.py: false`: отладчика и Python в `eval` нет. `grep.contextBefore/After: 3` действует только на родной маршрут; локальный `grep` по Cursor начинает с нуля. Четыре ключа выноса ответа в файл: `tools.artifactHeadBytes`, `tools.artifactTailBytes`, `tools.artifactTailLines`, `tools.artifactMaxBytes`. `find.enabled: "off"`, `astGrep.enabled: false`, `astEdit.enabled: false` (правка одна: `edit`) и `disassembler.backend: none`.
 
 **bash:** перехвата и блокировок нет (`bashInterceptor.enabled` по умолчанию `false`, OMP 19.1.1 `exec/settings.ts`). описание `bash` даёт мягкое правило по образцу Cursor: есть тул, предпочти его команде оболочки.
 

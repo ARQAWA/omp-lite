@@ -210,7 +210,6 @@ test("the settings file sets every guarded setting", () => {
 	const flat = (node, prefix = "") => Object.entries(node).flatMap(([key, value]) => typeof value === "object" ? flat(value, `${prefix}${key}.`) : [[prefix + key, value]]);
 	expect(Object.fromEntries(flat(yml))).toMatchObject(reference.settings);
 	expect(yml.tools.intentTracing).toBe(false);
-	expect(yml.edit.autoRepair).toEqual({ enabled: true });
 });
 
 // ---- per-file patches ----

@@ -83,7 +83,6 @@ test("every setting lives in one config fragment", () => {
 	expect(seen["claudeResets.autoRedeem5h"]).toBe('"no"');
 	expect(seen["claudeResets.autoRedeemWeekly"]).toBe('"no"');
 	expect(seen["read.summarize.enabled"]).toBe("false");
-	expect(seen["edit.autoRepair.enabled"]).toBe("true");
 	expect(Object.keys(seen).filter(key => /token$|secret|password/i.test(key))).toEqual([]);
 });
 
