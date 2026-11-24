@@ -1,6 +1,6 @@
 import blockedModels from "./blocked-models.json";
 
-const providers = new Set(["anthropic", "openai-codex", "zai", "opencode-go", "agy", "openrouter"]);
+const providers = new Set(["anthropic", "openai-codex", "zai", "opencode-go", "openrouter"]);
 const blocked = new Set(blockedModels);
 const sonnet = "anthropic/claude-sonnet-5-5";
 const deepseek = "openrouter/deepseek/deepseek-v4.1-flash-1017";

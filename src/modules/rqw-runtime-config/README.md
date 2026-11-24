@@ -16,11 +16,9 @@ RQW Runtime Config: общие настройки и список моделей
 
 **Экран:** `display.smoothStreaming: false` показывает текст и аргументы тулов по мере получения, без искусственной печати. Сам стриминг и остальные анимации не выключены. `display.collapseCompacted: true` прячет чат до компакшена за сводкой. `tui.autoGraph: "off"`: графиков под таблицами и запросов судье нет.
 
-**Модели:** `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `zai`, `agy`. Каталог OMP за вычетом `blocked-models.json` задаёт `enabledModels` и `modelRoles.perCall` в сессии. Новинки появляются автоматически. Из OpenRouter проходит только `openrouter/deepseek/deepseek-v4.1-flash-1017`; режим `floor` остаётся.
+**Модели:** `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `zai`. Каталог OMP за вычетом `blocked-models.json` задаёт `enabledModels` и `modelRoles.perCall` в сессии. Новинки появляются автоматически. Из OpenRouter проходит только `openrouter/deepseek/deepseek-v4.1-flash-1017`; режим `floor` остаётся.
 
 **Z.ai:** только Coding Plan, без GLM-5.3-FlashX-Legal. Платный `zai-api` выключен.
-
-**AGY:** модели Google Antigravity через [`rqw-agy-provider`](../rqw-agy-provider/README.md) на Mac.
 
 **Хуки:** `session_start` отслеживает каталог и ограничения `perCall`. `session_shutdown` снимает обе подписки.
 

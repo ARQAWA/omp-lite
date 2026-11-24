@@ -2970,29 +2970,17 @@ Blind и high больше не различаются ни моделью, ни
 
 **Проверка:** `bun test dev/tests` — 111 pass. На Mac шаблон удалён. RPC показал только две модели Z.ai. Обе вернули «ок» на живой запрос.
 
-## D-179 — Нативный провайдер AGY в харнесе
-
-**Решение:** добавлен модуль `rqw-agy-provider`: провайдер `agy` с 11 моделями Google Antigravity (Neon, Hydrogen, Argon с усилиями) через собственный api `agy-api` и `streamSimple`. Авторизация читается из keychain agy (`gemini`/`antigravity`), refresh-токен обменивается на access самим расширением. Пакет запроса воспроизводит agy-клиент по митм-реверсу: конверт `project`/`requestId`, `systemInstruction` с role user, `tools` с legacy `parameters`, labels, `sessionId`; неявный кэш Google подтверждён `cachedContentTokenCount`. Модели включены в `enabledModels` и `perCall`, порог сжатия `f400000` как у всех моделей с окном больше 500k.
-
-**Основание:** владелец: «надо, чтобы в этом Харнесе появился наш провайдер и чтобы он работал и в модул пикере, и везде в рамках Харнеса был реализован и по правилам Харнеса был доставлен на запушен в репозиторий и работал у нас локально»; «опираешься только на тот реверс инженеринг, который ты сам провел»; «у GLM моделей, так же как и у всех моделей с больше 500к контекстом, контекстное окно такое же в рамках правил нашего Харнеса».
-
-**Механика OMP 19.1.0:** расширение `pi.registerProvider` с собственным api (`packages/ai/src/api-registry.ts`, `packages/coding-agent/src/extensibility/`), пикер фильтрует `ctx.models.list()` по `enabledModels` (`rqw-harness-interface/model-picker.js`).
-
-**Проверка:** `bun test dev/tests/harness` — 102 pass. Локально после установки: пикер отдаёт 11 моделей AGY, живые вызовы Neon/Hydrogen/Argon вернули ответ, кэш виден в usage.
-
-**Носители:** `src/modules/rqw-agy-provider/`, `src/modules/rqw-runtime-config/`, `dev/tests/harness/rqw-agy-provider/`, `dev/tests/harness/rqw-runtime-config/`, `dev/tests/harness/rqw-codex-adapter/`, `install.manifest.json`, `INSTALL.md`.
-
 ## D-180 — Каталог моделей OMP 19.1.1
 
-**Решение:** храним исключённые `provider/id`. Пикер и `perCall` получают один список из каталога. Из OpenRouter остаётся только DeepSeek Flash. GLM-5.3-FlashX-Legal исключена. Для окон больше 500 000 действует `f400000`. AGY берёт новые Gemini из `agy models`.
+**Решение:** храним исключённые `provider/id`. Пикер и `perCall` получают один список из каталога. Из OpenRouter остаётся только DeepSeek Flash. GLM-5.3-FlashX-Legal исключена. Для окон больше 500 000 действует `f400000`.
 
 В точное ожидание ворот добавлен уже открытый `zai`; доступность других провайдеров не менялась.
 
-**Механика OMP 19.1.1:** `packages/coding-agent/src/config/model-registry.ts`, `config/registry.ts`, `task/model-approval.ts`, `extensibility/extensions/types.ts` (`fetchDynamicModels`). Версии OMP и Windows-пакета подняты; эталон `read` обновлён.
+**Механика OMP 19.1.1:** `packages/coding-agent/src/config/model-registry.ts`, `config/registry.ts`, `task/model-approval.ts`. Версии OMP и Windows-пакета подняты; эталон `read` обновлён.
 
 **Проверка:** `verify` 216/216; `bun test dev/tests` 119 pass за 246 мс. После установки `verify --runtime --no-tests` 219/219. Живые пробы 15/15: запросы повторно разобраны по сохранённым снимкам после исправления проверки стартовых шаблонов. В `perCall` видны GLM-5.4 и единственный DeepSeek OpenRouter. Без Anthropic восстанавливается сохранённая GLM-5.4.
 
-**Носители:** `src/modules/rqw-runtime-config/`, `src/modules/rqw-agy-provider/`, `install.manifest.json`.
+**Носители:** `src/modules/rqw-runtime-config/`, `install.manifest.json`.
 
 ## D-181 — выпуск ARQAWA OMPCLI 0.0.23
 
@@ -3018,20 +3006,6 @@ Blind и high больше не различаются ни моделью, ни
 
 **Носители:** [системный промпт](../src/modules/rqw-system-core/SYSTEM.md), [README модуля](../src/modules/rqw-system-core/README.md).
 
-## D-183 — паритет транспорта AGY с agy и квота Gemini в виджете
-
-**Решение:** провайдер `agy` сверен с полными дампами agy 1.5.14 (35 вызовов модели) и поправлен своим кодом: токен из keychain, при пустом keychain из файла agy; xhigh шлёт `thinkingLevel: 100`; `sessionId` — случайный int64 со знаком; `id` тула берётся из ответа сервера и идёт в `functionCall` и `functionResponse`, результат тула — ходом `role: "model"`; мысль перед вызовом тула в историю не возвращается; `minimum`, `minLength`, `minItems` идут полями схем. Своя квота: `POST retrieveUserQuotaSummary`, бакеты `gemini-weekly` и `gemini-5h` уходят в `omp usage` через `usage` провайдера. Виджет печатает `AGY <неделя>%/<5 ч>%` после `Go`.
-
-**Основание:** владелец: «Убедиться в том, что у нас транспорт сетевой антигравити надежно реализован и работает так же, как у оригинального, снятого через Reverse Engineering»; «нужно спланировать апгрейд виджета этих юзеджев и запилить туда юзадж Гемини недельный 5-часовой»; «мы пишем свой нет код»; «Мы не переиспользуем чужой код, готовый, связанный с неткодом»; «встраиваем в OMP конвенциональным способом ОМПшным». План на восемь задач принят: «Да давай, делай задачи полностью твоя от начала до конца».
-
-**Механика OMP 19.1.1:** `usage?: UsageProvider` в `packages/coding-agent/src/extensibility/extensions/types.ts`, контракт отчёта в `packages/ai/src/usage.ts`. Из OMP — только крючки `registerProvider`, `streamSimple`, `usage`.
-
-**Границы:** сервер Google отвечает `429 RESOURCE_EXHAUSTED` на штатный промпт OMP без `SYSTEM.md`: фильтр срабатывает на строку `You are omp's trusted coding assistant` (`packages/coding-agent/src/prompts/system/system-prompt.md:1`). Промпт из `SYSTEM.md` строки не содержит, с ним вызовы проходят. Обход фильтра не делался: решение за владельцем. Не внесено по плану: типы схем тулов строчными, одна part в `systemInstruction`, телеметрия agy.
-
-**Проверка:** `bun test dev/tests` — 121 pass. Живые вызовы штатным входом с промптом `SYSTEM.md`: xhigh (`thinkingLevel: 100`, HTTP 200), тул `read` (HTTP 200 на обоих ходах, `id` от сервера, `cacheRead` 796), `omp usage --json` — отчёт `agy` с двумя бакетами, статус-бар — `AGY 83%/98%`. Слепое ревью работы: 3 раунда, принято.
-
-**Носители:** [провайдер](../src/modules/rqw-agy-provider/index.js), [README провайдера](../src/modules/rqw-agy-provider/README.md), [виджет](../src/modules/rqw-harness-interface/subscriptions.js), [история провайдера](history/rqw-agy-provider.md), [история виджета](history/subscriptions.md), [INSTALL.md](../INSTALL.md), `dev/tests/harness/rqw-agy-provider/`, `dev/tests/harness/rqw-harness-interface/subscriptions.test.js`.
-
 ## D-184 — блок `<critical>` OMP вырезается из запроса
 
 **Решение:** [rqw-system-core](../src/modules/rqw-system-core/index.js) хуком `before_provider_request` вырезает из каждого запроса блок `<critical>`, который OMP дописывает после `SYSTEM.md`. Режутся обе формы блока: главного агента и сабагента. Другие блоки `<critical>` остаются. Хук отдаёт копию запроса.
@@ -3040,7 +3014,7 @@ Blind и high больше не различаются ни моделью, ни
 
 **Механика OMP 19.1.1:** блок зашит в `packages/coding-agent/src/prompts/system/project-prompt.md` и клеится всегда (`system-prompt.ts`, `buildSystemPrompt`); настройки нет. `before_agent_start` не подошёл: ход без сообщения владельца идёт без него (`session/agent-session.ts`, `#prepareUserAuthoredWake`). Копия нужна Codex: `packages/ai/src/providers/openai-codex-responses.ts`, `buildCodexChainedRequestBody` сравнивает прошлый запрос с новым.
 
-**Границы:** провайдер `agy` не зовёт `onPayload`, у него блок остаётся. Текст блока привязан к OMP 19.1.1.
+**Границы:** текст блока привязан к OMP 19.1.1.
 
 **Проверка:** тест модуля на обе формы блока, чужой `<critical>` и неизменность исходного запроса.
 
@@ -3054,20 +3028,8 @@ Blind и high больше не различаются ни моделью, ни
 
 **Механика OMP 19.1.1:** `packages/coding-agent/src/prompts/tools/task.md:92`; правка идёт хуком `before_provider_request` (`extensibility/extensions/runner.ts`, `emitBeforeProviderRequest`).
 
-**Границы:** провайдер `agy` хук не зовёт, там описания родные. Режим goal отложен владельцем.
+**Границы:** режим goal отложен владельцем.
 
 **Проверка:** тест адаптера на вырез из `task`. Тексты `rqw-base-tools`: сверены поиском, `Next step` нет.
 
 **Носители:** [тексты](../src/modules/rqw-base-tools/rqw-base-tools.texts.json), [адаптер](../src/modules/rqw-codex-adapter/index.js), README обоих модулей, `dev/tests/harness/rqw-codex-adapter/`.
-
-## D-186 — мимикрия payload под agy отклонена
-
-**Решение:** провайдер `agy` остаётся на payload из D-183. Мимикрия под agy (блок `<identity>`, конверт `<USER_REQUEST>`, шаг по числу ходов, `last_execution_id`, заглавные типы схем) не вносится и живыми пробами не проверяется.
-
-**Основание:** владелец заказал: «задача этого провайдера полная мимикрия под AGY неткод официальный». После живой проверки решил: «Да, убирай ветку, провайдер оставь как есть.»
-
-**Границы:** первый живой запрос с мимикрией получил `403 PERMISSION_DENIED`, `TOS_VIOLATION`: «This service has been disabled in this account for violation of Terms of Service». Оба запроса, без `SYSTEM.md` и с ним, получили `403`. Сразу после этого запрос прежнего payload получил `200`. Сервер Google отличает пакет OMP от agy. Какой элемент даёт `403`, не выяснялось: каждая проба — запрос с мимикрией с аккаунта владельца.
-
-**Проверка:** код мимикрии был готов в ветке, тесты модуля 10 из 10. Ветка и worktree удалены по решению владельца, `main` и live не менялись.
-
-**Носители:** [провайдер](../src/modules/rqw-agy-provider/index.js), [история провайдера](history/rqw-agy-provider.md).

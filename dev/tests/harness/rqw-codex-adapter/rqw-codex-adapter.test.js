@@ -3,9 +3,6 @@ import { basename } from "node:path";
 
 // OMP stand-ins: accounts are tried in order, the next one only after an auth error.
 mock.module("@oh-my-pi/pi-ai", () => ({
-	// общий модуль с rqw-agy-provider.test.js: оба мока — надмножество друг друга
-	AssistantMessageEventStream: class { push() {} end() {} },
-	toolWireSchema: tool => tool.parameters,
 	withOAuthAccess: async (storage, _provider, attempt, options) => {
 		let last = new Error(options.missingAccessMessage);
 		for (const access of storage) {

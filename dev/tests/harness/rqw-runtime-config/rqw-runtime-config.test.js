@@ -18,7 +18,7 @@ test("the removed scrollback setting stays absent", () => {
 test("Sonnet is the startup preference and unrelated roles and providers stay configured", () => {
 	expect(config.modelRoles).not.toHaveProperty("default");
 	expect(config.enabledModels[0]).toBe("anthropic/claude-sonnet-5-5");
-	for (const name of ["anthropic", "openai-codex", "opencode-go", "openrouter", "zai", "agy"]) expect(config.disabledProviders).not.toContain(name);
+	for (const name of ["anthropic", "openai-codex", "opencode-go", "openrouter", "zai"]) expect(config.disabledProviders).not.toContain(name);
 	expect(config.disabledProviders).toContain("kiro");
 	expect(config.disabledProviders).not.toContain("google-gemini-cli");
 	for (const name of ["claude", "claude-md", "claude-plugins"]) expect(config.disabledProviders).toContain(name);

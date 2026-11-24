@@ -50,7 +50,6 @@
 		{ "use": "rqw-system-core: threads выключены", "path": "packages/ai/src/providers/anthropic-threads.ts", "has": "PI_ANTHROPIC_MESSAGE_THREADS" },
 		{ "use": "rqw-system-core: памятка без пометки per-call", "path": "packages/coding-agent/src/extensibility/extensions/runner.ts", "has": "#isRepeatedProjection" },
 		{ "use": "rqw-runtime-config: обновление списка моделей", "path": "packages/coding-agent/src/config/model-registry.ts", "has": "subscribeMirror" },
-		{ "use": "rqw-agy-provider: подхват каталога AGY", "path": "packages/coding-agent/src/extensibility/extensions/types.ts", "has": "fetchDynamicModels" },
 		{ "use": "rqw-harness-interface model-picker.js: список без enabledModels", "path": "packages/coding-agent/src/extensibility/extensions/model-api.ts", "has": "getAvailable" },
 		{ "use": "rqw-harness-interface model-picker.js: фильтр enabledModels", "path": "packages/coding-agent/src/config/model-settings.ts", "has": "cfgEnabledModels" },
 		{ "use": "rqw-harness-interface model-picker.js: глобальные настройки", "path": "packages/coding-agent/src/config/settings.ts", "has": "export const settings" },

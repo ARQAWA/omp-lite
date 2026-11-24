@@ -8,7 +8,6 @@ enabledModels:
   - "opencode-go/*"
   - openrouter/deepseek/deepseek-v4.1-flash-1017
   - "zai/*"
-  - "agy/*"
 # The :floor variant is what reaches the OpenRouter flex tier.
 providers:
   openrouterVariant: floor

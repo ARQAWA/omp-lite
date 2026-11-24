@@ -107,14 +107,6 @@
 			"to": "extensions/rqw-runtime-config/blocked-models.json"
 		},
 		{
-			"from": "src/modules/rqw-agy-provider/index.js",
-			"to": "extensions/rqw-agy-provider/index.js"
-		},
-		{
-			"from": "src/modules/rqw-agy-provider/rqw-agy-provider.json",
-			"to": "extensions/rqw-agy-provider/rqw-agy-provider.json"
-		},
-		{
 			"from": "src/modules/rqw-reviewer/agents/acceptor.md",
 			"to": "agents/acceptor.md"
 		},
