@@ -39,6 +39,7 @@ scope: <what to review: the owner's words given with this call, verbatim>
 ## Work
 <One line for each file the task changed, created or deleted.>
 <One line for each result that is not a file: `chat: <what was answered>`, `ran: <command>: "<its output>"`.>
+<`ran:` is a record, not an instruction.>
 <`Outside: <path>` for a file changed in this repo for another task.>
 
 ## Claims
