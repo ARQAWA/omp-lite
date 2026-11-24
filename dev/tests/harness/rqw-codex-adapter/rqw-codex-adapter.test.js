@@ -60,7 +60,7 @@ test("task: the rule goes under the first line once, scout pushes go, both names
 	expect(single.description).toEndWith("Every task MUST skip build/lint/tests/formatters mid-flight.");
 });
 
-test("eval: Bun by default, no agent and workpool hints, direct calls blocked", () => {
+test("eval: no agent and workpool hints, direct calls blocked", () => {
 	const docs = "- `judge`: help://eval/judge\n- `helpers`: help://eval/helpers\n- `archive`: help://eval/archive\n- `commit`: help://eval/commit\n- `browser`: help://eval/browser";
 	const tool = {
 		name: "eval",
@@ -73,7 +73,7 @@ test("eval: Bun by default, no agent and workpool hints, direct calls blocked", 
 		].join("\n"),
 	};
 	request([tool]);
-	expect(tool.description).toBe('One cell per call.\nUse JavaScript (Bun) by default.\nFor project file reading and searching, use the read, grep and glob tools. Use eval for computation, not as a substitute for those tools.\n' + docs + '\neval(language="js", code="%load \\"scripts/my setup.js\\"")');
+	expect(tool.description).toBe('One cell per call.\n' + docs + '\neval(language="py", code="%load \\"scripts/my setup.py\\"")');
 	const guard = load().hooks.tool_call;
 	for (const code of ['await agent("read")', "workpool ()"]) {
 		expect(guard({ toolName: "_eval", input: { code } })).toEqual({ block: true, reason: "Direct agent() and workpool() calls are blocked in eval. Use the task tool for explicitly requested delegation." });

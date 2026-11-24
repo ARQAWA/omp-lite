@@ -19,8 +19,9 @@ test("every source exists and no development file is installed", () => {
 	}
 });
 
-test("the removed background counter is not installed", () => {
+test("the removed background counter is not installed and is removed", () => {
 	expect(manifest.files.some(entry => entry.to === "extensions/background-jobs.js")).toBe(false);
+	expect(manifest.remove).toContain("extensions/background-jobs.js");
 });
 
 test("the removed memory description patch is not installed", () => {
@@ -82,6 +83,7 @@ test("every setting lives in one config fragment", () => {
 	expect(seen["claudeResets.autoRedeem5h"]).toBe('"no"');
 	expect(seen["claudeResets.autoRedeemWeekly"]).toBe('"no"');
 	expect(seen["read.summarize.enabled"]).toBe("false");
+	expect(seen["edit.autoRepair.enabled"]).toBe("true");
 	expect(Object.keys(seen).filter(key => /token$|secret|password/i.test(key))).toEqual([]);
 });
 

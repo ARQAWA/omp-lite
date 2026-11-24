@@ -153,6 +153,7 @@
 		]
 	},
 	"remove": [
+		"extensions/background-jobs.js",
 		"zai-models.yml",
 		"extensions/codex-luna-search.js",
 		"extensions/cursor-tools/index.js",

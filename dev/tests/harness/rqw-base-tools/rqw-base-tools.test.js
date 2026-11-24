@@ -132,6 +132,33 @@ test("the Google, Bedrock and string-schema forms are rewritten; empty descripti
 	expect([inline.tools.map(entry => entry.description), seen]).toEqual([[undefined, ...Array(5).fill("")], []]);
 });
 
+test("eval guidance keeps the adapter's tools-array scope and wire forms", async () => {
+	const { handlers, ctx } = setup();
+	const guidance = "Use JavaScript (Bun) by default.\nFor project file reading and searching, use the read, grep and glob tools. Use eval for computation, not as a substitute for those tools.";
+	const py = 'eval(language="py", code="%load \\"scripts/my setup.py\\"")';
+	const js = 'eval(language="js", code="%load \\"scripts/my setup.js\\"")';
+	const description = `One cell per call. Subagents have separate kernels.\n${py}`;
+	const make = name => ({ name, description, parameters: { type: "object" } });
+	const flat = make("eval"), nested = make("_eval"), deep = make("eval"), other = make("read");
+	const declaration = make("eval"), spec = make("eval"), outside = make("eval"), empty = { name: "eval", description: "" };
+	const filtered = { name: "eval", description: `One cell per call.\n${py}` };
+	const body = { tools: [flat, { function: nested }, other, { functionDeclarations: [declaration] }, { toolSpec: spec }, empty, filtered], request: { extra: { tools: [deep] } }, functions: [outside] };
+	await handlers.before_provider_request({ payload: body }, ctx);
+	for (const tool of [flat, nested, deep]) {
+		expect(tool.description).toBe(`One cell per call. Subagents have separate kernels.\n${guidance}\n${js}`);
+		expect(tool.parameters).toEqual({ type: "object" });
+	}
+	for (const tool of [other, declaration, spec, outside]) expect(tool.description).toBe(description);
+	expect(filtered.description).toBe(`One cell per call.\n${guidance}\n${js}`);
+	expect(empty.description).toBe(`\n${guidance}`);
+	const once = JSON.stringify(body);
+	await handlers.before_provider_request({ payload: body }, ctx);
+	expect(JSON.stringify(body)).toBe(once);
+	const root = [make("eval")];
+	await handlers.before_provider_request({ payload: root }, ctx);
+	expect(root[0].description).toBe(description);
+});
+
 test("no text names subagents", () => {
 	expect(JSON.stringify(texts)).not.toMatch(/scout|subagent|Task \+/i);
 });
@@ -183,6 +210,7 @@ test("the settings file sets every guarded setting", () => {
 	const flat = (node, prefix = "") => Object.entries(node).flatMap(([key, value]) => typeof value === "object" ? flat(value, `${prefix}${key}.`) : [[prefix + key, value]]);
 	expect(Object.fromEntries(flat(yml))).toMatchObject(reference.settings);
 	expect(yml.tools.intentTracing).toBe(false);
+	expect(yml.edit.autoRepair).toEqual({ enabled: true });
 });
 
 // ---- per-file patches ----

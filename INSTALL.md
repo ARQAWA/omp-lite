@@ -33,7 +33,6 @@ rm -f "$HOME/.omp/agent/<путь>"
 
 ```bash
 rm -rf "$HOME/.omp/agent/extensions/cursor-tools" "$HOME/.omp/agent/extensions/codex-web-run" "$HOME/.omp/agent/extensions/pi-voice-stt/src"
-rm -f "$HOME/.omp/agent/extensions/background-jobs.js"
 ```
 
 ## 4. Запиши настройки

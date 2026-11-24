@@ -3097,3 +3097,7 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests` — 114 pass, 0 fail.
 
 **Носители:** `src/modules/rqw-codex-adapter/index.js`, его тест, `src/modules/rqw-runtime-config/config.yml`, `README.md`.
+
+## D-192 — три переноса между модулями
+
+`rqw-base-tools` владеет подсказкой `eval` о JavaScript и работе с файлами, а также `edit.autoRepair.enabled`. Правила делегирования остаются в `rqw-codex-adapter`. Удаление `extensions/background-jobs.js` задаёт `remove` манифеста для обеих установок.

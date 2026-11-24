@@ -158,9 +158,6 @@ startup:
   quiet: true
   showSplash: false
   checkUpdate: false
-edit:
-  autoRepair:
-    enabled: true
 lsp:
   enabled: false
 claudeResets:

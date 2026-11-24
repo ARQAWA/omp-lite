@@ -4,6 +4,10 @@
 	"read": "Pass a bare path to read a whole file when it fits. For Use :N- to continue, put :N- after the bare path. Separate multiple paths with semicolons, e.g. a.ts;b.ts. Existing local filenames containing :, ? or ; can be passed literally.\nOmit offset and limit for targets other than local text files. offset is a nonzero integer: positive starts at that line, counting from 1; negative counts back from the end. limit is a positive line count. Follow Use offset=N to continue with offset. An empty file returns the native result even with offset or limit. A partial oversized-line preview has no tag or row numbers. When a [path#TAG] header is present, its numbered rows can be used for hashline edit. [whole file: N lines] confirms a complete read.\nPass native selectors, directories, archives and members, SQLite and JSON queries, documents, images, notebooks, URLs and internal URIs in path. Read help://read/sources for selector syntax.",
 	"readRangeTarget": "Omit offset and limit for targets other than local text files.",
 	"readPastEnd": "No line {line}: the file has {total} lines.",
+	"eval": {
+		"add": "Use JavaScript (Bun) by default.\nFor project file reading and searching, use the read, grep and glob tools. Use eval for computation, not as a substitute for those tools.",
+		"swap": ["eval(language=\"py\", code=\"%load \\\"scripts/my setup.py\\\"\")", "eval(language=\"js\", code=\"%load \\\"scripts/my setup.js\\\"\")"]
+	},
 	"native": {
 		"bash": [
 			"Terminal only: git, tests, builds, package managers, running programs.\n",

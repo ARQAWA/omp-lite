@@ -368,6 +368,18 @@ function rewrite(tools) {
 	}
 }
 
+function rewriteEval(node) {
+	if (!node || typeof node !== "object") return;
+	if (Array.isArray(node.tools)) for (const item of node.tools) if (item && typeof item === "object") {
+		const tool = item.function && typeof item.function === "object" ? item.function : item;
+		if (typeof tool.name !== "string" || canon(tool.name) !== "eval" || typeof tool.description !== "string") continue;
+		let text = tool.description;
+		if (!text.includes(texts.eval.add)) text = text.replace(/\n|$/, `\n${texts.eval.add}$&`);
+		tool.description = text.replaceAll(...texts.eval.swap);
+	}
+	for (const value of Object.values(node)) rewriteEval(value);
+}
+
 // ---- per-file patches ----
 
 const SECTION = /^\s*\[([^\]\n#]+)(?:#[^\]\n]*)?\]\s*$/;
@@ -601,6 +613,7 @@ export default function rqwBaseTools(pi, load = name => MODULES[name]()) {
 			if (moved) ctx.ui?.notify?.(moved, "warning");
 		}
 		rewrite(tools);
+		rewriteEval(event.payload);
 		return event.payload;
 	});
 
