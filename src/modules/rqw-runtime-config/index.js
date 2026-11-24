@@ -19,15 +19,17 @@ export default async function runtimeConfig(pi, modules) {
 		let runtimeAllow, applied, previous;
 		const registry = ctx.modelRegistry;
 		const update = () => {
+			const { global, project, configOverlay, overrides } = scope.mirrorState();
+			const goModels = configOverlay.enabledModels ?? global.enabledModels ?? [];
 			const entries = new Map();
 			for (const model of registry.getAvailableForProviders(providers)) {
 				const id = `${model.provider}/${model.id}`;
 				if (/[,\s*?]/.test(id) || blocked.has(id) || (model.provider === "openrouter" && id !== deepseek)) continue;
+				if (model.provider === "opencode-go" && !goModels.includes(id)) continue;
 				entries.set(id, model.contextWindow);
 			}
 			const ids = [...entries.keys()].sort((a, b) => a === sonnet ? -1 : b === sonnet ? 1 : a.localeCompare(b));
 			const thresholds = Object.fromEntries(ids.filter(id => entries.get(id) >= 500000).map(id => [id, "f400000"]));
-			const { global, project, configOverlay, overrides } = scope.mirrorState();
 			const current = allow(overrides);
 			if (!Bun.deepEquals(current, applied)) runtimeAllow = current;
 			const operator = allow(configOverlay) ?? allow(global);

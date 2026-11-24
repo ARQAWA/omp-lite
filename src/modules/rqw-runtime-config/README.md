@@ -16,13 +16,13 @@ RQW Runtime Config: общие настройки и список моделей
 
 **Экран:** `display.smoothStreaming: false` показывает текст и аргументы тулов по мере получения, без искусственной печати. Сам стриминг и остальные анимации не выключены. `display.collapseCompacted: true` прячет чат до компакшена за сводкой. `tui.autoGraph: "off"`: графиков под таблицами и запросов судье нет.
 
-**Модели:** `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `zai`. Каталог OMP за вычетом `blocked-models.json` задаёт `enabledModels` и `modelRoles.perCall` в сессии. Новинки появляются автоматически. Из OpenRouter проходит только `openrouter/deepseek/deepseek-v4.1-flash-1017`; режим `floor` остаётся.
+**Модели:** `anthropic`, `openai-codex`, `opencode-go`, `openrouter`, `zai`. Фильтр каталога задаёт `enabledModels` и `modelRoles.perCall` в сессии. Для OpenCode Go пропускаются только точные имена из `enabledModels` установочного фрагмента: `opencode-go/deepseek-v4.1-flash` и `opencode-go/hy4-flash-free`. Для остальных действует `blocked-models.json`. Из OpenRouter проходит только `openrouter/deepseek/deepseek-v4.1-flash-1017`; режим `floor` остаётся.
 
 **Z.ai:** только Coding Plan, без GLM-5.3-FlashX-Legal. Платный `zai-api` выключен.
 
 **Хуки:** `session_start` отслеживает каталог и ограничения `perCall`. `session_shutdown` снимает обе подписки.
 
-**Старт:** Sonnet 5.5 идёт первой. До загрузки фильтра используются шаблоны подключённых провайдеров, чтобы OMP мог восстановить выбор. Расширение не меняет `modelRoles.default` и `web`.
+**Старт:** Sonnet 5.5 идёт первой. До загрузки фильтра используются стартовые шаблоны, но Go уже ограничен двумя именами. Расширение не меняет `modelRoles.default` и `web`.
 
 **Установка:** по [INSTALL.md](../../../INSTALL.md). Секретов нет.
 
@@ -32,12 +32,12 @@ RQW Runtime Config: общие настройки и список моделей
 
 **Границы:**
 - **Обвязка Claude Code выключена:** в `disabledProviders` стоят `claude` (`.claude/` проекта и `~/.claude/`: `CLAUDE.md`, скиллы, команды, хуки, тулы, расширения, `settings.json`, `SYSTEM.md`, MCP), `claude-md` (`CLAUDE.md` в проекте и выше) и `claude-plugins` (плагины Claude Code и их сабагенты). Модели Claude и вход в подписку Anthropic работают. Не выключаются штатно: разовое чтение `~/.claude/history.jsonl` демоном подсказок композера при пустой базе, импорт `--from-claude`, `omp claude-trace`.
-- Это фильтр нашего пикера и `perCall`, не запрет ручного `--model`.
+- Фильтр действует в обычных списках выбора сессии и `perCall`. Отдельный каталог `omp models` и явный выбор через `--model`, `--models` или `/switch <имя>` не ограничены этим фильтром.
 - Новый провайдер надо добавить в список явно.
 - Остальные окна сжимаются по правилам OMP.
 
 **Механика OMP 19.1.1**, каталог `packages/coding-agent/src`: `config/compaction-threshold.ts` (формы порога, точное имя главнее шаблона), `config/model-settings.ts` (`modelRoles`, `enabledModels`, `disabledProviders`), `config/model-resolver.ts` (`normalizeModelPatternList`, `resolveModelRoleValue`: роль это список через запятую, берётся первая доступная модель), `task/model-approval.ts` (список моделей в описании тула `task` строится из `perCall`), `session/settings.ts` (`providers.openrouterVariant`, подогрев, `retry.fallbackChains`), `session/cache-warmer.ts` (подогрев и стратегия), `tools/settings.ts` (`tools.approvalMode`, `dev.autoqaConsent`), `modes/controllers/event-controller.ts` (плавное появление текста и аргументов).
 
-Обновление каталога: `config/model-registry.ts` (`getAvailableForProviders`, `subscribeMirror`). Настройки: `config/registry.ts` (`override`).
+Обновление каталога: `config/model-registry.ts` (`getAvailableForProviders`, `subscribeMirror`). Слои настроек: `config/settings.ts` (`mirrorState`: глобальный конфиг на Mac, `PI_CONFIG_FILES` на VDI). Выбор в сессии: `session/model-controls.ts` (`getAvailableModels`). Отдельный каталог: `cli/models-cli.ts`.
 
 **Маршруты Z.ai в OMP 19.1.1:** `packages/catalog/src/compat/rules/providers/zai.kdl`.

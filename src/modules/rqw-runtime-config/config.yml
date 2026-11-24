@@ -5,7 +5,8 @@ enabledModels:
   - anthropic/claude-sonnet-5-5
   - "anthropic/*"
   - "openai-codex/*"
-  - "opencode-go/*"
+  - opencode-go/deepseek-v4.1-flash
+  - opencode-go/hy4-flash-free
   - openrouter/deepseek/deepseek-v4.1-flash-1017
   - "zai/*"
 # The :floor variant is what reaches the OpenRouter flex tier.

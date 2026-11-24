@@ -27,13 +27,13 @@ test("Sonnet is the startup preference and unrelated roles and providers stay co
 
 const model = (provider, id, contextWindow = 200000) => ({ provider, id, contextWindow });
 
-async function session(models, operator = [], live = []) {
+async function session(models, operator = [], live = [], configOverlay = {}) {
 	const hooks = {};
 	const layer = perCallModelAllow => ({ task: { perCallModelAllow } });
 	let settingsChanged, runtime;
 	const scope = {
 		roles: { web: config.modelRoles.web },
-		mirrorState: () => ({ global: layer(operator), project: layer(live), configOverlay: {}, overrides: layer(runtime) }),
+		mirrorState: () => ({ global: { ...layer(operator), enabledModels: config.enabledModels }, project: layer(live), configOverlay, overrides: layer(runtime) }),
 		onLayersChange: listener => { settingsChanged = listener; return () => { settingsChanged = undefined; }; },
 		overrideModelRoles: roles => Object.assign(scope.roles, roles),
 	};
@@ -79,6 +79,24 @@ test("the live catalog updates both model lists and compaction thresholds", asyn
 	expect(scope.thresholds).toEqual({ "openai-codex/gpt-6.2-sol": "f400000", "zai/glm-5.3": "f400000", "zai/glm-5.4": "f400000" });
 	expect(scope.roles.web).toBe(config.modelRoles.web);
 	expect(shutdown()).toBeUndefined();
+});
+
+test("OpenCode Go keeps only its configured models as the catalog updates", async () => {
+	const ids = ["deepseek-v4.1-flash", "hy4-flash-free"];
+	const enabled = ids.map(id => `opencode-go/${id}`);
+	expect(config.enabledModels.filter(id => id.startsWith("opencode-go/"))).toEqual(enabled);
+	for (const overlay of [{}, { enabledModels: ["opencode-go/hy4-flash-free"] }]) {
+		const models = [model("opencode-go", ids[0]), model("opencode-go", "hungerg-free")];
+		const { scope, discover, shutdown } = await session(models, [], [], overlay);
+		expect(scope.enabled).toEqual(overlay.enabledModels ? ["rqw/no-model"] : [enabled[0]]);
+		models.push(model("opencode-go", ids[1]), model("opencode-go", "new-model"));
+		discover();
+		const expected = overlay.enabledModels ?? enabled;
+		expect(scope.enabled).toEqual(expected);
+		expect(scope.roles.perCall.split(", ")).toEqual(expected);
+		expect(scope.allow).toEqual(expected);
+		shutdown();
+	}
 });
 
 test("operator and project per-call allowlists both narrow the catalog", async () => {
