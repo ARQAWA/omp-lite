@@ -3033,3 +3033,13 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** тест адаптера на вырез из `task`. Тексты `rqw-base-tools`: сверены поиском, `Next step` нет.
 
 **Носители:** [тексты](../src/modules/rqw-base-tools/rqw-base-tools.texts.json), [адаптер](../src/modules/rqw-codex-adapter/index.js), README обоих модулей, `dev/tests/harness/rqw-codex-adapter/`.
+
+## D-187 — выпуск ARQAWA OMPCLI 0.0.24
+
+**Решение:** `arqawa.ompcli` 0.0.24 опубликован для `win32-x64` по заказу владельца. Пин OMP 19.1.1 не менялся.
+
+**Проверка:** ревизия payload `1de7132b6c02f1b9c19948a12b2b05872509ff05`. VSIX: 215028105 байт, SHA-256 `b8823b6fd90d723175946c9e724ce052d7df9bf78041707565f0b453e97003a1`. Загрузка подтверждена `2026-11-24T01:05:14Z`. Marketplace: `{"version":"0.0.24","targetPlatform":"win32-x64","flags":"validated","lastUpdated":"2026-11-24T01:18:27.197Z"}`. `bun test dev/tests`: 113 pass, 0 fail.
+
+**Границы:** запуск на Windows VDI не проверен.
+
+**Носители:** `src/modules/rqw-windows-pack/vscode/`; `dist/ompcli-0.0.24-win32-x64.vsix`; Marketplace `arqawa.ompcli`.
