@@ -8,19 +8,19 @@
 		"bash": [
 			"Terminal only: git, tests, builds, package managers, running programs.\n",
 			"A tool exists for the action: prefer it to a shell command (`read` over `cat`, `grep` and `glob` over shell search).",
-			"\n`cwd` sets the directory; never `cd`. Independent commands are separate calls in one response: they run in parallel. Dependent commands are joined with `&&`.\nOutput over 50 KB keeps its head and tail, the middle is cut: `[Showing lines 1-N and M-K of K; ... middle lines elided. Read local://0.log for full output]`. `read` the artifact.\nNext step: after `edit`, run the narrow check (a test, a build, `git diff`).\n",
+			"\n`cwd` sets the directory; never `cd`. Independent commands are separate calls in one response: they run in parallel. Dependent commands are joined with `&&`.\nOutput over 50 KB keeps its head and tail, the middle is cut: `[Showing lines 1-N and M-K of K; ... middle lines elided. Read local://0.log for full output]`. `read` the artifact.\n",
 			{
 				"native": "Persistent bash"
 			}
 		],
 		"edit": [
-			"Changes existing files. One call carries every ready change: any number of files, one `[PATH#TAG]` section per file.\nThe result names skipped files and their reasons; fix and resend only those sections. Syntax errors may reject the whole patch. A write error may leave some files written: check them before resending.\nNext step: a narrow check through `bash`.\n\n",
+			"Changes existing files. One call carries every ready change: any number of files, one `[PATH#TAG]` section per file.\nThe result names skipped files and their reasons; fix and resend only those sections. Syntax errors may reject the whole patch. A write error may leave some files written: check them before resending.\n\n",
 			{
 				"native": "Hashline patches"
 			}
 		],
-		"replace": "Replaces `old_string` with `new_string` in one file; whitespace is matched loosely.\n- `old_string`: the smallest text that names the place uniquely. Not unique: add context, or `replace_all: true` for every occurrence.\n- One call is one replacement. Send all ready replacements as separate `edit` calls in one response: they run one after another, and a failed one does not stop the others.\n- Read the file before you change it. New files: `write`.\nA failed call says why: fix that call and send only it again.\nNext step: a narrow check through `bash`.",
-		"write": "Creates one file or replaces it fully.\nSeveral new files: send all `write` calls in one response (they run one after another).\nReplacing an existing file: read it whole first. `write` replaces the whole file: every line you did not read is lost.\nA small change in an existing file: `edit`.\nNext step: a narrow check through `bash`."
+		"replace": "Replaces `old_string` with `new_string` in one file; whitespace is matched loosely.\n- `old_string`: the smallest text that names the place uniquely. Not unique: add context, or `replace_all: true` for every occurrence.\n- One call is one replacement. Send all ready replacements as separate `edit` calls in one response: they run one after another, and a failed one does not stop the others.\n- Read the file before you change it. New files: `write`.\nA failed call says why: fix that call and send only it again.",
+		"write": "Creates one file or replaces it fully.\nSeveral new files: send all `write` calls in one response (they run one after another).\nReplacing an existing file: read it whole first. `write` replaces the whole file: every line you did not read is lost.\nA small change in an existing file: `edit`."
 	},
 	"skipped": {
 		"head": "Partial patch: the files below were skipped and are NOT changed.",

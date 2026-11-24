@@ -3045,3 +3045,17 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** тест модуля на обе формы блока, чужой `<critical>` и неизменность исходного запроса.
 
 **Носители:** [код](../src/modules/rqw-system-core/index.js), [README модуля](../src/modules/rqw-system-core/README.md), `dev/tests/harness/rqw-system-core/`.
+
+## D-185 — описания тулов не назначают проверку
+
+**Решение:** из описаний `bash`, `edit`, `replace`, `write` убраны фразы `Next step: ... narrow check` ([тексты](../src/modules/rqw-base-tools/rqw-base-tools.texts.json)). Из родного описания `task` вырезано `; run once afterward` ([адаптер](../src/modules/rqw-codex-adapter/index.js)); запрет сборки и тестов у сабагентов остался.
+
+**Основание:** владелец: «Bash Edit write, velet Narrow check, это надо вырезать»; «run once afterward убрать». Фразы назначали проверку без заказа и спорили с D-182.
+
+**Механика OMP 19.1.1:** `packages/coding-agent/src/prompts/tools/task.md:92`; правка идёт хуком `before_provider_request` (`extensibility/extensions/runner.ts`, `emitBeforeProviderRequest`).
+
+**Границы:** провайдер `agy` хук не зовёт, там описания родные. Режим goal отложен владельцем.
+
+**Проверка:** тест адаптера на вырез из `task`. Тексты `rqw-base-tools`: сверены поиском, `Next step` нет.
+
+**Носители:** [тексты](../src/modules/rqw-base-tools/rqw-base-tools.texts.json), [адаптер](../src/modules/rqw-codex-adapter/index.js), README обоих модулей, `dev/tests/harness/rqw-codex-adapter/`.

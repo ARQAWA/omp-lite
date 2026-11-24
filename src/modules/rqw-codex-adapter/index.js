@@ -19,6 +19,7 @@ const EDITS = {
 		cut: [
 			"most specific, ",
 			"MUST be used for exploratory codebase research, rapid code analysis, and broad pattern searches. ",
+			"; run once afterward",
 		],
 		add: "Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.",
 		swap: [

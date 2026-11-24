@@ -56,10 +56,11 @@ test("task: the rule goes under the first line once, scout pushes go, both names
 		expect(text).toBe(`Spawn \`tasks[]\` concurrently.\n${RULE}\n\n# Inputs\n- \`agent\`: inside each \`tasks[]\` item.\n  - Omit \`agent\` by default: a general worker equal to you. \`scout\` only for read-only search over unknown files; \`sonic\` only for mechanical edits with exact instructions. The user names an agent type: pass it in \`agent\`. The user names a model or effort: set \`model\` to \`provider/id:level\` (your own model if none named), no \`agent\`. Levels: \`low\`, \`medium\`, \`high\`, \`xhigh\` (extra high), \`max\`; pass exactly the level the user says. In every task say how thorough to be and exactly what to return.\n  - Prefer one agent.\n- \`scout\`: Read-only scout.`);
 	}
 	expect(other.description).toBe("Read-only research MUST use `scout` only when files unknown.");
-	const single = { name: "task", description: "Spawn one.\n- `agent`: most specific.\n  - Read-only research MUST use `scout` only when files unknown.\n- `scout`: Pick the most specific.\nNote: Pick the most specific." };
+	const single = { name: "task", description: "Spawn one.\n- `agent`: most specific.\n  - Read-only research MUST use `scout` only when files unknown.\n- `scout`: Pick the most specific.\nNote: Pick the most specific.\nEvery task MUST skip build/lint/tests/formatters mid-flight; run once afterward." };
 	request([single]); request([single]);
 	expect(single.description).toContain("- `scout`: Pick the most specific.\nNote: Pick the most specific.");
 	expect(single.description).toContain("- `agent`:\n  - Omit `agent` by default");
+	expect(single.description).toEndWith("Every task MUST skip build/lint/tests/formatters mid-flight.");
 });
 
 test("eval: Bun by default, no agent and workpool hints, direct calls blocked", () => {
