@@ -3105,3 +3105,17 @@ Blind и high больше не различаются ни моделью, ни
 ## D-193 — штатное поведение редактора
 
 Харнес больше не включает авторемонт. Без переопределения OMP 19.1.1 использует `false` (`packages/coding-agent/src/edit/settings.ts`).
+
+## D-194 — ревьюер переведён на Sonnet 5.5 Extra High
+
+**Решение:** профиль `acceptor` и вызов в скилле `reviewer` идут на `anthropic/claude-sonnet-5-5`, усилие `xhigh`, вместо `openai-codex/gpt-6.1-terra` `high`.
+
+**Основание:** владелец, 2026-11-26: «надо поменять ревьюра ... с модели Terra High на модель Sonnet Extra High».
+
+**Механика OMP 19.1.1:** `packages/coding-agent/src/discovery/helpers.ts`: `model` и `thinking-level` профиля. `omp models`: у `claude-sonnet-5-5` окно 1M, усилия `low,medium,high,xhigh,max`.
+
+**Заменяет:** D-157 в части модели ревьюера.
+
+**Проверка:** `bun test dev/tests`: 115 pass, 0 fail. Два файла установлены в `~/.omp/agent`, `cmp` молчит. Живой круг ревью не запускался.
+
+**Носители:** `src/modules/rqw-reviewer/agents/acceptor.md`, `skills/reviewer/SKILL.md`, `README.md`; `dev/tests/harness/rqw-reviewer/rqw-reviewer.test.js`; `dev/history/review.md`.
