@@ -3116,6 +3116,6 @@ Blind и high больше не различаются ни моделью, ни
 
 **Заменяет:** D-157 в части модели ревьюера.
 
-**Проверка:** `bun test dev/tests`: 115 pass, 0 fail. Два файла установлены в `~/.omp/agent`, `cmp` молчит. Живой круг ревью не запускался.
+**Проверка:** `bun test dev/tests`: 115 pass, 0 fail. Два файла установлены в `~/.omp/agent`, `cmp` молчит. Живой круг `acceptor`: `CLEAN`; сессия сабагента: `model_change` `anthropic/claude-sonnet-5-5`, `resolvedModelIsFallback: false`, `thinkingLevel: xhigh`.
 
 **Носители:** `src/modules/rqw-reviewer/agents/acceptor.md`, `skills/reviewer/SKILL.md`, `README.md`; `dev/tests/harness/rqw-reviewer/rqw-reviewer.test.js`; `dev/history/review.md`.
