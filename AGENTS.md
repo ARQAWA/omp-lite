@@ -4,6 +4,8 @@
 
 Обновление OMP («обнови версию», новая версия OMP, `omp update`, сторож `rqw-base-tools` пишет «native … changed description»): сначала прочитай [dev/agents/omp-upgrade/SKILL.md](dev/agents/omp-upgrade/SKILL.md) и следуй ему.
 
+«Обнови харнес»: это обновление omp-lite, не OMP. Выполни только раздел «Обновление харнеса» в [INSTALL.md](INSTALL.md).
+
 Личные принципы владельца: [dev/WORKFLOW-MANIFEST.md](dev/WORKFLOW-MANIFEST.md). Это отдельная запись, не процедура выполнения задач.
 
 ## Исходники OMP — единственный источник правды
