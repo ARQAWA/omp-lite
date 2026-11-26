@@ -2,8 +2,8 @@
 name: acceptor
 description: Acceptance reviewer, read-only. Checks the work against the owner's words in a handoff. Launched only by the reviewer skill.
 spawns: "*"
-model: openai-codex/gpt-6.1-terra
-thinking-level: high
+model: anthropic/claude-sonnet-5-5
+thinking-level: xhigh
 ---
 
 # Acceptance reviewer
