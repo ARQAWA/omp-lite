@@ -3119,3 +3119,13 @@ Blind и high больше не различаются ни моделью, ни
 **Проверка:** `bun test dev/tests`: 115 pass, 0 fail. Два файла установлены в `~/.omp/agent`, `cmp` молчит. Живой круг `acceptor`: `CLEAN`; сессия сабагента: `model_change` `anthropic/claude-sonnet-5-5`, `resolvedModelIsFallback: false`, `thinkingLevel: xhigh`.
 
 **Носители:** `src/modules/rqw-reviewer/agents/acceptor.md`, `skills/reviewer/SKILL.md`, `README.md`; `dev/tests/harness/rqw-reviewer/rqw-reviewer.test.js`; `dev/history/review.md`.
+
+## D-195 — «обнови харнес» значит обновить omp-lite
+
+**Решение:** в `INSTALL.md` раздел «Обновление харнеса»: `git pull --ff-only origin main`, затем шаги 1-4. Шаг 5 при обновлении не выполняется. `AGENTS.md` ведёт слова «обнови харнес» в этот раздел. Кода нет.
+
+**Основание:** владелец, 2026-11-26: «чтобы это имелось в виду не обновление самого OMP, а ... обновление OMP Lite»; «без запуска, без проб».
+
+**Границы:** уточняет D-028 и D-115: при первой установке шаг 5 остаётся. Строку `AGENTS.md` видит только агент в этом репозитории.
+
+**Носители:** `INSTALL.md`, `AGENTS.md`.
