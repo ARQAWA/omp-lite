@@ -3,9 +3,9 @@ import { expect, test } from "bun:test";
 const dir = `${import.meta.dir}/../../../../src/modules/rqw-reviewer`;
 const front = async file => Bun.YAML.parse((await Bun.file(`${dir}/${file}`).text()).split("---")[1]);
 
-test("the acceptor runs on Terra high with default tools", async () => {
+test("the acceptor runs on Sonnet xhigh with default tools", async () => {
 	const p = await front("agents/acceptor.md");
-	expect([p.name, p.model, p["thinking-level"]]).toEqual(["acceptor", "openai-codex/gpt-6.1-terra", "high"]);
+	expect([p.name, p.model, p["thinking-level"]]).toEqual(["acceptor", "anthropic/claude-sonnet-5-5", "xhigh"]);
 	expect([p.tools, p.spawns]).toEqual([undefined, "*"]);
 });
 

@@ -47,7 +47,7 @@ scope: <what to review: the owner's words given with this call, verbatim>
 ```
 
 ## 3. Review rounds
-1. Call `task` with `context: "acceptance review"` and one item: `agent: "acceptor"`, `solutionSpace: "fixed procedure"`, `model: "openai-codex/gpt-6.1-terra:high"`, `task`: the handoff. Every round is a new call: one fresh reviewer and a full check.
+1. Call `task` with `context: "acceptance review"` and one item: `agent: "acceptor"`, `solutionSpace: "fixed procedure"`, `model: "anthropic/claude-sonnet-5-5:xhigh"`, `task`: the handoff. Every round is a new call: one fresh reviewer and a full check.
 2. First line `BROKEN`: correct the handoff where the line says and call again, once. `BROKEN` again: stop and report to the owner.
 3. Check that the answer is complete before you use it: a row line for every thing the owner ordered or forbade, and a part line for every file of `Work`. A crashed answer, an answer in another form or an incomplete answer is not a verdict: repeat the round once, then stop and report to the owner.
 4. First line `FINDINGS`: work through section 4, then go to step 1.
